@@ -22,14 +22,15 @@ set(REVEREND_SRC_DIRECTORY ${PROJECT_SOURCE_DIR}/src)
 set(REVEREND_EXECUTABLE kbrcpp)
 
 
-set(CNPY_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/cnpy)
-set(CNPY_LIB_DIR ${PROJECT_SOURCE_DIR}/cnpy)
+set(CNPY_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/../cnpy)
+set(CNPY_LIB_DIR ${PROJECT_SOURCE_DIR}/../cnpy)
 
 find_library(CNPY_LIBRARY NAMES "cnpy" PATHS ${CNPY_LIB_DIR})
+find_library(NLOPT_LIBRARY NAMES "nlopt") 
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -std=c++11")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -Wall -std=c++11")
-set(CMAKE_BUILD_TYPE debug)
+set(CMAKE_BUILD_TYPE release)
 
 set(CMAKE_VERBOSE_MAKEFILE on)
 
@@ -50,4 +51,5 @@ add_custom_command(TARGET ${REVEREND_EXECUTABLE} POST_BUILD
 
 target_link_libraries(${REVEREND_EXECUTABLE} 
                       ${CNPY_LIBRARY}
+                      ${NLOPT_LIBRARY}
                       ${Boost_FILESYSTEM_LIBRARY} )

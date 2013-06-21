@@ -33,8 +33,8 @@ from reverend import preimage
 from reverend import kbrcpp
 
 #evaluation image size
-xssize = 300
-yssize = 300
+xssize = 50
+yssize = 50
 
 #some training parameters for kernel width
 sigma_x_min = 0.02
@@ -91,7 +91,7 @@ def main():
     kbrcpp.write_data_files(settings, U=U, X=X, Y=Y, X_s=X_s, Y_s=Y_s,)
 
     #now we're ready to invoke kbrpp
-    kbrcpp.run(filename_config, '../build/kbrcpp')
+    kbrcpp.run(filename_config, '../cpp/kbrcpp')
 
     #read in the weights we've just calculated
     W = np.load(settings.filename_weights)
