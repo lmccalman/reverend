@@ -134,7 +134,13 @@ void Regressor::operator()(const TrainingData& data,
   }
   else
   {
-    std::cout << "ERROR: TODO" << std::endl;
+    double scaleFactor = beta_.cwiseAbs().maxCoeff();
+    beta_ /= scaleFactor;
+    beta_ = beta_.cwiseAbs2();
+    beta_diag_ = beta_.asDiagonal();
+    Eigen::MatrixXd b = g_yy_ * beta_diag_;
+    Eigen::MatrixXd A = b * g_yy_;
+    chol_beta_g_yy_.solve(A, b, r_xy_);
   }
   //now infer
   auto s = weights.rows();
