@@ -33,8 +33,8 @@ from reverend import preimage
 from reverend import kbrcpp
 
 #evaluation image size
-xssize = 50
-yssize = 50
+xssize = 300
+yssize = 300
 
 #some training parameters for kernel width
 sigma_x_min = 0.02
@@ -45,7 +45,7 @@ sigma_y = 0.3
 sigma_y_max = 0.5
 
 #Some other settings
-wall_time = 20.0
+wall_time = 60.0
 folds = 5
 
 def main():

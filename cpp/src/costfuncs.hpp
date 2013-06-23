@@ -85,10 +85,11 @@ double logGaussianMixture(const Eigen::VectorXd& point,
   assert(means.rows() == coeffs.size());
   uint numberOfMeans = means.rows();
   double sigma2 = sigma * sigma;
-  double logScaleFactor = -1.0*log(sigma*sqrt(2.0*M_PI));
+  uint k = means.cols();
+  double logScaleFactor = -0.5*k*log(sigma*sigma*2.0*M_PI);
   
   //find the min exp coeff
-  double maxPower = -1e200 // ie infinity;
+  double maxPower = -1e200; // ie infinity;
   for (uint i=0; i<numberOfMeans; i++)
   {
     double deltaNormSquared = (point - means.row(i)).squaredNorm();
