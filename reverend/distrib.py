@@ -45,6 +45,7 @@ def evaluate_Log_GM(points, means, sigma, coefficients):
     assert(means.ndim == 2)
     assert(coefficients.ndim == 1)
     assert(coefficients.shape[0] == means.shape[0])
+    coefficients = np.maximum(coefficients, 0.0)
     log_scale_factor = -1*np.log(float( sigma * np.sqrt( 2. * np.pi)))
     p = points.reshape((points.shape[0],1, -1))
     q = means.reshape((1,means.shape[0], -1))

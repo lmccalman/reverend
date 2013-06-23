@@ -21,7 +21,7 @@
 
 #makes life a bit easier
 import sys;
-sys.path.append("../reverend") #might need to change to backslash on windows
+sys.path.append("../") #might need to change to backslash on windows
 
 #3rd party imports
 import numpy as np
@@ -44,8 +44,15 @@ sigma_y_min = 0.05
 sigma_y = 0.3
 sigma_y_max = 0.5
 
+#for preimage
+preimage_reg = 1e-6
+preimage_reg_min = 1e-10
+preimage_reg_max = 1e1
+normed_weights = True
+
 #Some other settings
-wall_time = 60.0
+walltime = 10.0
+preimage_walltime = 10.0
 folds = 5
 
 def main():
@@ -85,7 +92,12 @@ def main():
     settings.sigma_y_min = sigma_y_min
     settings.sigma_x_max = sigma_x_max
     settings.sigma_y_max = sigma_y_max
-    settings.wall_time = wall_time
+    settings.preimage_reg = preimage_reg
+    settings.preimage_reg_min = preimage_reg_min
+    settings.preimage_reg_max = preimage_reg_max
+    settings.normed_weights = normed_weights
+    settings.walltime = walltime
+    settings.preimage_walltime = preimage_walltime
     settings.folds = folds
     kbrcpp.write_config_file(settings, filename_config)
     kbrcpp.write_data_files(settings, U=U, X=X, Y=Y, X_s=X_s, Y_s=Y_s,)
@@ -95,14 +107,26 @@ def main():
 
     #read in the weights we've just calculated
     W = np.load(settings.filename_weights)
+    pdf = preimage.posterior_embedding_image(W, X, X_s, sigma_x)
+    P = None
+    if normed_weights is False:
+        P = np.load(settings.filename_preimage)
+        pdf2 = preimage.posterior_embedding_image(P, X, X_s, sigma_x)
 
     #And plot...
-    pdf = preimage.posterior_embedding_image(W, X, X_s, sigma_x)
     fig = pl.figure()
-    axes = fig.add_subplot(111)
-    axes.set_title('PDF estimate')
+    if normed_weights is False:
+        axes = fig.add_subplot(121)
+    else:
+        axes = fig.add_subplot(111)
+    axes.set_title('raw estimate')
     axes.imshow(pdf.T, origin='lower', extent=(ysmin, ysmax, xsmin, xsmax))
     axes.scatter(Y, X, c='y')
+    if normed_weights is False:
+        axes = fig.add_subplot(122)
+        axes.set_title('Preimage estimate')
+        axes.imshow(pdf2.T, origin='lower', extent=(ysmin, ysmax, xsmin, xsmax))
+        axes.scatter(Y, X, c='y')
     pl.show()
 
 if __name__ == "__main__":

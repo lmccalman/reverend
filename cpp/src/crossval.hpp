@@ -120,7 +120,7 @@ template <class T>
 struct KFoldCVCost : NloptCost
 {
   public:
-    KFoldCVCost(uint k, const TrainingData& data)
+    KFoldCVCost(uint k, const TrainingData& data, bool normedWeights)
     {
       n_ = data.x.rows();
       k_ = k;
@@ -129,7 +129,7 @@ struct KFoldCVCost : NloptCost
       //initialise cost functions
       for (uint i=0;i<k;i++)
       {
-        rawCostFunctions_.push_back(T(trainingFolds_[i], testingFolds_[i])); 
+        rawCostFunctions_.push_back(T(trainingFolds_[i], testingFolds_[i], normedWeights)); 
       } 
 
     };
@@ -150,7 +150,51 @@ struct KFoldCVCost : NloptCost
       std::cout << " ] cost:" << totalCost << std::endl;
       return totalCost;
     };
-  private:
+  protected:
+    std::vector<T> rawCostFunctions_;
+    std::vector<TrainingData> trainingFolds_;
+    std::vector<TestingData> testingFolds_;
+    uint n_;
+    uint k_;
+};
+
+
+//A K-fold cross validating cost function for my nlopt wrapper
+template <class T>
+struct PreimageCVCost : NloptCost
+{
+  public:
+    PreimageCVCost(uint k, const TrainingData& data, double sigma_x, double sigma_y)
+    {
+      n_ = data.x.rows();
+      k_ = k;
+      //initialise k-fold data
+      kFoldData(k, data, trainingFolds_, testingFolds_);
+      //initialise cost functions
+      for (uint i=0;i<k;i++)
+      {
+        rawCostFunctions_.push_back(T(trainingFolds_[i], testingFolds_[i], sigma_x, sigma_y)); 
+      } 
+
+    };
+    double operator()(const std::vector<double>&x, std::vector<double>&grad)
+    {
+      double totalCost = 0.0;
+#pragma omp parallel for reduction(+:totalCost)
+      for (uint i=0;i<k_;i++)
+      {
+        totalCost += rawCostFunctions_[i](x, grad);
+      }
+      totalCost = totalCost / double(n_);
+      std::cout << "[ "; 
+      for (uint i=0;i<x.size();i++)
+      {
+        std::cout << std::setw(10) << x[i] << " ";
+      }
+      std::cout << " ] cost:" << totalCost << std::endl;
+      return totalCost;
+    };
+  protected:
     std::vector<T> rawCostFunctions_;
     std::vector<TrainingData> trainingFolds_;
     std::vector<TestingData> testingFolds_;

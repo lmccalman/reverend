@@ -17,6 +17,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include "kbr.hpp"
+#include "preimage.hpp"
 
 
 double logGaussianMixture(const Eigen::VectorXd& point,
@@ -42,10 +43,11 @@ struct Cost
 struct MyCost:Cost
 {
   public:
-    MyCost(const TrainingData& train, const TestingData& test)
+    MyCost(const TrainingData& train, const TestingData& test, bool normedWeights)
       : Cost(train, test), 
-      regressor_(train.x.rows(), train.u.rows()),
-      weights_(test.ys.rows(), train.x.rows())
+      regressor_(train.x.rows(), train.u.rows(), normedWeights),
+      weights_(test.ys.rows(), train.x.rows()),
+      normedWeights_(normedWeights)
   {
   }; 
 
@@ -73,6 +75,7 @@ struct MyCost:Cost
   private: 
     Regressor regressor_;
     Eigen::MatrixXd weights_;
+    bool normedWeights_;
 };
 
 
@@ -112,3 +115,56 @@ double logGaussianMixture(const Eigen::VectorXd& point,
   double result =  log(std::max(sumAdjProb,1e-200)) + maxPower + logScaleFactor;
   return result;
 }
+
+struct PreimageCost:Cost
+{
+  public:
+    PreimageCost(const TrainingData& train, const TestingData& test,
+        double sigma_x,
+        double sigma_y)
+      : Cost(train, test), 
+      regressor_(train.x.rows(), train.u.rows(), false),
+      weights_(test.ys.rows(), train.x.rows()),
+      preimageWeights_(test.ys.rows(), train.x.rows()),
+      g_xx_(train.x.rows(), train.x.rows()),
+      sigma_x_(sigma_x)
+    {
+      Kernel kx = boost::bind(rbfKernel, _1, _2, sigma_x);
+      Kernel ky = boost::bind(rbfKernel, _1, _2, sigma_y);
+      regressor_(trainingData_, kx, ky, testingData_.ys, weights_);
+      computeGramMatrix(train.x, train.x, kx, g_xx_);
+    }; 
+
+    double operator()(const std::vector<double>&x, std::vector<double>&grad)
+    {
+      uint n = trainingData_.x.rows();
+      double preimage_reg = x[0];
+      uint dim = trainingData_.x.cols();
+      Eigen::VectorXd coeff_i(n);
+      uint testPoints = testingData_.xs.rows();
+      for (int i=0; i<testPoints; i++)
+      {
+        coeff_i = Eigen::VectorXd::Ones(n) * (1.0/double(n));
+        positiveNormedCoeffs(weights_.row(i), g_xx_, dim, preimage_reg, coeff_i);
+        preimageWeights_.row(i) = coeff_i;
+      }
+      
+      double totalCost = 0.0;
+      for (int i=0;i<testPoints;i++)
+      {
+        totalCost += logGaussianMixture(testingData_.xs.row(i),
+            trainingData_.x,
+            preimageWeights_.row(i),
+            sigma_x_);
+      }
+      totalCost *= -1; // minimize this maximizes probability
+      return totalCost;
+    };
+
+  private: 
+    Regressor regressor_;
+    Eigen::MatrixXd weights_;
+    Eigen::MatrixXd preimageWeights_;
+    Eigen::MatrixXd g_xx_;
+    double sigma_x_;
+};

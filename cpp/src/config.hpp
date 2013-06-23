@@ -28,14 +28,20 @@ struct Settings
   std::string filename_xs;
   std::string filename_u;
   std::string filename_weights;
+  std::string filename_preimage;
   double sigma_x;
   double sigma_x_min;
   double sigma_x_max;
   double sigma_y;
   double sigma_y_min;
   double sigma_y_max;
-  double wall_time;
+  double walltime;
+  double preimage_reg;
+  double preimage_reg_min;
+  double preimage_reg_max;
+  double preimage_walltime;
   uint folds;
+  bool normed_weights;
 };
 
 Settings getSettings(const std::string& filename)
@@ -49,13 +55,19 @@ Settings getSettings(const std::string& filename)
   s.filename_xs = pt.get<std::string>("Input.filename_xs"); 
   s.filename_ys = pt.get<std::string>("Input.filename_ys"); 
   s.filename_weights = pt.get<std::string>("Output.filename_weights"); 
+  s.filename_preimage = pt.get<std::string>("Output.filename_preimage"); 
   s.sigma_x = pt.get<double>("Kernel.sigma_x"); 
   s.sigma_x_min = pt.get<double>("Kernel.sigma_x_min"); 
   s.sigma_x_max = pt.get<double>("Kernel.sigma_x_max"); 
   s.sigma_y = pt.get<double>("Kernel.sigma_y");
   s.sigma_y_min = pt.get<double>("Kernel.sigma_y_min");
   s.sigma_y_max = pt.get<double>("Kernel.sigma_y_max");
-  s.wall_time = pt.get<double>("Training.wall_time");
+  s.walltime = pt.get<double>("Training.walltime");
+  s.preimage_walltime = pt.get<double>("Training.preimage_walltime");
   s.folds = pt.get<uint>("Training.folds");
+  s.preimage_reg = pt.get<double>("Preimage.preimage_reg");
+  s.preimage_reg_min = pt.get<double>("Preimage.preimage_reg_min");
+  s.preimage_reg_max = pt.get<double>("Preimage.preimage_reg_max");
+  s.normed_weights = pt.get<bool>("Preimage.normed_weights");
   return s;
 }

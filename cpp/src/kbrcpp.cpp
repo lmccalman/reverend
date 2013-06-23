@@ -25,6 +25,7 @@
 #include "crossval.hpp"
 #include "train.hpp"
 #include "costfuncs.hpp"
+#include "preimage.hpp"
 
 int main(int argc, char** argv)
 {
@@ -55,10 +56,13 @@ int main(int argc, char** argv)
 
   Eigen::MatrixXd weights(s,n);
   TrainingData data(u, lambda, x, y);
+  
+  //important settings for the regressor
+  bool normedWeights = settings.normed_weights;
  
   //lets try some training 
   uint folds = settings.folds;
-  KFoldCVCost<MyCost> costfunc(folds, data);
+  KFoldCVCost<MyCost> costfunc(folds, data, normedWeights);
   std::vector<double> thetaMin(2);
   std::vector<double> thetaMax(2);
   std::vector<double> theta0(2);
@@ -68,7 +72,7 @@ int main(int argc, char** argv)
   thetaMin[1] = settings.sigma_y_min;
   thetaMax[0] = settings.sigma_x_max;
   thetaMax[1] = settings.sigma_y_max;
-  double wallTime = settings.wall_time;
+  double wallTime = settings.walltime;
   auto thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
   
   //Initialise from params
@@ -77,13 +81,44 @@ int main(int argc, char** argv)
   Kernel kx = boost::bind(rbfKernel, _1, _2, sigma_x);
   Kernel ky = boost::bind(rbfKernel, _1, _2, sigma_y);
 
-  Regressor r(n, m);
+  Regressor r(n, m, normedWeights);
   r(data, kx, ky, ys, weights);
-  
+
   //write out the results 
   writeNPY(weights, settings.filename_weights);
   std::cout << "kbrcpp inference complete."<< std::endl;
-  
+
+  if (!normedWeights)
+  {
+    //preimage training
+    PreimageCVCost<PreimageCost> pmcostfunc(folds, data, sigma_x, sigma_y);
+    std::vector<double> thetaPMin(1);
+    std::vector<double> thetaPMax(1);
+    std::vector<double> thetaP0(1);
+    thetaP0[0] = settings.preimage_reg;//1e-6;
+    thetaPMin[0] = settings.preimage_reg_min;//1e-10;
+    thetaPMax[0] = settings.preimage_reg_max;//1.0e1;
+    double preimageWalltime = settings.preimage_walltime; // 120;
+    auto thetaPBest = globalOptimum(pmcostfunc, thetaPMin, thetaPMax, thetaP0,
+                                    preimageWalltime);
+
+    //now compute some preimages
+    double preimage_reg = thetaPBest[0];
+    Eigen::MatrixXd preimageWeights(s,n);
+    Eigen::MatrixXd g_xx(n,n); 
+    computeGramMatrix(x, x, kx, g_xx);
+    uint dim = x.cols();
+    Eigen::VectorXd coeff_i(n);
+    Eigen::MatrixXd regularisedGxx(n,n);
+    for (int i=0; i<s; i++)
+    {
+      coeff_i = Eigen::VectorXd::Ones(n) * (1.0/double(n));
+      positiveNormedCoeffs(weights.row(i), g_xx, dim, preimage_reg, coeff_i);
+      preimageWeights.row(i) = coeff_i;
+    }
+    //and write out the preimage results
+    writeNPY(preimageWeights, settings.filename_preimage);
+  }
   return 0;
 }
 

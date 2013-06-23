@@ -1,4 +1,4 @@
 Reverend is written by Lachlan McCalman.
 
 However, it relies on help from some fantastic libraries including Boost,
-Eigen, Nlopt, Numpy/Scipy and Matplotlib.
+Eigen, Nlopt, uQuadProg, Numpy/Scipy and Matplotlib.

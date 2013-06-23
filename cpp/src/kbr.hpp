@@ -28,8 +28,7 @@
 class Regressor
 {
   public:
-    Regressor(uint trainingLength, uint priorLength);
-        
+    Regressor(uint trainingLength, uint priorLength, bool normedWeights);
     void operator()(const TrainingData& data, 
                const Kernel& kx,
                const Kernel& ky, 
@@ -39,7 +38,7 @@ class Regressor
   private:
 
     //Settings
-    bool isPositiveNormed_ = true;
+    bool isPositiveNormed_;
  
     //Useful numbers
     uint n_; // number of training points
@@ -90,7 +89,7 @@ void computeKernelVector(const Eigen::MatrixXd& x,
   }
 }
 
-Regressor::Regressor(uint trainLength, uint testLength)
+Regressor::Regressor(uint trainLength, uint testLength, bool normedWeights)
   : g_xx_(trainLength,trainLength),
   g_xu_(trainLength,testLength),
   g_yy_(trainLength,trainLength),
@@ -101,7 +100,8 @@ Regressor::Regressor(uint trainLength, uint testLength)
   r_xy_(trainLength,trainLength),
   chol_g_xx_(trainLength,trainLength,1),
   chol_beta_g_yy_(trainLength,trainLength,trainLength),
-  w_(trainLength){}
+  w_(trainLength),
+  isPositiveNormed_(normedWeights){}
 
 void Regressor::operator()(const TrainingData& data, 
                           const Kernel& kx,
