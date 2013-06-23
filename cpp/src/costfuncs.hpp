@@ -65,7 +65,9 @@ struct MyCost:Cost
                                         weights_.row(i),
                                         sigma_x);
       }
+      totalCost *= -1; // minimize this maximizes probability
       return totalCost;
+
     };
   
   private: 
@@ -86,7 +88,7 @@ double logGaussianMixture(const Eigen::VectorXd& point,
   double logScaleFactor = -1.0*log(sigma*sqrt(2.0*M_PI));
   
   //find the min exp coeff
-  double maxPower = -1e200;
+  double maxPower = -1e200 // ie infinity;
   for (uint i=0; i<numberOfMeans; i++)
   {
     double deltaNormSquared = (point - means.row(i)).squaredNorm();
@@ -94,7 +96,7 @@ double logGaussianMixture(const Eigen::VectorXd& point,
     maxPower = std::max(maxPower, expCoeff);
   }
   //now compute everything
-  double sumAdjProb = 1e-100; 
+  double sumAdjProb = 0.0; 
   for (uint i=0; i<numberOfMeans; i++)
   {
     double alpha = coeffs[i];
@@ -104,6 +106,8 @@ double logGaussianMixture(const Eigen::VectorXd& point,
     double adjProbs = alpha*exp(adjExpCoeff);
     sumAdjProb += adjProbs;
   }
-  double result =  log(sumAdjProb) + maxPower + logScaleFactor;
+  // this means that if my sumAdjProb is zero or negative, things don't
+  // actually break I just get a very low result
+  double result =  log(std::max(sumAdjProb,1e-200)) + maxPower + logScaleFactor;
   return result;
 }
