@@ -18,6 +18,7 @@
 #include <string>
 #include <stdlib.h>
 #include <time.h>
+#include <math.h>
 
 #define EIGEN_DEFAULT_TO_ROW_MAJOR
 #include "io.hpp"
@@ -95,9 +96,9 @@ int main(int argc, char** argv)
     std::vector<double> thetaPMin(1);
     std::vector<double> thetaPMax(1);
     std::vector<double> thetaP0(1);
-    thetaP0[0] = settings.preimage_reg;//1e-6;
-    thetaPMin[0] = settings.preimage_reg_min;//1e-10;
-    thetaPMax[0] = settings.preimage_reg_max;//1.0e1;
+    thetaP0[0] = log(settings.preimage_reg);//1e-6;
+    thetaPMin[0] = log(settings.preimage_reg_min);//1e-10;
+    thetaPMax[0] = log(settings.preimage_reg_max);//1.0e1;
     double preimageWalltime = settings.preimage_walltime; // 120;
     auto thetaPBest = globalOptimum(pmcostfunc, thetaPMin, thetaPMax, thetaP0,
                                     preimageWalltime);

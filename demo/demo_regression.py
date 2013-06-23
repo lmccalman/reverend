@@ -48,11 +48,11 @@ sigma_y_max = 0.5
 preimage_reg = 1e-6
 preimage_reg_min = 1e-10
 preimage_reg_max = 1e1
-normed_weights = True
+normed_weights = False
 
 #Some other settings
-walltime = 10.0
-preimage_walltime = 10.0
+walltime = 120.0
+preimage_walltime = 120.0
 folds = 5
 
 def main():

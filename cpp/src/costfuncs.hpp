@@ -138,7 +138,7 @@ struct PreimageCost:Cost
     double operator()(const std::vector<double>&x, std::vector<double>&grad)
     {
       uint n = trainingData_.x.rows();
-      double preimage_reg = x[0];
+      double preimage_reg = exp(x[0]);
       uint dim = trainingData_.x.cols();
       Eigen::VectorXd coeff_i(n);
       uint testPoints = testingData_.xs.rows();
