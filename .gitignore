@@ -11,3 +11,16 @@
 *.lai
 *.la
 *.a
+
+#Cmake stuff
+CMakeFiles
+CMakeCache.txt
+Makefile
+*.cmake
+*.a
+*.so
+*.npy
+tags
+*.pyc
+*.ini
+kbrcpp
