@@ -33,8 +33,8 @@ from reverend import preimage
 from reverend import kbrcpp
 
 #evaluation image size
-xssize = 300
-yssize = 300
+xssize = 800
+yssize = 800
 
 #some training parameters for kernel width
 sigma_x_min = 0.02
