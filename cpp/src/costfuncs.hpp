@@ -66,6 +66,11 @@ struct MyCost:Cost
                                         trainingData_.x,
                                         weights_.row(i),
                                         sigma_x);
+        
+        // totalCost += hilbertSpaceDistance(testingData_.xs.row(i),
+                                        // trainingData_.x,
+                                        // weights_.row(i),
+                                        // sigma_x);
       }
       totalCost *= -1; // minimize this maximizes probability
       return totalCost;
@@ -77,6 +82,48 @@ struct MyCost:Cost
     Eigen::MatrixXd weights_;
     bool normedWeights_;
 };
+
+struct HilbertCost:Cost
+{
+  public:
+    HilbertCost(const TrainingData& train, const TestingData& test, bool normedWeights)
+      : Cost(train, test), 
+      regressor_(train.x.rows(), train.u.rows(), normedWeights),
+      weights_(test.ys.rows(), train.x.rows()),
+      normedWeights_(normedWeights)
+  {
+  }; 
+
+    double operator()(const std::vector<double>&x, std::vector<double>&grad)
+    {
+      double sigma_x = x[0];
+      double sigma_y = x[1];
+      Kernel kx = boost::bind(rbfKernel, _1, _2, sigma_x);
+      Kernel ky = boost::bind(rbfKernel, _1, _2, sigma_y);
+      regressor_(trainingData_, kx, ky, testingData_.ys, weights_);
+      uint testPoints = testingData_.xs.rows();
+      uint n = trainingData_.x.rows();
+      Eigen::VectorXd pointEmbedding(n);
+      Eigen::MatrixXd g_xx(n,n);
+      computeGramMatrix(trainingData_.x, trainingData_.x, kx, g_xx);
+      double totalCost = 0.0;
+      for (int i=0;i<testPoints;i++)
+      {
+        computeKernelVector(trainingData_.x, testingData_.xs.row(i), kx, pointEmbedding);
+        Eigen::VectorXd res(1);
+        res = weights_.row(i).transpose() * g_xx * pointEmbedding;
+        totalCost += res(0);
+      }
+      return totalCost;
+      std::cout << "cost:" << totalCost << std::endl;
+    };
+
+  private: 
+    Regressor regressor_;
+    Eigen::MatrixXd weights_;
+    bool normedWeights_;
+};
+
 
 
 double logGaussianMixture(const Eigen::VectorXd& point,
