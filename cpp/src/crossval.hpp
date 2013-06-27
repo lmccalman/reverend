@@ -120,7 +120,7 @@ template <class T>
 struct KFoldCVCost : NloptCost
 {
   public:
-    KFoldCVCost(uint k, const TrainingData& data, bool normedWeights)
+    KFoldCVCost(uint k, const TrainingData& data, const Settings& settings)
     {
       n_ = data.x.rows();
       k_ = k;
@@ -129,14 +129,14 @@ struct KFoldCVCost : NloptCost
       //initialise cost functions
       for (uint i=0;i<k;i++)
       {
-        rawCostFunctions_.push_back(T(trainingFolds_[i], testingFolds_[i], normedWeights)); 
+        rawCostFunctions_.push_back(T(trainingFolds_[i], testingFolds_[i], settings)); 
       } 
 
     };
     double operator()(const std::vector<double>&x, std::vector<double>&grad)
     {
       double totalCost = 0.0;
-      #pragma omp parallel for reduction(+:totalCost)
+      //#pragma omp parallel for reduction(+:totalCost)
       for (uint i=0;i<k_;i++)
       {
         totalCost += rawCostFunctions_[i](x, grad);
@@ -164,7 +164,8 @@ template <class T>
 struct PreimageCVCost : NloptCost
 {
   public:
-    PreimageCVCost(uint k, const TrainingData& data, double sigma_x, double sigma_y)
+    PreimageCVCost(uint k, const TrainingData& data, double sigma_x, double sigma_y,
+        const Settings& settings)
     {
       n_ = data.x.rows();
       k_ = k;
@@ -173,7 +174,7 @@ struct PreimageCVCost : NloptCost
       //initialise cost functions
       for (uint i=0;i<k;i++)
       {
-        rawCostFunctions_.push_back(T(trainingFolds_[i], testingFolds_[i], sigma_x, sigma_y)); 
+        rawCostFunctions_.push_back(T(trainingFolds_[i], testingFolds_[i], sigma_x, sigma_y, settings)); 
       } 
 
     };

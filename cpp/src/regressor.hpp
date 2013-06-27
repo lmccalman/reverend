@@ -28,7 +28,7 @@
 class Regressor
 {
   public:
-    Regressor(uint trainingLength, uint priorLength, bool normedWeights);
+    Regressor(uint trainingLength, uint priorLength, const Settings& settings);
     void operator()(const TrainingData& data, 
                const Kernel& kx,
                const Kernel& ky, 
@@ -38,7 +38,7 @@ class Regressor
   private:
 
     //Settings
-    bool isPositiveNormed_;
+    const Settings& settings_;
  
     //Useful numbers
     uint n_; // number of training points
@@ -89,7 +89,7 @@ void computeKernelVector(const Eigen::MatrixXd& x,
   }
 }
 
-Regressor::Regressor(uint trainLength, uint testLength, bool normedWeights)
+Regressor::Regressor(uint trainLength, uint testLength, const Settings& settings)
   : g_xx_(trainLength,trainLength),
   g_xu_(trainLength,testLength),
   g_yy_(trainLength,trainLength),
@@ -101,7 +101,7 @@ Regressor::Regressor(uint trainLength, uint testLength, bool normedWeights)
   chol_g_xx_(trainLength,trainLength,1),
   chol_beta_g_yy_(trainLength,trainLength,trainLength),
   w_(trainLength),
-  isPositiveNormed_(normedWeights){}
+  settings_(settings){}
 
 void Regressor::operator()(const TrainingData& data, 
                           const Kernel& kx,
@@ -124,7 +124,7 @@ void Regressor::operator()(const TrainingData& data,
   //get jitchol of gram matrix
   chol_g_xx_.solve(g_xx_, mu_pi_, beta_);
   
-  if (isPositiveNormed_)
+  if (settings_.normed_weights)
   {
     beta_ = beta_.cwiseMax(0.0);
     beta_ = beta_ / beta_.sum();
@@ -149,7 +149,7 @@ void Regressor::operator()(const TrainingData& data,
     auto yi = ys.row(i);
     computeKernelVector(y, yi, ky, w_);
     w_ = r_xy_ * w_;
-    if (isPositiveNormed_)
+    if (settings_.normed_weights)
     {
       w_ = w_.cwiseMax(0.0);
       w_ = w_ / w_.sum();

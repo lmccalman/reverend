@@ -58,12 +58,9 @@ int main(int argc, char** argv)
   Eigen::MatrixXd weights(s,n);
   TrainingData data(u, lambda, x, y);
   
-  //important settings for the regressor
-  bool normedWeights = settings.normed_weights;
- 
   //lets try some training 
   uint folds = settings.folds;
-  KFoldCVCost<MyCost> costfunc(folds, data, normedWeights);
+  KFoldCVCost< LogPCost<Regressor> > costfunc(folds, data, settings);
   std::vector<double> thetaMin(2);
   std::vector<double> thetaMax(2);
   std::vector<double> theta0(2);
@@ -82,17 +79,17 @@ int main(int argc, char** argv)
   Kernel kx = boost::bind(rbfKernel, _1, _2, sigma_x);
   Kernel ky = boost::bind(rbfKernel, _1, _2, sigma_y);
 
-  Regressor r(n, m, normedWeights);
+  Regressor r(n, m, settings);
   r(data, kx, ky, ys, weights);
 
   //write out the results 
   writeNPY(weights, settings.filename_weights);
   std::cout << "kbrcpp inference complete."<< std::endl;
 
-  if (!normedWeights)
+  if (!settings.normed_weights)
   {
     //preimage training
-    PreimageCVCost<PreimageCost> pmcostfunc(folds, data, sigma_x, sigma_y);
+    PreimageCVCost<PreimageCost> pmcostfunc(folds, data, sigma_x, sigma_y, settings);
     std::vector<double> thetaPMin(1);
     std::vector<double> thetaPMax(1);
     std::vector<double> thetaP0(1);

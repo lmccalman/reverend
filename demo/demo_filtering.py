@@ -16,7 +16,7 @@
 # along with Reverend.  If not, see <http://www.gnu.org/licenses/>.
 
 ###################################################################
-# Regression Demo -- Motorcycle Dataset
+# Filtering Demo -- Lorenz Attractor
 ###################################################################
 
 #makes life a bit easier
@@ -36,54 +36,71 @@ from reverend import kbrcpp
 xssize = 800
 yssize = 800
 
+# how much data to use
+step_size = 10
+training_size = 500
+
 #some training parameters for kernel width
-sigma_x_min = 0.02
-sigma_x = 0.2
-sigma_x_max = 0.5
+sigma_x_min = 0.05
+sigma_x = 0.155
+sigma_x_max = 0.2
 sigma_y_min = 0.05
-sigma_y = 0.3
-sigma_y_max = 0.5
+sigma_y = 0.0804
+sigma_y_max = 0.1
 
 #for preimage
 preimage_reg = 1e-6
 preimage_reg_min = 1e-10
 preimage_reg_max = 1e1
-normed_weights = False
+normed_weights = True
 
 #Some other settings
-walltime = 120.0
+walltime = 1200.0
 preimage_walltime = 120.0
-folds = 5
+folds = 2
 
 def main():
-    X = np.load('motorcycle_X.npy')
-    Y = np.load('motorcycle_Y.npy')
-            
-    # Make sure we shuffle for the benefit of cross-validation
-    random_indices = np.random.permutation(X.shape[0])
-    X = X[random_indices]
-    Y = Y[random_indices]
-
+    data = np.load('lorenz.npy')
+    #2D only at the moment
+    all_X = data[::step_size,1:]
+    all_Y = data[::step_size,1:] 
+    #add noise
+    all_Y = all_Y + np.random.normal(loc=0.0,scale=0.1,size=all_Y.shape)
+    
+    #create training and testing data
+    X = all_X[0:training_size]
+    X_s = all_X[training_size:]
+    Y = all_Y[0:training_size]
+    Y_s = all_Y[training_size:]
+    
     #whiten and rescale inputs
     X_mean, X_sd = distrib.scale_factors(X)
     Y_mean, Y_sd = distrib.scale_factors(Y)
     X = distrib.scale(X, X_mean, X_sd)
+    X_s = distrib.scale(X_s, X_mean, X_sd)
     Y = distrib.scale(Y, Y_mean, Y_sd)
+    Y_s = distrib.scale(Y_s, X_mean, X_sd)
+
+    # import matplotlib.pyplot as pl
+    # pl.figure()
+    # pl.plot(Y[:,0], Y[:,1])
+    # pl.show()
+    # sys.exit()
 
     # simple prior
     U = X
 
     # We just want to plot the result, not evaluate it
-    xsmin = np.amin(X)
-    xsmax = np.amax(X)
-    ysmin = np.amin(Y)
-    ysmax = np.amax(Y)
-    Y_s = np.linspace(ysmin, ysmax, yssize)[:, np.newaxis]
-    X_s = np.linspace(xsmin, xsmax, xssize)[:, np.newaxis]
+    xsmin = np.amin(X, axis=0)
+    xsmax = np.amax(X, axis=0)
+    ysmin = np.amin(Y, axis=0)
+    ysmax = np.amax(Y, axis=0)
+    # Y_s = np.linspace(ysmin, ysmax, yssize)[:, np.newaxis]
+    # X_s = np.linspace(xsmin, xsmax, xssize)[:, np.newaxis]
 
     #construct settings and data files for kbrcpp
-    filename_config = 'motorcycle_regressor.ini'
-    prefix = 'mc'  # will automatically construct all filenames
+    filename_config = 'lorenz_filter.ini'
+    prefix = 'lz'  # will automatically construct all filenames
     settings = kbrcpp.Settings(prefix)
     #training parameters
     settings.sigma_x = sigma_x
@@ -102,8 +119,8 @@ def main():
     kbrcpp.write_config_file(settings, filename_config)
     kbrcpp.write_data_files(settings, U=U, X=X, Y=Y, X_s=X_s, Y_s=Y_s,)
 
-    #now we're ready to invoke the regressor
-    kbrcpp.run(filename_config, '../cpp/kbrregressor')
+    #now we're ready to invoke the filter
+    kbrcpp.run(filename_config, '../cpp/kbrfilter')
 
     #read in the weights we've just calculated
     W = np.load(settings.filename_weights)
@@ -113,6 +130,7 @@ def main():
         P = np.load(settings.filename_preimage)
         pdf2 = preimage.posterior_embedding_image(P, X, X_s, sigma_x)
 
+    sys.exit()
     #And plot...
     fig = pl.figure()
     if normed_weights is False:

@@ -45,7 +45,8 @@ template <class T>
 void VerifiedCholeskySolver<T>::solve(const Eigen::MatrixXd& A, const Eigen::MatrixXd& b, T& x)
 {
   uint n = A.rows();
-  double maxJitter = 1.0e2;
+  double maxJitter = 1.0e10;
+  double minJitter = 1.0e-10;
   double precision = 1e-8;
   aJit_ = A;
   // start with the jitter from last time
@@ -58,7 +59,7 @@ void VerifiedCholeskySolver<T>::solve(const Eigen::MatrixXd& A, const Eigen::Mat
   bool smallestFound = false;
   if (solved)
   {
-    while (!smallestFound)
+    while (!smallestFound && (jitter_ > minJitter))
     {
       //decrease the jitter
       aJit_ -= Eigen::MatrixXd::Identity(n,n)*jitter_;
@@ -91,6 +92,7 @@ void VerifiedCholeskySolver<T>::solve(const Eigen::MatrixXd& A, const Eigen::Mat
     if (!solved)
     {
       std::cout << "WARNING: max jitter reached" << std::endl;
+      jitter_ /=2.0;
     }
   }
 }

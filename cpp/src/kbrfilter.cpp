@@ -55,16 +55,12 @@ int main(int argc, char** argv)
   Eigen::VectorXd lambda = Eigen::VectorXd::Ones(m);
   lambda = lambda / double(m);
 
-  Eigen::MatrixXd weights(s,n);
+  Eigen::MatrixXd weights(s,n-1);
   TrainingData data(u, lambda, x, y);
   
-  //important settings for the filter
-  FilterSettings filterSettings;
-  filterSettings.normedWeights = settings.normed_weights;
- 
   //lets try some training 
   uint folds = settings.folds;
-  KFoldCVCost<FilterCost> costfunc(folds, data, normedWeights);
+  KFoldCVCost< LogPFilterCost<Filter> > costfunc(folds, data, settings);
   std::vector<double> thetaMin(2);
   std::vector<double> thetaMax(2);
   std::vector<double> theta0(2);
@@ -83,17 +79,17 @@ int main(int argc, char** argv)
   Kernel kx = boost::bind(rbfKernel, _1, _2, sigma_x);
   Kernel ky = boost::bind(rbfKernel, _1, _2, sigma_y);
 
-  Filter r(n, m, normedWeights, filterSettings);
+  Filter r(n, m, settings);
   r(data, kx, ky, ys, weights);
 
   //write out the results 
   writeNPY(weights, settings.filename_weights);
   std::cout << "kbrfilter inference complete."<< std::endl;
 
-  if (!normedWeights)
+  if (!settings.normed_weights)
   {
     //preimage training
-    PreimageCVCost<PreimageCost> pmcostfunc(folds, data, sigma_x, sigma_y);
+    PreimageCVCost<PreimageCost> pmcostfunc(folds, data, sigma_x, sigma_y, settings);
     std::vector<double> thetaPMin(1);
     std::vector<double> thetaPMax(1);
     std::vector<double> thetaP0(1);

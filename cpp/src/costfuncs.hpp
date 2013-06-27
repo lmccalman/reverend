@@ -1,3 +1,4 @@
+#pragma once
 // Reverend -- Practical Bayesian Inference with Kernel Embeddings
 // Copyright (C) 2013 Lachlan McCalman
 // lachlan@mccalman.info
@@ -16,8 +17,10 @@
 // along with Reverend.  If not, see <http://www.gnu.org/licenses/>.
 #define _USE_MATH_DEFINES
 #include <math.h>
-#include "kbr.hpp"
+#include "regressor.hpp"
+#include "filter.hpp"
 #include "preimage.hpp"
+#include "config.hpp"
 
 
 double logGaussianMixture(const Eigen::VectorXd& point,
@@ -40,14 +43,14 @@ struct Cost
 };
 
 //This is my particular 'Raw' cost function
-struct MyCost:Cost
+template <class T>
+class LogPCost:Cost
 {
   public:
-    MyCost(const TrainingData& train, const TestingData& test, bool normedWeights)
+   LogPCost(const TrainingData& train, const TestingData& test, const Settings& settings)
       : Cost(train, test), 
-      regressor_(train.x.rows(), train.u.rows(), normedWeights),
-      weights_(test.ys.rows(), train.x.rows()),
-      normedWeights_(normedWeights)
+      algo_(train.x.rows(), train.u.rows(), settings),
+      weights_(test.ys.rows(), train.x.rows())
   {
   }; 
 
@@ -57,7 +60,7 @@ struct MyCost:Cost
       double sigma_y = x[1];
       Kernel kx = boost::bind(rbfKernel, _1, _2, sigma_x);
       Kernel ky = boost::bind(rbfKernel, _1, _2, sigma_y);
-      regressor_(trainingData_, kx, ky, testingData_.ys, weights_);
+      algo_(trainingData_, kx, ky, testingData_.ys, weights_);
       uint testPoints = testingData_.xs.rows();
       double totalCost = 0.0;
       for (int i=0;i<testPoints;i++)
@@ -66,11 +69,6 @@ struct MyCost:Cost
                                         trainingData_.x,
                                         weights_.row(i),
                                         sigma_x);
-        
-        // totalCost += hilbertSpaceDistance(testingData_.xs.row(i),
-                                        // trainingData_.x,
-                                        // weights_.row(i),
-                                        // sigma_x);
       }
       totalCost *= -1; // minimize this maximizes probability
       return totalCost;
@@ -78,19 +76,18 @@ struct MyCost:Cost
     };
   
   private: 
-    Regressor regressor_;
+    T algo_;
     Eigen::MatrixXd weights_;
-    bool normedWeights_;
 };
 
-struct HilbertCost:Cost
+template <class T>
+class LogPFilterCost:Cost
 {
   public:
-    HilbertCost(const TrainingData& train, const TestingData& test, bool normedWeights)
+    LogPFilterCost(const TrainingData& train, const TestingData& test, const Settings& settings)
       : Cost(train, test), 
-      regressor_(train.x.rows(), train.u.rows(), normedWeights),
-      weights_(test.ys.rows(), train.x.rows()),
-      normedWeights_(normedWeights)
+      algo_(train.x.rows(), train.u.rows(), settings),
+      weights_(test.ys.rows(), train.x.rows()-1)
   {
   }; 
 
@@ -100,7 +97,44 @@ struct HilbertCost:Cost
       double sigma_y = x[1];
       Kernel kx = boost::bind(rbfKernel, _1, _2, sigma_x);
       Kernel ky = boost::bind(rbfKernel, _1, _2, sigma_y);
-      regressor_(trainingData_, kx, ky, testingData_.ys, weights_);
+      algo_(trainingData_, kx, ky, testingData_.ys, weights_);
+      uint testPoints = testingData_.xs.rows();
+      double totalCost = 0.0;
+      for (int i=0;i<testPoints;i++)
+      {
+        totalCost += logGaussianMixture(testingData_.xs.row(i),
+            trainingData_.x,
+            weights_.row(i),
+            sigma_x);
+      }
+      totalCost *= -1; // minimize this maximizes probability
+      return totalCost;
+
+    };
+
+  private: 
+    T algo_;
+    Eigen::MatrixXd weights_;
+};
+
+template <class T>
+struct HilbertCost:Cost
+{
+  public:
+    HilbertCost(const TrainingData& train, const TestingData& test, const Settings& settings)
+      : Cost(train, test), 
+      algo_(train.x.rows(), train.u.rows(), settings),
+      weights_(test.ys.rows(), train.x.rows())
+  {
+  }; 
+
+    double operator()(const std::vector<double>&x, std::vector<double>&grad)
+    {
+      double sigma_x = x[0];
+      double sigma_y = x[1];
+      Kernel kx = boost::bind(rbfKernel, _1, _2, sigma_x);
+      Kernel ky = boost::bind(rbfKernel, _1, _2, sigma_y);
+      algo_(trainingData_, kx, ky, testingData_.ys, weights_);
       uint testPoints = testingData_.xs.rows();
       uint n = trainingData_.x.rows();
       Eigen::VectorXd pointEmbedding(n);
@@ -119,9 +153,8 @@ struct HilbertCost:Cost
     };
 
   private: 
-    Regressor regressor_;
+    T algo_;
     Eigen::MatrixXd weights_;
-    bool normedWeights_;
 };
 
 
@@ -168,9 +201,9 @@ struct PreimageCost:Cost
   public:
     PreimageCost(const TrainingData& train, const TestingData& test,
         double sigma_x,
-        double sigma_y)
+        double sigma_y, const Settings& settings)
       : Cost(train, test), 
-      regressor_(train.x.rows(), train.u.rows(), false),
+      regressor_(train.x.rows(), train.u.rows(), settings),
       weights_(test.ys.rows(), train.x.rows()),
       preimageWeights_(test.ys.rows(), train.x.rows()),
       g_xx_(train.x.rows(), train.x.rows()),
