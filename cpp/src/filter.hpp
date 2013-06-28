@@ -127,32 +127,44 @@ void Filter::operator()(const TrainingData& data,
     {
       beta_ = beta_.cwiseMax(0.0);
       beta_ = beta_ / beta_.sum();
-      beta_diag_ = beta_.asDiagonal();
-      beta_g_yy_ = beta_diag_ * g_yy_;
-      chol_beta_g_yy_.solve(beta_g_yy_, beta_diag_, r_xy_);
+    }
+    
+    if (i%settings_.observation_period == 0) 
+    {
+      if (settings_.normed_weights)
+      {
+        beta_diag_ = beta_.asDiagonal();
+        beta_g_yy_ = beta_diag_ * g_yy_;
+        chol_beta_g_yy_.solve(beta_g_yy_, beta_diag_, r_xy_);
+      }
+      else
+      {
+        double scaleFactor = beta_.cwiseAbs().maxCoeff();
+        beta_ /= scaleFactor;
+        beta_ = beta_.cwiseAbs2();
+        beta_diag_ = beta_.asDiagonal();
+        Eigen::MatrixXd b = g_yy_ * beta_diag_;
+        Eigen::MatrixXd A = b * g_yy_;
+        chol_beta_g_yy_.solve(A, b, r_xy_);
+      }
+      //actual inference part 
+      auto yi = ys.row(i);
+      computeKernelVector(y, yi, ky, w_);
+      w_ = r_xy_ * w_;
+      if (settings_.normed_weights)
+      {
+        w_ = w_.cwiseMax(0.0);
+        w_ = w_ / w_.sum();
+      }
+      weights.row(i) = w_;
+      //ensure the current posterior is the next prior
+      mu_pi_ = w_;
     }
     else
     {
-      double scaleFactor = beta_.cwiseAbs().maxCoeff();
-      beta_ /= scaleFactor;
-      beta_ = beta_.cwiseAbs2();
-      beta_diag_ = beta_.asDiagonal();
-      Eigen::MatrixXd b = g_yy_ * beta_diag_;
-      Eigen::MatrixXd A = b * g_yy_;
-      chol_beta_g_yy_.solve(A, b, r_xy_);
+      weights.row(i) = beta_;
+      mu_pi_ = beta_;
     }
-    //actual inference part 
-    auto yi = ys.row(i);
-    computeKernelVector(y, yi, ky, w_);
-    w_ = r_xy_ * w_;
-    if (settings_.normed_weights)
-    {
-      w_ = w_.cwiseMax(0.0);
-      w_ = w_ / w_.sum();
-    }
-    weights.row(i) = w_;
-    //ensure the current posterior is the next prior
-    mu_pi_ = w_;
   }
 }
 

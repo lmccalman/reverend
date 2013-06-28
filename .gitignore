@@ -23,5 +23,6 @@ Makefile
 tags
 *.pyc
 *.ini
-kbrcpp
+kbrfilter
+kbrregressor
 cnpy

@@ -33,20 +33,21 @@ from reverend import preimage
 from reverend import kbrcpp
 
 #evaluation image size
-xssize = 800
-yssize = 800
+xssize = (200, 200)
 
 # how much data to use
 step_size = 10
-training_size = 500
+training_size = 1000
+testing_size = 500
+observation_period = 10
 
 #some training parameters for kernel width
 sigma_x_min = 0.05
-sigma_x = 0.155
-sigma_x_max = 0.2
+sigma_x = 0.494
+sigma_x_max = 0.8
 sigma_y_min = 0.05
-sigma_y = 0.0804
-sigma_y_max = 0.1
+sigma_y = 0.197
+sigma_y_max = 0.8
 
 #for preimage
 preimage_reg = 1e-6
@@ -55,7 +56,7 @@ preimage_reg_max = 1e1
 normed_weights = True
 
 #Some other settings
-walltime = 1200.0
+walltime = 120.0
 preimage_walltime = 120.0
 folds = 2
 
@@ -69,34 +70,25 @@ def main():
     
     #create training and testing data
     X = all_X[0:training_size]
-    X_s = all_X[training_size:]
     Y = all_Y[0:training_size]
-    Y_s = all_Y[training_size:]
+    Y_s = all_Y[training_size:training_size+testing_size]
     
     #whiten and rescale inputs
     X_mean, X_sd = distrib.scale_factors(X)
     Y_mean, Y_sd = distrib.scale_factors(Y)
     X = distrib.scale(X, X_mean, X_sd)
-    X_s = distrib.scale(X_s, X_mean, X_sd)
     Y = distrib.scale(Y, Y_mean, Y_sd)
     Y_s = distrib.scale(Y_s, X_mean, X_sd)
-
-    # import matplotlib.pyplot as pl
-    # pl.figure()
-    # pl.plot(Y[:,0], Y[:,1])
-    # pl.show()
-    # sys.exit()
 
     # simple prior
     U = X
 
     # We just want to plot the result, not evaluate it
-    xsmin = np.amin(X, axis=0)
-    xsmax = np.amax(X, axis=0)
-    ysmin = np.amin(Y, axis=0)
-    ysmax = np.amax(Y, axis=0)
-    # Y_s = np.linspace(ysmin, ysmax, yssize)[:, np.newaxis]
-    # X_s = np.linspace(xsmin, xsmax, xssize)[:, np.newaxis]
+    xsmin = np.amin(X, axis=0) - 3*sigma_x
+    xsmax = np.amax(X, axis=0) + 3*sigma_x
+    X_s = np.mgrid[xsmin[0]:xsmax[0]:xssize[0]*1j,
+                   xsmin[1]:xsmax[1]:xssize[1]*1j]
+    X_s = np.rollaxis(X_s, 0, 3).reshape((-1,2))
 
     #construct settings and data files for kbrcpp
     filename_config = 'lorenz_filter.ini'
@@ -109,6 +101,7 @@ def main():
     settings.sigma_y_min = sigma_y_min
     settings.sigma_x_max = sigma_x_max
     settings.sigma_y_max = sigma_y_max
+    settings.observation_period = observation_period
     settings.preimage_reg = preimage_reg
     settings.preimage_reg_min = preimage_reg_min
     settings.preimage_reg_max = preimage_reg_max
@@ -122,30 +115,20 @@ def main():
     #now we're ready to invoke the filter
     kbrcpp.run(filename_config, '../cpp/kbrfilter')
 
+    #The filter removes a training point to calculate deltas
+    X = X[:-1]
+    Y = Y[:-1]
+    
     #read in the weights we've just calculated
     W = np.load(settings.filename_weights)
     pdf = preimage.posterior_embedding_image(W, X, X_s, sigma_x)
+    pdf = pdf.reshape((testing_size, xssize[0], xssize[1]))
+    np.save('lzPDF.npy', pdf)
     P = None
     if normed_weights is False:
         P = np.load(settings.filename_preimage)
         pdf2 = preimage.posterior_embedding_image(P, X, X_s, sigma_x)
-
-    sys.exit()
-    #And plot...
-    fig = pl.figure()
-    if normed_weights is False:
-        axes = fig.add_subplot(121)
-    else:
-        axes = fig.add_subplot(111)
-    axes.set_title('raw estimate')
-    axes.imshow(pdf.T, origin='lower', extent=(ysmin, ysmax, xsmin, xsmax))
-    axes.scatter(Y, X, c='y')
-    if normed_weights is False:
-        axes = fig.add_subplot(122)
-        axes.set_title('Preimage estimate')
-        axes.imshow(pdf2.T, origin='lower', extent=(ysmin, ysmax, xsmin, xsmax))
-        axes.scatter(Y, X, c='y')
-    pl.show()
+        np.save('lzPDF2.npy', pdf2)
 
 if __name__ == "__main__":
     main()

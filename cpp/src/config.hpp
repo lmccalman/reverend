@@ -41,6 +41,7 @@ struct Settings
   double preimage_reg_max;
   double preimage_walltime;
   uint folds;
+  uint observation_period;
   bool normed_weights;
 };
 
@@ -69,5 +70,6 @@ Settings getSettings(const std::string& filename)
   s.preimage_reg_min = pt.get<double>("Preimage.preimage_reg_min");
   s.preimage_reg_max = pt.get<double>("Preimage.preimage_reg_max");
   s.normed_weights = pt.get<bool>("Preimage.normed_weights");
+  s.observation_period = pt.get<uint>("Algorithm.observation_period");
   return s;
 }

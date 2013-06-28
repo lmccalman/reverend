@@ -34,6 +34,8 @@ class Settings(object):
 
 def write_config_file(settings, filename):
     config = ConfigParser.RawConfigParser()
+    config.add_section('Algorithm')
+    config.set('Algorithm', 'observation_period', settings.observation_period)
     config.add_section('Input')
     config.set('Input', 'filename_x', settings.filename_X)
     config.set('Input', 'filename_y', settings.filename_Y)

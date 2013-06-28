@@ -50,6 +50,7 @@ def MAP_estimate(y_initial, Y, weights, sigma):
 def posterior_embedding_image(weights, Y, Y_s, sigma_y):
     image = np.zeros((weights.shape[0], Y_s.shape[0]))
     for i, w in enumerate(weights):
+        print 'evaluating test', i, 'of', weights.shape[0]
         image[i] = distrib.evaluate_Log_GM(Y_s, Y, sigma_y, w.flatten())
     return np.exp(image)
 
