@@ -54,6 +54,7 @@ normed_weights = False
 walltime = 120.0
 preimage_walltime = 120.0
 folds = 5
+observation_period = 1
 
 def main():
     X = np.load('motorcycle_X.npy')
@@ -99,6 +100,7 @@ def main():
     settings.walltime = walltime
     settings.preimage_walltime = preimage_walltime
     settings.folds = folds
+    settings.observation_period = observation_period
     kbrcpp.write_config_file(settings, filename_config)
     kbrcpp.write_data_files(settings, U=U, X=X, Y=Y, X_s=X_s, Y_s=Y_s,)
 
