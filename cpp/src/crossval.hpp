@@ -19,7 +19,13 @@
 #include <iomanip>
 #include <algorithm>
 #include <vector>
-#include "train.hpp"
+
+//This must be inherited by anything that we want to optimize with NLOpt
+struct NloptCost
+{
+  public:
+    virtual double operator()(const std::vector<double>&x, std::vector<double>&grad) = 0;
+};
 
 void ithFoldTestIndices(uint k, uint i, uint n, uint& lowIndex, uint& highIndex)
 //Indices are INCLUSIVE
@@ -135,52 +141,7 @@ struct KFoldCVCost : NloptCost
     double operator()(const std::vector<double>&x, std::vector<double>&grad)
     {
       double totalCost = 0.0;
-      //#pragma omp parallel for reduction(+:totalCost)
-      for (uint i=0;i<k_;i++)
-      {
-        totalCost += rawCostFunctions_[i](x, grad);
-      }
-      totalCost = totalCost / double(n_);
-      std::cout << "[ "; 
-      for (uint i=0;i<x.size();i++)
-      {
-        std::cout << std::setw(10) << x[i] << " ";
-      }
-      std::cout << " ] cost:" << totalCost << std::endl;
-      return totalCost;
-    };
-  protected:
-    std::vector<T> rawCostFunctions_;
-    std::vector<TrainingData> trainingFolds_;
-    std::vector<TestingData> testingFolds_;
-    uint n_;
-    uint k_;
-};
-
-
-//A K-fold cross validating cost function for my nlopt wrapper
-template <class T>
-struct PreimageCVCost : NloptCost
-{
-  public:
-    PreimageCVCost(uint k, const TrainingData& data, double sigma_x, double sigma_y,
-        const Settings& settings)
-    {
-      n_ = data.x.rows();
-      k_ = k;
-      //initialise k-fold data
-      kFoldData(k, data, trainingFolds_, testingFolds_);
-      //initialise cost functions
-      for (uint i=0;i<k;i++)
-      {
-        rawCostFunctions_.push_back(T(trainingFolds_[i], testingFolds_[i], sigma_x, sigma_y, settings)); 
-      } 
-
-    };
-    double operator()(const std::vector<double>&x, std::vector<double>&grad)
-    {
-      double totalCost = 0.0;
-#pragma omp parallel for reduction(+:totalCost)
+      #pragma omp parallel for reduction(+:totalCost)
       for (uint i=0;i<k_;i++)
       {
         totalCost += rawCostFunctions_[i](x, grad);

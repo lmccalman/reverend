@@ -25,13 +25,14 @@
 #include "kernel.hpp"
 #include "rkhs.hpp"
 
+template <class K>
 class Regressor
 {
   public:
     Regressor(uint trainingLength, uint priorLength, const Settings& settings);
     void operator()(const TrainingData& data, 
-               const Kernel& kx,
-               const Kernel& ky, 
+               const Kernel<K>& kx,
+               const Kernel<K>& ky, 
                const Eigen::MatrixXd& ys,
                Eigen::MatrixXd& weights); 
 
@@ -47,9 +48,6 @@ class Regressor
     uint dim_y_;
 
     //stuff I'm going to compute
-    Eigen::MatrixXd g_xx_;
-    Eigen::MatrixXd g_yy_;
-    Eigen::MatrixXd g_xu_;
     Eigen::VectorXd mu_pi_;
     Eigen::VectorXd beta_;
     Eigen::MatrixXd beta_g_yy_;
@@ -61,48 +59,39 @@ class Regressor
 
 };
 
+template <class K>
+Regressor<K>::Regressor(uint trainLength, uint testLength, const Settings& settings)
+  : beta_g_yy_(trainLength,trainLength),
+    beta_(trainLength),
+    mu_pi_(trainLength),
+    beta_diag_(trainLength, trainLength),
+    r_xy_(trainLength,trainLength),
+    chol_g_xx_(trainLength,trainLength,1),
+    chol_beta_g_yy_(trainLength,trainLength,trainLength),
+    w_(trainLength),
+    settings_(settings){}
 
-Regressor::Regressor(uint trainLength, uint testLength, const Settings& settings)
-  : g_xx_(trainLength,trainLength),
-  g_xu_(trainLength,testLength),
-  g_yy_(trainLength,trainLength),
-  beta_g_yy_(trainLength,trainLength),
-  beta_(trainLength),
-  mu_pi_(trainLength),
-  beta_diag_(trainLength, trainLength),
-  r_xy_(trainLength,trainLength),
-  chol_g_xx_(trainLength,trainLength,1),
-  chol_beta_g_yy_(trainLength,trainLength,trainLength),
-  w_(trainLength),
-  settings_(settings){}
-
-void Regressor::operator()(const TrainingData& data, 
-                          const Kernel& kx,
-                          const Kernel& ky, 
+template <class K>
+void Regressor<K>::operator()(const TrainingData& data, 
+                          const Kernel<K>& kx,
+                          const Kernel<K>& ky, 
                           const Eigen::MatrixXd& ys,
                           Eigen::MatrixXd& weights)
 {
-  const Eigen::MatrixXd& u = data.u;
-  const Eigen::VectorXd& lam = data.lambda;
   const Eigen::MatrixXd& x = data.x;
   const Eigen::MatrixXd& y = data.y;
 
-  //compute gram matrices
-  computeGramMatrix(x, x, kx, g_xx_);
-  computeGramMatrix(x, u, kx, g_xu_);
-  computeGramMatrix(y, y, ky, g_yy_);
-  
   //compute prior embedding
-  mu_pi_ = g_xu_ * lam;
+  kx.embed(data.u, data.lambda, mu_pi_);
   //get jitchol of gram matrix
-  chol_g_xx_.solve(g_xx_, mu_pi_, beta_);
+  chol_g_xx_.solve(kx.gramMatrix(), mu_pi_, beta_);
   
   if (settings_.normed_weights)
   {
     beta_ = beta_.cwiseMax(0.0);
     beta_ = beta_ / beta_.sum();
     beta_diag_ = beta_.asDiagonal();
-    beta_g_yy_ = beta_diag_ * g_yy_;
+    beta_g_yy_ = beta_diag_ * ky.gramMatrix();
     chol_beta_g_yy_.solve(beta_g_yy_, beta_diag_, r_xy_);
   }
   else
@@ -111,8 +100,8 @@ void Regressor::operator()(const TrainingData& data,
     beta_ /= scaleFactor;
     beta_ = beta_.cwiseAbs2();
     beta_diag_ = beta_.asDiagonal();
-    Eigen::MatrixXd b = g_yy_ * beta_diag_;
-    Eigen::MatrixXd A = b * g_yy_;
+    Eigen::MatrixXd b = ky.gramMatrix() * beta_diag_;
+    Eigen::MatrixXd A = b * ky.gramMatrix();
     chol_beta_g_yy_.solve(A, b, r_xy_);
   }
   //now infer
@@ -120,7 +109,7 @@ void Regressor::operator()(const TrainingData& data,
   for (uint i=0; i<s; i++)
   {
     auto yi = ys.row(i);
-    computeKernelVector(y, yi, ky, w_);
+    ky.embed(yi, w_);
     w_ = r_xy_ * w_;
     if (settings_.normed_weights)
     {

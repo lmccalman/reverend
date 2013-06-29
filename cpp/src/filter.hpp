@@ -26,13 +26,14 @@
 #include "rkhs.hpp"
 
 
+template <class K>
 class Filter
 {
   public:
     Filter(uint trainingLength, uint priorLength, const Settings& settings);
     void operator()(const TrainingData& data, 
-               const Kernel& kx,
-               const Kernel& ky, 
+               const Kernel<K>& kx,
+               const Kernel<K>& ky, 
                const Eigen::MatrixXd& ys,
                Eigen::MatrixXd& weights); 
 
@@ -67,7 +68,8 @@ class Filter
 };
 
 
-Filter::Filter(uint trainLength, uint testLength, const Settings& settings)
+template <class K>
+Filter<K>::Filter(uint trainLength, uint testLength, const Settings& settings)
   : g_xx_(trainLength-1,trainLength-1),
   g_xxtp1_(trainLength-1,trainLength-1),
   g_xu_(trainLength-1,testLength),
@@ -85,9 +87,10 @@ Filter::Filter(uint trainLength, uint testLength, const Settings& settings)
   w_(trainLength-1),
   settings_(settings){}
 
-void Filter::operator()(const TrainingData& data, 
-                          const Kernel& kx,
-                          const Kernel& ky, 
+template <class K>
+void Filter<K>::operator()(const TrainingData& data, 
+                          const Kernel<K>& kx,
+                          const Kernel<K>& ky, 
                           const Eigen::MatrixXd& ys,
                           Eigen::MatrixXd& weights)
 {

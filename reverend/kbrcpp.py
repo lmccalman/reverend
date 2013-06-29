@@ -29,7 +29,8 @@ class Settings(object):
             self.filename_Y_s = prefix + 'Y_s.npy'
             self.filename_U = prefix + 'U.npy'
             self.filename_weights = prefix + 'W.npy'
-            self.filename_preimage = prefix + 'P.npy'
+            self.filename_preimage = prefix + 'R.npy'
+            self.filename_posterior = prefix + 'P.npy'
 
 
 def write_config_file(settings, filename):
@@ -52,10 +53,12 @@ def write_config_file(settings, filename):
     config.add_section('Output')
     config.set('Output', 'filename_weights', settings.filename_weights)
     config.set('Output', 'filename_preimage', settings.filename_preimage)
+    config.set('Output', 'filename_posterior', settings.filename_posterior)
     config.add_section('Training')
     config.set('Training', 'walltime', settings.walltime)
     config.set('Training', 'preimage_walltime', settings.preimage_walltime)
     config.set('Training', 'folds', settings.folds)
+    config.set('Training', 'cost_function', settings.cost_function)
     config.add_section('Preimage')
     config.set('Preimage', 'preimage_reg', settings.preimage_reg)
     config.set('Preimage', 'preimage_reg_min', settings.preimage_reg_min)

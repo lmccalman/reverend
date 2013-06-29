@@ -22,9 +22,42 @@
 #include <boost/bind.hpp>
 #include <boost/tokenizer.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/ini_parser.hpp>
 
 #include "cnpy.h"
+#include "data.hpp"
 
+Settings getSettings(const std::string& filename)
+{
+  Settings s;
+  boost::property_tree::ptree pt;
+  boost::property_tree::ini_parser::read_ini(filename, pt);
+  s.filename_u = pt.get<std::string>("Input.filename_u"); 
+  s.filename_x = pt.get<std::string>("Input.filename_x"); 
+  s.filename_y = pt.get<std::string>("Input.filename_y"); 
+  s.filename_xs = pt.get<std::string>("Input.filename_xs"); 
+  s.filename_ys = pt.get<std::string>("Input.filename_ys"); 
+  s.filename_weights = pt.get<std::string>("Output.filename_weights"); 
+  s.filename_preimage = pt.get<std::string>("Output.filename_preimage"); 
+  s.filename_posterior = pt.get<std::string>("Output.filename_posterior"); 
+  s.sigma_x = pt.get<double>("Kernel.sigma_x"); 
+  s.sigma_x_min = pt.get<double>("Kernel.sigma_x_min"); 
+  s.sigma_x_max = pt.get<double>("Kernel.sigma_x_max"); 
+  s.sigma_y = pt.get<double>("Kernel.sigma_y");
+  s.sigma_y_min = pt.get<double>("Kernel.sigma_y_min");
+  s.sigma_y_max = pt.get<double>("Kernel.sigma_y_max");
+  s.walltime = pt.get<double>("Training.walltime");
+  s.preimage_walltime = pt.get<double>("Training.preimage_walltime");
+  s.folds = pt.get<uint>("Training.folds");
+  s.cost_function = pt.get<std::string>("Training.cost_function"); 
+  s.preimage_reg = pt.get<double>("Preimage.preimage_reg");
+  s.preimage_reg_min = pt.get<double>("Preimage.preimage_reg_min");
+  s.preimage_reg_max = pt.get<double>("Preimage.preimage_reg_max");
+  s.normed_weights = pt.get<bool>("Preimage.normed_weights");
+  s.observation_period = pt.get<uint>("Algorithm.observation_period");
+  return s;
+}
 
 Eigen::MatrixXd readCSV(const std::string& filename)
 {
@@ -96,9 +129,33 @@ Eigen::MatrixXd readNPY(const std::string& filename)
   return mat;
 }
 
+TrainingData readTrainingData(const Settings& settings)
+{
+  auto x = readNPY(settings.filename_x);
+  auto y = readNPY(settings.filename_y);
+  Eigen::MatrixXd u = x;
+  uint m = x.rows();
+  if (settings.filename_u != "")
+  {
+    u = readNPY(settings.filename_u);
+    m = u.rows();
+  }
+  //for the moment keep the weights constant
+  Eigen::VectorXd lambda = Eigen::VectorXd::Ones(m);
+  lambda = lambda / double(m);
+  return TrainingData(u, lambda, x, y);
+}
+
+TestingData readTestingData(const Settings& settings)
+{
+  auto xs = readNPY(settings.filename_xs);
+  auto ys = readNPY(settings.filename_ys);
+  return TestingData(xs,ys);
+}
+
 void writeNPY(const Eigen::MatrixXd& matrix, const std::string& filename)
 {
-  const unsigned int shape[] = {matrix.rows(), matrix.cols()};
+  const uint shape[] = {(uint)matrix.rows(),(uint)matrix.cols()};
   const double* data = matrix.data();
   cnpy::npy_save(filename, data, shape, 2, "w");
   // //load it into a new array

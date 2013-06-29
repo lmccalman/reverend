@@ -15,8 +15,35 @@
 // You should have received a copy of the GNU General Public License
 // along with Reverend.  If not, see <http://www.gnu.org/licenses/>.
 #pragma once
-
 #include <Eigen/Core>
+
+struct Settings
+{
+  std::string filename_x;
+  std::string filename_y;
+  std::string filename_ys;
+  std::string filename_xs;
+  std::string filename_u;
+  std::string filename_weights;
+  std::string filename_preimage;
+  std::string filename_posterior;
+  std::string cost_function;
+  double sigma_x;
+  double sigma_x_min;
+  double sigma_x_max;
+  double sigma_y;
+  double sigma_y_min;
+  double sigma_y_max;
+  double walltime;
+  double preimage_reg;
+  double preimage_reg_min;
+  double preimage_reg_max;
+  double preimage_walltime;
+  uint folds;
+  uint observation_period;
+  bool normed_weights;
+};
+
 
 struct TrainingData
 {
