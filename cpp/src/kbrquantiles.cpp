@@ -27,15 +27,15 @@
 #include "train.hpp"
 #include "costfuncs.hpp"
 #include "preimage.hpp"
-#include "filter.hpp"
+#include "cumulative.hpp"
 
 int main(int argc, char** argv)
 {
 
-  std::cout << "kbrfilter initialised." << std::endl;
+  std::cout << "kbrquantiles initialised." << std::endl;
   srand(time(NULL));
   auto settings = getSettings(argv[1]);
-  
+
   auto x = readNPY(settings.filename_x);
   auto y = readNPY(settings.filename_y);
   auto xs = readNPY(settings.filename_xs);
@@ -55,21 +55,24 @@ int main(int argc, char** argv)
   Eigen::VectorXd lambda = Eigen::VectorXd::Ones(m);
   lambda = lambda / double(m);
 
-  Eigen::MatrixXd weights(s,n-1);
+  Eigen::MatrixXd weights(s,n);
   TrainingData data(u, lambda, x, y);
   
   //lets try some training 
   uint folds = settings.folds;
-  KFoldCVCost< LogPCost<Filter> > costfunc(folds, data, settings);
-  std::vector<double> thetaMin(2);
-  std::vector<double> thetaMax(2);
-  std::vector<double> theta0(2);
+  KFoldCVCost< LogPJointCost<Regressor> > costfunc(folds, data, settings);
+  std::vector<double> thetaMin(3);
+  std::vector<double> thetaMax(3);
+  std::vector<double> theta0(3);
   theta0[0] = settings.sigma_x;
   theta0[1] = settings.sigma_y;
+  theta0[2] = settings.preimage_reg;
   thetaMin[0] = settings.sigma_x_min;
   thetaMin[1] = settings.sigma_y_min;
+  thetaMin[2] = settings.preimage_reg_min;
   thetaMax[0] = settings.sigma_x_max;
   thetaMax[1] = settings.sigma_y_max;
+  thetaMax[2] = settings.preimage_reg_max;
   double wallTime = settings.walltime;
   auto thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
   
@@ -79,12 +82,29 @@ int main(int argc, char** argv)
   Kernel kx = boost::bind(rbfKernel, _1, _2, sigma_x);
   Kernel ky = boost::bind(rbfKernel, _1, _2, sigma_y);
 
-  Filter r(n, m, settings);
+  Regressor r(n, m, settings);
   r(data, kx, ky, ys, weights);
+
+  //now compute cumulative estimates
+  Eigen::MatrixXd g_xx(n,n);
+  computeGramMatrix(x, x, kx, g_xx);
+  Eigen::MatrixXd cumulates(s,xs.rows());
+  Eigen::VectorXd w(n); 
+  for (int i=0;i<s;i++)
+  {
+    w = weights.row(i);
+    Cumulative c(w, x, g_xx, sigma_x, settings);
+    for (int j=0;j<xs.rows();j++)
+    {
+      double bullshite = c(xs.row(j));
+      cumulates(i,j) = bullshite;
+    }
+  }
 
   //write out the results 
   writeNPY(weights, settings.filename_weights);
-  std::cout << "kbrfilter inference complete."<< std::endl;
+  writeNPY(cumulates, "cumulates.npy");
+  std::cout << "kbrquantiles inference complete."<< std::endl;
 
   if (!settings.normed_weights)
   {

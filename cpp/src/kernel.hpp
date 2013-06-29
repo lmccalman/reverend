@@ -19,6 +19,32 @@
 #include <Eigen/Core>
 #include <boost/function.hpp>
 
+// class Kernel
+// {
+  // public:
+    // Kernel(const Eigen::MatrixXd& X):
+      // g_xx_(X.rows(),X.rows())
+    // {
+      // uint n = X.rows();
+      // for (int r=0;r<n;r++)
+      // {
+        // for (int c=0;c<n;c++)
+        // {
+          // g_xx_(r,c) = this(X.row(r),X.row(c));
+        // }
+      // }
+    // }
+    // const Eigen::MatrixXd& gramMatrix(){return g_xx_;}
+    // double width(){return width_;}
+    // virtual double approximateHalfSupport() = 0;
+    // virtual operator()(const Eigen::Vector& x1, const Eigen::Vector& x2) = 0;
+
+  // protected:
+    // Eigen::MatrixXd g_xx_;
+// }
+
+
+
 typedef boost::function<double (const Eigen::VectorXd& x,
                                 const Eigen::VectorXd& x_dash)> Kernel;
 

@@ -20,7 +20,6 @@
 #include "regressor.hpp"
 #include "filter.hpp"
 #include "preimage.hpp"
-#include "config.hpp"
 
 
 double logGaussianMixture(const Eigen::VectorXd& point,
@@ -80,14 +79,18 @@ class LogPCost:Cost
     Eigen::MatrixXd weights_;
 };
 
+
 template <class T>
-class LogPFilterCost:Cost
+class LogPJointCost:Cost
 {
   public:
-    LogPFilterCost(const TrainingData& train, const TestingData& test, const Settings& settings)
+    LogPJointCost(const TrainingData& train, const TestingData& test, const Settings& settings)
       : Cost(train, test), 
       algo_(train.x.rows(), train.u.rows(), settings),
-      weights_(test.ys.rows(), train.x.rows()-1)
+      weights_(test.ys.rows(), train.x.rows()),
+      posWeights_(train.x.rows()),
+      g_xx_(train.x.rows(), train.x.rows())
+
   {
   }; 
 
@@ -95,13 +98,17 @@ class LogPFilterCost:Cost
     {
       double sigma_x = x[0];
       double sigma_y = x[1];
+      double preimage_reg = exp(x[2]);
       Kernel kx = boost::bind(rbfKernel, _1, _2, sigma_x);
       Kernel ky = boost::bind(rbfKernel, _1, _2, sigma_y);
+      computeGramMatrix(trainingData_.x, trainingData_.x, kx, g_xx_);
       algo_(trainingData_, kx, ky, testingData_.ys, weights_);
       uint testPoints = testingData_.xs.rows();
       double totalCost = 0.0;
+      double dim = trainingData_.x.cols();
       for (int i=0;i<testPoints;i++)
       {
+        positiveNormedCoeffs(weights_.row(i), g_xx_, dim, preimage_reg, posWeights_);
         totalCost += logGaussianMixture(testingData_.xs.row(i),
             trainingData_.x,
             weights_.row(i),
@@ -115,7 +122,46 @@ class LogPFilterCost:Cost
   private: 
     T algo_;
     Eigen::MatrixXd weights_;
+    Eigen::MatrixXd g_xx_;
+    Eigen::VectorXd posWeights_;
 };
+
+// template <class T>
+// class LogPFilterCost:Cost
+// {
+  // public:
+    // LogPFilterCost(const TrainingData& train, const TestingData& test, const Settings& settings)
+      // : Cost(train, test), 
+      // algo_(train.x.rows(), train.u.rows(), settings),
+      // weights_(test.ys.rows(), train.x.rows()-1)
+  // {
+  // }; 
+
+    // double operator()(const std::vector<double>&x, std::vector<double>&grad)
+    // {
+      // double sigma_x = x[0];
+      // double sigma_y = x[1];
+      // Kernel kx = boost::bind(rbfKernel, _1, _2, sigma_x);
+      // Kernel ky = boost::bind(rbfKernel, _1, _2, sigma_y);
+      // algo_(trainingData_, kx, ky, testingData_.ys, weights_);
+      // uint testPoints = testingData_.xs.rows();
+      // double totalCost = 0.0;
+      // for (int i=0;i<testPoints;i++)
+      // {
+        // totalCost += logGaussianMixture(testingData_.xs.row(i),
+            // trainingData_.x,
+            // weights_.row(i),
+            // sigma_x);
+      // }
+      // totalCost *= -1; // minimize this maximizes probability
+      // return totalCost;
+
+    // };
+
+  // private: 
+    // T algo_;
+    // Eigen::MatrixXd weights_;
+// };
 
 template <class T>
 struct HilbertCost:Cost
@@ -145,7 +191,8 @@ struct HilbertCost:Cost
       {
         computeKernelVector(trainingData_.x, testingData_.xs.row(i), kx, pointEmbedding);
         Eigen::VectorXd res(1);
-        res = weights_.row(i).transpose() * g_xx * pointEmbedding;
+        res = weights_.row(i).transpose() * g_xx * weights_.row(i)
+              - 2 * weights_.row(i).transpose() * g_xx * pointEmbedding;
         totalCost += res(0);
       }
       return totalCost;

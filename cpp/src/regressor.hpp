@@ -20,10 +20,10 @@
 #include <iostream>
 #include <Eigen/Core>
 #include <Eigen/Cholesky>
-#include "kernel.hpp"
 #include "data.hpp"
-#include "io.hpp"
 #include "matvec.hpp"
+#include "kernel.hpp"
+#include "rkhs.hpp"
 
 class Regressor
 {
@@ -61,33 +61,6 @@ class Regressor
 
 };
 
-void computeGramMatrix(const Eigen::MatrixXd& x, 
-                       const Eigen::MatrixXd& x_dash, 
-                       Kernel k,
-                       Eigen::MatrixXd& g)
-{
-  uint n = x.rows();
-  uint m = x_dash.rows();
-  for(uint i=0; i<n;i++)
-  {
-    for(uint j=0;j<m;j++)
-    {
-      g(i,j) = k(x.row(i), x_dash.row(j));
-    }
-  }
-}
-
-void computeKernelVector(const Eigen::MatrixXd& x, 
-    const Eigen::VectorXd& x_dash, 
-    Kernel k,
-    Eigen::VectorXd& g)
-{
-  uint n = x.rows();
-  for(uint i=0; i<n;i++)
-  {
-    g(i) = k(x.row(i), x_dash);
-  }
-}
 
 Regressor::Regressor(uint trainLength, uint testLength, const Settings& settings)
   : g_xx_(trainLength,trainLength),

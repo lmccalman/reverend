@@ -16,7 +16,7 @@
 # along with Reverend.  If not, see <http://www.gnu.org/licenses/>.
 
 ###################################################################
-# Filtering Demo -- Lorenz Attractor
+# Quantile Demo -- Motorcycle Dataset
 ###################################################################
 
 #makes life a bit easier
@@ -33,65 +33,58 @@ from reverend import preimage
 from reverend import kbrcpp
 
 #evaluation image size
-xssize = (200, 200)
-
-# how much data to use
-step_size = 5
-training_size = 1000
-testing_size = 500
-observation_period = 20
+xssize = 800
+yssize = 800
 
 #some training parameters for kernel width
-sigma_x_min = 0.05
-sigma_x = 0.494
-sigma_x_max = 0.8
+sigma_x_min = 0.02
+sigma_x = 0.2
+sigma_x_max = 0.5
 sigma_y_min = 0.05
-sigma_y = 0.197
-sigma_y_max = 0.8
+sigma_y = 0.3
+sigma_y_max = 0.5
 
 #for preimage
 preimage_reg = 1e-6
 preimage_reg_min = 1e-10
 preimage_reg_max = 1e1
-normed_weights = True
+normed_weights = False
 
 #Some other settings
-walltime = 120.0
-preimage_walltime = 120.0
-folds = 2
+walltime = 12.0
+preimage_walltime = 12.0
+folds = 5
+observation_period = 1
 
 def main():
-    data = np.load('lorenz.npy')
-    #2D only at the moment
-    all_X = data[::step_size,1:]
-    all_Y = data[::step_size,1:] 
-    #add noise
-    all_Y = all_Y + np.random.normal(loc=0.0,scale=0.1,size=all_Y.shape)
-    #create training and testing data
-    X = all_X[0:training_size]
-    Y = all_Y[0:training_size]
-    Y_s = all_Y[training_size:training_size+testing_size]
-    
+    X = np.load('motorcycle_X.npy')
+    Y = np.load('motorcycle_Y.npy')
+            
+    # Make sure we shuffle for the benefit of cross-validation
+    random_indices = np.random.permutation(X.shape[0])
+    X = X[random_indices]
+    Y = Y[random_indices]
+
     #whiten and rescale inputs
     X_mean, X_sd = distrib.scale_factors(X)
     Y_mean, Y_sd = distrib.scale_factors(Y)
     X = distrib.scale(X, X_mean, X_sd)
     Y = distrib.scale(Y, Y_mean, Y_sd)
-    Y_s = distrib.scale(Y_s, X_mean, X_sd)
 
     # simple prior
     U = X
 
     # We just want to plot the result, not evaluate it
-    xsmin = np.amin(X, axis=0) - 3*sigma_x
-    xsmax = np.amax(X, axis=0) + 3*sigma_x
-    X_s = np.mgrid[xsmin[0]:xsmax[0]:xssize[0]*1j,
-                   xsmin[1]:xsmax[1]:xssize[1]*1j]
-    X_s = np.rollaxis(X_s, 0, 3).reshape((-1,2))
+    xsmin = np.amin(X) - 1.0
+    xsmax = np.amax(X) + 1.0
+    ysmin = np.amin(Y)
+    ysmax = np.amax(Y)
+    Y_s = np.linspace(ysmin, ysmax, yssize)[:, np.newaxis]
+    X_s = np.linspace(xsmin, xsmax, xssize)[:, np.newaxis]
 
     #construct settings and data files for kbrcpp
-    filename_config = 'lorenz_filter.ini'
-    prefix = 'lz'  # will automatically construct all filenames
+    filename_config = 'motorcycle_regressor.ini'
+    prefix = 'mc'  # will automatically construct all filenames
     settings = kbrcpp.Settings(prefix)
     #training parameters
     settings.sigma_x = sigma_x
@@ -100,7 +93,6 @@ def main():
     settings.sigma_y_min = sigma_y_min
     settings.sigma_x_max = sigma_x_max
     settings.sigma_y_max = sigma_y_max
-    settings.observation_period = observation_period
     settings.preimage_reg = preimage_reg
     settings.preimage_reg_min = preimage_reg_min
     settings.preimage_reg_max = preimage_reg_max
@@ -108,26 +100,32 @@ def main():
     settings.walltime = walltime
     settings.preimage_walltime = preimage_walltime
     settings.folds = folds
+    settings.observation_period = observation_period
     kbrcpp.write_config_file(settings, filename_config)
     kbrcpp.write_data_files(settings, U=U, X=X, Y=Y, X_s=X_s, Y_s=Y_s,)
 
-    #now we're ready to invoke the filter
-    kbrcpp.run(filename_config, '../cpp/kbrfilter')
+    #now we're ready to invoke the regressor
+    kbrcpp.run(filename_config, '../cpp/kbrquantiles')
 
-    #The filter removes a training point to calculate deltas
-    X = X[:-1]
-    Y = Y[:-1]
-    
     #read in the weights we've just calculated
     W = np.load(settings.filename_weights)
+    cdf = np.load("cumulates.npy")
     pdf = preimage.posterior_embedding_image(W, X, X_s, sigma_x)
-    pdf = pdf.reshape((testing_size, xssize[0], xssize[1]))
-    np.save('lzPDF.npy', pdf)
-    P = None
     if normed_weights is False:
         P = np.load(settings.filename_preimage)
-        pdf2 = preimage.posterior_embedding_image(P, X, X_s, sigma_x)
-        np.save('lzPDF2.npy', pdf2)
+        pdf = preimage.posterior_embedding_image(P, X, X_s, sigma_x)
+
+    #And plot...
+    fig = pl.figure()
+    axes = fig.add_subplot(121)
+    axes.set_title('PDF estimate')
+    axes.imshow(pdf.T, origin='lower', extent=(ysmin, ysmax, xsmin, xsmax))
+        
+    axes = fig.add_subplot(122)
+    axes.set_title('Cumulative estimate')
+    axes.imshow(cdf.T, origin='lower', extent=(ysmin, ysmax, xsmin, xsmax))
+    axes.scatter(Y, X, c='y')
+    pl.show()
 
 if __name__ == "__main__":
     main()

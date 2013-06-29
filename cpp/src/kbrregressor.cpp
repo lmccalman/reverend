@@ -31,11 +31,10 @@
 int main(int argc, char** argv)
 {
 
-  std::cout << "kbrcpp initialised." << std::endl;
+  std::cout << "kbrregressor initialised." << std::endl;
   srand(time(NULL));
   auto settings = getSettings(argv[1]);
 
-  
   auto x = readNPY(settings.filename_x);
   auto y = readNPY(settings.filename_y);
   auto xs = readNPY(settings.filename_xs);

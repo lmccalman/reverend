@@ -19,7 +19,6 @@
 #include <iomanip>
 #include <algorithm>
 #include <vector>
-#include "data.hpp"
 #include "train.hpp"
 
 void ithFoldTestIndices(uint k, uint i, uint n, uint& lowIndex, uint& highIndex)

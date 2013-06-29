@@ -20,10 +20,10 @@
 #include <iostream>
 #include <Eigen/Core>
 #include <Eigen/Cholesky>
-#include "kernel.hpp"
 #include "data.hpp"
-#include "io.hpp"
 #include "matvec.hpp"
+#include "kernel.hpp"
+#include "rkhs.hpp"
 
 
 class Filter
