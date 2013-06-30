@@ -16,7 +16,7 @@
 # along with Reverend.  If not, see <http://www.gnu.org/licenses/>.
 
 ###################################################################
-# Filtering Demo -- Lorenz Attractor
+# Filtering Demo -- Lorenz Dataset
 ###################################################################
 
 #makes life a bit easier
@@ -26,40 +26,73 @@ sys.path.append("../") #might need to change to backslash on windows
 #3rd party imports
 import numpy as np
 import matplotlib.pylab as pl
+import matplotlib.cm as cm
 
 #local imports
 from reverend import distrib
-from reverend import preimage
 from reverend import kbrcpp
+
+def evaluate_Log_GM(points, means, sigma, coefficients):
+    assert(points.ndim == 2)
+    assert(means.ndim == 2)
+    assert(coefficients.ndim == 1)
+    assert(coefficients.shape[0] == means.shape[0])
+    coefficients = np.maximum(coefficients, 0.0)
+    log_scale_factor = -1*np.log(float( sigma * np.sqrt( 2. * np.pi)))
+    p = points.reshape((points.shape[0],1, -1))
+    q = means.reshape((1,means.shape[0], -1))
+    deltas_squared = np.sum((p-q) ** 2,axis=-1)
+    exp_coeffs = -1 * deltas_squared / float(2. * (sigma * sigma))
+    #now find the min power of this
+    max_power = np.amax(exp_coeffs,axis=1)
+    #and subtract it off
+    adj_exp_coeffs = exp_coeffs - max_power[:,np.newaxis]
+    adj_probs = coefficients * np.exp(adj_exp_coeffs)
+    log_sum_adj_probs = np.log(np.sum(adj_probs, axis=1) + 1e-100)
+    log_probs = (log_scale_factor + max_power + log_sum_adj_probs) 
+    return log_probs
+
+def posterior_embedding_image(weights, Y, Y_s, sigma_y):
+    image = np.zeros((weights.shape[0], Y_s.shape[0]))
+    for i, w in enumerate(weights):
+        image[i] = evaluate_Log_GM(Y_s, Y, sigma_y, w.flatten())
+    return np.exp(image)
+
 
 #evaluation image size
 xssize = (200, 200)
 
 # how much data to use
 step_size = 5
-training_size = 1000
-testing_size = 500
-observation_period = 20
+training_size = 500
+testing_size = 5
 
+#construct settings and data files for kbrcpp
+filename_config = 'lorenz_filter.ini'
+prefix = 'lz'  # will automatically construct all filenames
+settings = kbrcpp.Settings(prefix)
+    
 #some training parameters for kernel width
 settings.cost_function = 'logp'  # {'logp', 'hilbert', 'joint'}
-sigma_x_min = 0.05
-sigma_x = 0.494
-sigma_x_max = 0.8
-sigma_y_min = 0.05
-sigma_y = 0.197
-sigma_y_max = 0.8
+settings.sigma_x_min = 0.05
+settings.sigma_x = 0.494
+settings.sigma_x_max = 0.8
+settings.sigma_y_min = 0.05
+settings.sigma_y = 0.197
+settings.sigma_y_max = 0.8
 
 #for preimage
-preimage_reg = 1e-6
-preimage_reg_min = 1e-10
-preimage_reg_max = 1e1
-normed_weights = True
+settings.preimage_reg = 1e-6
+settings.preimage_reg_min = 1e-10
+settings.preimage_reg_max = 1e1
+settings.normed_weights = True
 
 #Some other settings
-walltime = 120.0
-preimage_walltime = 120.0
-folds = 2
+settings.inference_type = 'filter'  # {'filter', 'regress'}
+settings.walltime = 12.0
+settings.preimage_walltime = 12.0
+settings.folds = 2
+settings.observation_period = 1
 
 def main():
     data = np.load('lorenz.npy')
@@ -72,7 +105,7 @@ def main():
     X = all_X[0:training_size]
     Y = all_Y[0:training_size]
     Y_s = all_Y[training_size:training_size+testing_size]
-    
+
     #whiten and rescale inputs
     X_mean, X_sd = distrib.scale_factors(X)
     Y_mean, Y_sd = distrib.scale_factors(Y)
@@ -84,51 +117,44 @@ def main():
     U = X
 
     # We just want to plot the result, not evaluate it
-    xsmin = np.amin(X, axis=0) - 3*sigma_x
-    xsmax = np.amax(X, axis=0) + 3*sigma_x
-    X_s = np.mgrid[xsmin[0]:xsmax[0]:xssize[0]*1j,
-                   xsmin[1]:xsmax[1]:xssize[1]*1j]
-    X_s = np.rollaxis(X_s, 0, 3).reshape((-1,2))
+    xsmin = np.amin(X, axis=0) - 3*settings.sigma_x
+    xsmax = np.amax(X, axis=0) + 3*settings.sigma_x
+    fakeX_s = np.mgrid[xsmin[0]:xsmax[0]:xssize[0]*1j,
+            xsmin[1]:xsmax[1]:xssize[1]*1j]
+    fakeX_s = np.rollaxis(fakeX_s, 0, 3).reshape((-1,2))
+    #Needed so we don't screw up the file writing
+    X_s = np.zeros((xssize[0]*xssize[1], 2))
+    X_s[:] = fakeX_s
 
-    #construct settings and data files for kbrcpp
-    filename_config = 'lorenz_filter.ini'
-    prefix = 'lz'  # will automatically construct all filenames
-    settings = kbrcpp.Settings(prefix)
-    #training parameters
-    settings.sigma_x = sigma_x
-    settings.sigma_y = sigma_y
-    settings.sigma_x_min = sigma_x_min
-    settings.sigma_y_min = sigma_y_min
-    settings.sigma_x_max = sigma_x_max
-    settings.sigma_y_max = sigma_y_max
-    settings.observation_period = observation_period
-    settings.preimage_reg = preimage_reg
-    settings.preimage_reg_min = preimage_reg_min
-    settings.preimage_reg_max = preimage_reg_max
-    settings.normed_weights = normed_weights
-    settings.walltime = walltime
-    settings.preimage_walltime = preimage_walltime
-    settings.folds = folds
+    #parameters
     kbrcpp.write_config_file(settings, filename_config)
     kbrcpp.write_data_files(settings, U=U, X=X, Y=Y, X_s=X_s, Y_s=Y_s,)
 
-    #now we're ready to invoke the filter
-    kbrcpp.run(filename_config, '../cpp/kbrfilter')
+    #now we're ready to invoke the regressor
+    kbrcpp.run(filename_config, '../cpp/kbrregressor')
 
-    #The filter removes a training point to calculate deltas
-    X = X[:-1]
-    Y = Y[:-1]
-    
     #read in the weights we've just calculated
     W = np.load(settings.filename_weights)
-    pdf = preimage.posterior_embedding_image(W, X, X_s, sigma_x)
-    pdf = pdf.reshape((testing_size, xssize[0], xssize[1]))
-    np.save('lzPDF.npy', pdf)
     P = None
-    if normed_weights is False:
+    if settings.normed_weights is False:
         P = np.load(settings.filename_preimage)
-        pdf2 = preimage.posterior_embedding_image(P, X, X_s, sigma_x)
-        np.save('lzPDF2.npy', pdf2)
+    pdf = np.load(settings.filename_posterior)
+    pdf = pdf.reshape((testing_size,xssize[0],xssize[1]))
+    # pdf = pdf.reshape((testing_size,xssize[0],xssize[1]))
+
+    X = X[:-1]
+
+    pdf2 = posterior_embedding_image(W, X, X_s, settings.sigma_x)
+    pdf2 = pdf2.reshape((testing_size, xssize[0], xssize[1]))
+    
+    fig = pl.figure()
+    for i, frame in enumerate(pdf):
+        print i
+        fig.clf()
+        ax = fig.add_subplot(111)
+        ax.imshow(frame.T, extent=(xsmin[0],xsmax[0],xsmin[1],xsmax[1]),cmap=cm.hot)
+        ax.plot(X[:,0], X[:,1])
+        pl.savefig("lz%04d.png" % i)
 
 if __name__ == "__main__":
     main()
