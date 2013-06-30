@@ -32,11 +32,11 @@ class Settings(object):
             self.filename_preimage = prefix + 'R.npy'
             self.filename_posterior = prefix + 'P.npy'
 
-
 def write_config_file(settings, filename):
     config = ConfigParser.RawConfigParser()
     config.add_section('Algorithm')
     config.set('Algorithm', 'observation_period', settings.observation_period)
+    config.set('Algorithm', 'inference_type', settings.inference_type)
     config.add_section('Input')
     config.set('Input', 'filename_x', settings.filename_X)
     config.set('Input', 'filename_y', settings.filename_Y)

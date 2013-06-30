@@ -48,16 +48,22 @@ void computeNormedWeights(const Eigen::MatrixXd& weights,
   }
 }
 
-void computePosterior(const Eigen::MatrixXd& xs,
-    const Eigen::MatrixXd& x, const Eigen::MatrixXd& weights,
-    const Settings& settings, Eigen::MatrixXd& posterior)
+void computePosterior(const TrainingData& trainingData, const TestingData& testingData,
+    const Eigen::MatrixXd& weights, double sigma_x, Eigen::MatrixXd& posterior)
 {
-  for (int i=0; i<xs.rows();i++)
+  uint s = weights.rows(); 
+  uint p = testingData.xs.rows();
+  
+  #pragma omp parallel for
+  for (int i=0;i<s;i++)  
   {
-    for (int j=0; j<posterior.cols();j++)
+    for (int j=0;j<p;j++)
     {
-      posterior(i,j) = std::exp(logGaussianMixture(xs.row(i),
-                        x, weights.row(j), settings.sigma_x));
+        double logProb = logGaussianMixture(testingData.xs.row(j),
+                                            trainingData.x,
+                                            weights.row(i),
+                                            sigma_x);
+        posterior(i,j) = exp(logProb);
     }
   }
 }

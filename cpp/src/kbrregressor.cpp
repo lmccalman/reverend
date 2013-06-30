@@ -27,8 +27,8 @@
 
 int main(int argc, char** argv)
 {
-
-  std::cout << "kbrregressor initialised." << std::endl;
+  
+  std::cout << "kbrcpp initialised." << std::endl;
   srand(time(NULL));
   auto settings = getSettings(argv[1]);
 
@@ -40,36 +40,57 @@ int main(int argc, char** argv)
   uint s = testData.ys.rows();
   Eigen::MatrixXd weights(s,n);
 
+  std::cout << "Training..." << std::endl;
   //how about some training  
-  trainSettings(trainData, settings);
+  if (settings.inference_type == std::string("filter"))
+  {
+    trainSettings<Filter<RBFKernel>, RBFKernel>(trainData, settings);
+  }
+  else
+  {
+    trainSettings<Regressor<RBFKernel>, RBFKernel>(trainData, settings);
+  }
 
-  //Create kernels and regressor
+  //Create kernels and algorithm 
+  std::cout << "Inferring..." << std::endl;
   Kernel<RBFKernel> kx(trainData.x, settings.sigma_x);
   Kernel<RBFKernel> ky(trainData.y, settings.sigma_y);
-  Regressor<RBFKernel> r(n, m, settings);
+  if (settings.inference_type == std::string("filter"))
+  {
+    Filter<RBFKernel> f(n, m, settings);
+    f(trainData, kx, ky, testData.ys, weights);
+  }
+  else
+  {
+    Regressor<RBFKernel> r(n, m, settings);
+    r(trainData, kx, ky, testData.ys, weights);
+  }
  
-  //Kernel bayes rule
-  r(trainData, kx, ky, testData.ys, weights);
-
   //write out the results 
   writeNPY(weights, settings.filename_weights);
 
   //Normalise and compute posterior
-  Eigen::MatrixXd posterior(testData.xs.rows(), s);
+  Eigen::MatrixXd posterior(testData.ys.rows(), testData.xs.rows());
   if (!settings.normed_weights)
   {
+    std::cout << "Computing normed weights..." << std::endl;
     Eigen::MatrixXd preimageWeights(s,n);
     computeNormedWeights(weights, kx, trainData.x.cols(),
                          settings, preimageWeights);
     writeNPY(preimageWeights, settings.filename_preimage);
-    computePosterior(testData.xs, trainData.x, preimageWeights, settings, posterior);
+    std::cout << "Evaluating posterior..." << std::endl;
+    computePosterior(trainData, testData, weights, settings.sigma_x,
+        posterior);
   }
   else
   {
-    computePosterior(testData.xs, trainData.x, weights, settings, posterior);
+    std::cout << "Evaluating posterior..." << std::endl;
+    computePosterior(trainData, testData, weights, settings.sigma_x,
+                          posterior);
   }
   //and write the posterior
   writeNPY(posterior, settings.filename_posterior);
+  std::cout << "kbrcpp task complete." << std::endl;
   return 0;
 }
 

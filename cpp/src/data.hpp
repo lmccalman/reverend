@@ -28,6 +28,7 @@ struct Settings
   std::string filename_preimage;
   std::string filename_posterior;
   std::string cost_function;
+  std::string inference_type;
   double sigma_x;
   double sigma_x_min;
   double sigma_x_max;
@@ -54,9 +55,18 @@ struct TrainingData
                  const Eigen::MatrixXd& in_x,
                  const Eigen::MatrixXd& in_y) :
       u(in_u), lambda(in_lambda), x(in_x), y(in_y) {};
+    TrainingData(const Eigen::MatrixXd& in_u,
+        const Eigen::VectorXd& in_lambda,
+        const Eigen::MatrixXd& in_x,
+        const Eigen::MatrixXd& in_y,
+        const Eigen::MatrixXd& in_xtp1) :
+      u(in_u), lambda(in_lambda), x(in_x), y(in_y),
+      xtp1(in_xtp1) {};
+    
     Eigen::MatrixXd u;
     Eigen::VectorXd lambda;
     Eigen::MatrixXd x;
+    Eigen::MatrixXd xtp1;
     Eigen::MatrixXd y;
 };
 

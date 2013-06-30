@@ -55,6 +55,7 @@ Settings getSettings(const std::string& filename)
   s.preimage_reg_min = pt.get<double>("Preimage.preimage_reg_min");
   s.preimage_reg_max = pt.get<double>("Preimage.preimage_reg_max");
   s.normed_weights = pt.get<bool>("Preimage.normed_weights");
+  s.inference_type = pt.get<std::string>("Algorithm.inference_type"); 
   s.observation_period = pt.get<uint>("Algorithm.observation_period");
   return s;
 }
@@ -133,6 +134,9 @@ TrainingData readTrainingData(const Settings& settings)
 {
   auto x = readNPY(settings.filename_x);
   auto y = readNPY(settings.filename_y);
+  uint dim_x = x.cols();
+  uint dim_y = y.cols();
+  uint n = x.rows();
   Eigen::MatrixXd u = x;
   uint m = x.rows();
   if (settings.filename_u != "")
@@ -143,7 +147,21 @@ TrainingData readTrainingData(const Settings& settings)
   //for the moment keep the weights constant
   Eigen::VectorXd lambda = Eigen::VectorXd::Ones(m);
   lambda = lambda / double(m);
-  return TrainingData(u, lambda, x, y);
+
+  if (settings.inference_type == std::string("filter"))
+  {
+    Eigen::MatrixXd su = x.block(0,0,n-1,dim_x);
+    Eigen::VectorXd slambda = Eigen::VectorXd::Ones(n-1);
+    slambda = slambda / double(n-1);
+    Eigen::MatrixXd sx = x.block(0,0,n-1,dim_x);
+    Eigen::MatrixXd sy = y.block(0,0,n-1,dim_y);
+    Eigen::MatrixXd xtp1 = x.block(1,0,n-1,dim_x);
+    return TrainingData(su, slambda, sx, sy, xtp1);
+  }
+  else
+  {
+    return TrainingData(u, lambda, x, y);
+  }
 }
 
 TestingData readTestingData(const Settings& settings)
@@ -158,15 +176,6 @@ void writeNPY(const Eigen::MatrixXd& matrix, const std::string& filename)
   const uint shape[] = {(uint)matrix.rows(),(uint)matrix.cols()};
   const double* data = matrix.data();
   cnpy::npy_save(filename, data, shape, 2, "w");
-  // //load it into a new array
-  // cnpy::NpyArray arr = cnpy::npy_load(filename);
-  // double* loaded_data = reinterpret_cast<double*>(arr.data);
-  // //make sure the loaded data matches the saved data
-  // assert(arr.word_size == sizeof(double));
-  // assert(arr.shape.size() == 2 
-         // && arr.shape[0] == matrix.rows()
-         // && arr.shape[1] == matrix.cols());
-  // for(uint i = 0; i < matrix.size();i++) assert(data[i] == loaded_data[i]);
 }
 
 

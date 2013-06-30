@@ -54,6 +54,7 @@ settings.preimage_reg_min = 1e-10
 settings.preimage_reg_max = 1e1
 settings.normed_weights = False
 #Some other settings
+settings.inference_type = 'regress'
 settings.walltime = 5.0
 settings.preimage_walltime = 5.0
 settings.folds = 5

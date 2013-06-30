@@ -49,10 +49,7 @@ class Filter
     uint dim_y_;
 
     //stuff I'm going to compute
-    Eigen::MatrixXd g_xx_;
     Eigen::MatrixXd g_xxtp1_;
-    Eigen::MatrixXd g_yy_;
-    Eigen::MatrixXd g_xu_;
     Eigen::VectorXd mu_pi_;
     Eigen::VectorXd beta_;
     Eigen::VectorXd beta_0_;
@@ -70,21 +67,18 @@ class Filter
 
 template <class K>
 Filter<K>::Filter(uint trainLength, uint testLength, const Settings& settings)
-  : g_xx_(trainLength-1,trainLength-1),
-  g_xxtp1_(trainLength-1,trainLength-1),
-  g_xu_(trainLength-1,testLength),
-  g_yy_(trainLength-1,trainLength-1),
-  beta_g_yy_(trainLength-1,trainLength-1),
-  beta_(trainLength-1),
-  beta_0_(trainLength-1),
-  mu_pi_(trainLength-1),
-  beta_diag_(trainLength-1, trainLength-1),
-  r_xy_(trainLength-1,trainLength-1),
-  chol_g_yy_(trainLength-1,trainLength-1,1),
-  chol_beta_0_(trainLength-1,trainLength-1,1),
-  chol_beta_(trainLength-1,trainLength-1,1),
-  chol_beta_g_yy_(trainLength-1,trainLength-1,trainLength-1),
-  w_(trainLength-1),
+  : g_xxtp1_(trainLength,trainLength),
+  beta_g_yy_(trainLength,trainLength),
+  beta_(trainLength),
+  beta_0_(trainLength),
+  mu_pi_(trainLength),
+  beta_diag_(trainLength, trainLength),
+  r_xy_(trainLength,trainLength),
+  chol_g_yy_(trainLength,trainLength,1),
+  chol_beta_0_(trainLength,trainLength,1),
+  chol_beta_(trainLength,trainLength,1),
+  chol_beta_g_yy_(trainLength,trainLength,trainLength),
+  w_(trainLength),
   settings_(settings){}
 
 template <class K>
@@ -94,27 +88,25 @@ void Filter<K>::operator()(const TrainingData& data,
                           const Eigen::MatrixXd& ys,
                           Eigen::MatrixXd& weights)
 {
-  const Eigen::MatrixXd& u = data.u;
-  const Eigen::VectorXd& lam = data.lambda;
   uint n = data.x.rows();
   dim_x_ = data.x.cols();
   dim_y_ = data.y.cols();
-  Eigen::MatrixXd x = data.x.block(0,0,n-1,dim_x_);
-  Eigen::MatrixXd y = data.y.block(0,0,n-1,dim_y_);
-  Eigen::MatrixXd xtm1 = data.x.block(1,0,n-1,dim_x_);
 
-  //compute gram matrices
-  computeGramMatrix(xtm1, x, kx, g_xxtp1_);
-  computeGramMatrix(x, x, kx, g_xx_);
-  computeGramMatrix(x, u, kx, g_xu_);
-  computeGramMatrix(y, y, ky, g_yy_);
+  //compute transition matrix
+  for (int i=0; i<n;i++)
+  {
+    for (int j=0; j<n; j++)
+    {
+      g_xxtp1_(i,j) = kx(data.xtp1.row(i), data.x.row(j));
+    }
+  }
   
   //compute initial embedding from kbr
   Eigen::VectorXd y0(dim_y_); 
   y0 = data.y.block(0,0,1,dim_y_).transpose();
-  Eigen::VectorXd mu_dash(n-1);
-  computeKernelVector(y, y0, ky, mu_dash);
-  chol_g_yy_.solve(g_yy_, mu_dash, mu_pi_);
+  Eigen::VectorXd mu_dash(n);
+  ky.embed(y0, mu_dash);
+  chol_g_yy_.solve(ky.gramMatrix(), mu_dash, mu_pi_);
   weights.row(0) = mu_pi_;
 
   auto s = weights.rows();
@@ -122,10 +114,10 @@ void Filter<K>::operator()(const TrainingData& data,
   {
     mu_pi_ = mu_pi_.cwiseMax(0.0);
     mu_pi_ = mu_pi_ / mu_pi_.sum();
-    mu_pi_ = g_xx_ * mu_pi_; 
-    chol_beta_0_.solve(g_xx_, mu_pi_, beta_0_);
+    mu_pi_ = kx.gramMatrix() * mu_pi_; 
+    chol_beta_0_.solve(kx.gramMatrix(), mu_pi_, beta_0_);
     beta_0_ = g_xxtp1_ * beta_0_;
-    chol_beta_.solve(g_xx_, beta_0_, beta_);
+    chol_beta_.solve(kx.gramMatrix(), beta_0_, beta_);
     if (settings_.normed_weights)
     {
       beta_ = beta_.cwiseMax(0.0);
@@ -137,7 +129,7 @@ void Filter<K>::operator()(const TrainingData& data,
       if (settings_.normed_weights)
       {
         beta_diag_ = beta_.asDiagonal();
-        beta_g_yy_ = beta_diag_ * g_yy_;
+        beta_g_yy_ = beta_diag_ * ky.gramMatrix();
         chol_beta_g_yy_.solve(beta_g_yy_, beta_diag_, r_xy_);
       }
       else
@@ -146,13 +138,13 @@ void Filter<K>::operator()(const TrainingData& data,
         beta_ /= scaleFactor;
         beta_ = beta_.cwiseAbs2();
         beta_diag_ = beta_.asDiagonal();
-        Eigen::MatrixXd b = g_yy_ * beta_diag_;
-        Eigen::MatrixXd A = b * g_yy_;
+        Eigen::MatrixXd b = ky.gramMatrix() * beta_diag_;
+        Eigen::MatrixXd A = b * ky.gramMatrix();
         chol_beta_g_yy_.solve(A, b, r_xy_);
       }
       //actual inference part 
       auto yi = ys.row(i);
-      computeKernelVector(y, yi, ky, w_);
+      ky.embed(yi, w_);
       w_ = r_xy_ * w_;
       if (settings_.normed_weights)
       {

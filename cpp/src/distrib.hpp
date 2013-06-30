@@ -35,7 +35,9 @@ double logGaussianMixture(const Eigen::VectorXd& point,
   double maxPower = -1e200; // ie infinity;
   for (uint i=0; i<numberOfMeans; i++)
   {
-    double deltaNormSquared = (point - means.row(i)).squaredNorm();
+    
+    Eigen::VectorXd delta = point - means.row(i).transpose();
+    double deltaNormSquared = delta.squaredNorm();
     double expCoeff = -0.5 * deltaNormSquared / sigma2;
     maxPower = std::max(maxPower, expCoeff);
   }
@@ -44,7 +46,8 @@ double logGaussianMixture(const Eigen::VectorXd& point,
   for (uint i=0; i<numberOfMeans; i++)
   {
     double alpha = coeffs[i];
-    double deltaNormSquared = (point - means.row(i)).squaredNorm();
+    Eigen::VectorXd delta = point - means.row(i).transpose();
+    double deltaNormSquared = delta.squaredNorm();
     double expCoeff = -0.5 * deltaNormSquared / sigma2;
     double adjExpCoeff = expCoeff - maxPower;
     double adjProbs = alpha*exp(adjExpCoeff);

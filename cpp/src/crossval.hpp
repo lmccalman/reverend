@@ -115,7 +115,17 @@ void kFoldData(uint k, const TrainingData& allData, std::vector<TrainingData>& f
     fillSubset(k, i, allData.u, u, us);
     Eigen::VectorXd lambda = Eigen::VectorXd::Ones(trainSize);
     lambda = lambda / double(trainSize);
-    foldTraining.push_back(TrainingData(u, lambda, x, y)); 
+    if (allData.xtp1.rows() > 0)
+    {
+      Eigen::MatrixXd xtp1(trainSize, dx);
+      Eigen::MatrixXd xtp1s(testSize, dx);
+      fillSubset(k, i, allData.xtp1, xtp1,xtp1s);
+      foldTraining.push_back(TrainingData(u, lambda, x, y, xtp1)); 
+    }
+    else
+    {
+      foldTraining.push_back(TrainingData(u, lambda, x, y)); 
+    }
     foldTesting.push_back(TestingData(xs, ys)); 
   }
 }

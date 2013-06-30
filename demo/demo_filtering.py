@@ -42,6 +42,7 @@ testing_size = 500
 observation_period = 20
 
 #some training parameters for kernel width
+settings.cost_function = 'logp'  # {'logp', 'hilbert', 'joint'}
 sigma_x_min = 0.05
 sigma_x = 0.494
 sigma_x_max = 0.8

@@ -53,6 +53,7 @@ std::vector<double> globalOptimum(NloptCost& costFunction, const std::vector<dou
 }
 
 //Epic training function
+template <class A, class K>
 void trainSettings(const TrainingData& data, Settings& settings)
 {
   uint folds = settings.folds;
@@ -73,7 +74,7 @@ void trainSettings(const TrainingData& data, Settings& settings)
     thetaMax[1] = settings.sigma_y_max;
     thetaMax[2] = log(settings.preimage_reg_max);
     std::vector<double> thetaBest(3);
-    KFoldCVCost< JointCost<Regressor<RBFKernel>, RBFKernel> > costfunc(folds,
+    KFoldCVCost< JointCost<A,K> > costfunc(folds,
         data, settings);
     thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
     settings.sigma_x = thetaBest[0];
@@ -94,7 +95,7 @@ void trainSettings(const TrainingData& data, Settings& settings)
     std::vector<double> thetaBest(2);
     if (settings.cost_function == std::string("hilbert"))
     {
-      KFoldCVCost< HilbertCost<Regressor<RBFKernel>, RBFKernel> > costfunc(
+      KFoldCVCost< HilbertCost<A,K> > costfunc(
           folds, data, settings);
       thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
       settings.sigma_x = thetaBest[0];
@@ -102,7 +103,7 @@ void trainSettings(const TrainingData& data, Settings& settings)
     }
     else
     {
-      KFoldCVCost< LogPCost<Regressor<RBFKernel>, RBFKernel> > costfunc(folds,
+      KFoldCVCost< LogPCost<A,K> > costfunc(folds,
           data, settings);
       thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
       settings.sigma_x = thetaBest[0];
@@ -110,7 +111,7 @@ void trainSettings(const TrainingData& data, Settings& settings)
     }
     if (!settings.normed_weights)
     { 
-      KFoldCVCost<PreimageCost<RBFKernel> > pmcostfunc(folds, data, settings);
+      KFoldCVCost<PreimageCost<K> > pmcostfunc(folds, data, settings);
       std::vector<double> thetaPMin(1);
       std::vector<double> thetaPMax(1);
       std::vector<double> thetaP0(1);

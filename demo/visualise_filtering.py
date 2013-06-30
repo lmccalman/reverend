@@ -29,8 +29,8 @@ import matplotlib.pylab as pl
 import matplotlib.cm as cm
 import mayavi.mlab as ml
 
-#local imports
-from reverend import distrib
+#At the moment this needs to be correctly sized
+xssize = (200, 200)
 
 X = np.load('lzX.npy')
 Y = np.load('lzY.npy')
@@ -38,10 +38,12 @@ X = X[:-1]
 Y = Y[:-1]
 X_s = np.load('lzX_s.npy')
 Y_s = np.load('lzY_s.npy')
-PDF = np.load('lzPDF.npy')
+PDF = np.load('lzP.npy')
 
-imsize_w = PDF.shape[1]
-imsize_h = PDF.shape[2]
+PDF = PDF.reshape((-1, xssize[0], xssize[1]))
+
+imsize_w = xssize[0]
+imsize_h = xssize[1]
 X_s = X_s.reshape((imsize_w, imsize_h, 2))
 wmin = np.amin(X_s[:,:,0])
 wmax = np.amax(X_s[:,:,0])
