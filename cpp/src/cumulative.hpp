@@ -76,12 +76,13 @@ class Cumulative
 template <class K>
 double Cumulative<K>::fromNormedWeights(const Eigen::VectorXd& x)
 {
-  assert( coeffs_.sum() == 1.0);
   double result = 0.0;
   uint n = X_.rows();
   for (int i=0; i<n; i++)
   {
-    result += coeffs_(i) * kx_.cumulative(x, X_.row(i));
+    const Eigen::VectorXd mu = X_.row(i);
+    double val = kx_.cumulative(x, mu);
+    result += coeffs_(i) * val;
   }
   return result;
 }
@@ -102,14 +103,16 @@ void computeCumulates(const TrainingData& trainingData, const TestingData& testi
 {
   uint testPoints = weights.rows(); 
   uint evalPoints = testingData.xs.rows();
-
-#pragma omp parallel for
+  #pragma omp parallel for
   for (int i=0;i<testPoints;i++)  
   {
-    Cumulative<K> cumulator(weights.row(i), trainingData.x, kx, settings);
+    Eigen::VectorXd coeffs = weights.row(i);
+    Cumulative<K> cumulator(coeffs, trainingData.x, kx, settings);
     for (int j=0;j<evalPoints;j++)
     {
-      cumulates(i,j) = cumulator(testingData.xs.row(j));
+      Eigen::VectorXd point = testingData.xs.row(j);
+      double result = cumulator(point);
+      cumulates(i,j) = result;
     }
   }
 }

@@ -33,8 +33,8 @@ from reverend import distrib
 from reverend import kbrcpp
 
 #evaluation image size
-xssize = 800
-yssize = 800
+xssize = 100
+yssize = 100
     
 #construct settings and data files for kbrcpp
 filename_config = 'motorcycle_regressor.ini'
@@ -108,7 +108,7 @@ def main():
     axes = fig.add_subplot(122)
     axes.set_title('CDF estimate')
     axes.imshow(cdf.T, origin='lower', 
-            extent=(ysmin, ysmax, xsmin, xsmax))
+            extent=(ysmin, ysmax, xsmin, xsmax), cmap=cm.hot)
     axes.scatter(Y, X, c='y')
     axes.set_xlim(ysmin, ysmax)
     axes.set_ylim(xsmin, xsmax)

@@ -145,15 +145,16 @@ class RBFKernel
                       double sigma_x) const
     {
       double denom = 1.0 / (sigma_x*std::sqrt(2.0));
-      uint dx = cutoff.rows(); 
+      uint dx = cutoff.size(); 
       double dim_result = 1.0;
-      for (int d=0; d<dx; d++)
+      for (int d=0;d<dx; d++)
       {
         double p = cutoff(d);
         double m = centre(d);
+        double delta = p-m;
         dim_result *= 0.5 * (1.0 + std::erf( (p - m)*denom ));
       }
-    
+      return dim_result;
     }
 
 
