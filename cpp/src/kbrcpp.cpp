@@ -101,6 +101,16 @@ int main(int argc, char** argv)
     writeNPY(cumulates, settings.filename_cumulative);
   }
   
+  //compute quantile estimates
+  if (settings.quantile_estimate && (trainData.x.cols() == 1))
+  {
+    std::cout << "Estimating " << settings.quantile
+      << " quantile..." << std::endl;
+    Eigen::VectorXd quantiles(testData.ys.rows());
+    computeQuantiles(trainData, testData, weights, kx, settings, quantiles);
+    writeNPY(quantiles, settings.filename_quantile);
+  }
+  
   std::cout << "kbrcpp task complete." << std::endl;
 
   return 0;

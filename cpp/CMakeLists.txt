@@ -19,9 +19,7 @@ cmake_minimum_required(VERSION 2.8)
 project(reverend) 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 set(REVEREND_SRC_DIRECTORY ${PROJECT_SOURCE_DIR}/src)
-set(REVEREND_REGRESSOR kbrregressor)
-set(REVEREND_FILTER kbrfilter)
-set(REVEREND_QUANTILES kbrquantiles)
+set(REVEREND_EXECUTABLE kbrcpp)
 
 set(CNPY_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/../cnpy)
 set(CNPY_LIB_DIR ${PROJECT_SOURCE_DIR}/../cnpy)
@@ -45,27 +43,14 @@ include_directories( ${EIGEN3_INCLUDE_DIR}
                      ${CNPY_INCLUDE_DIR}
                      ${QUADPROG_INCLUDE_DIR})
 
-# file(GLOB REVEREND_SOURCE_FILES "${REVEREND_SRC_DIRECTORY}/*.cpp")
-add_executable(${REVEREND_REGRESSOR} ${REVEREND_SRC_DIRECTORY}/${REVEREND_REGRESSOR}.cpp)
-# add_executable(${REVEREND_FILTER} ${REVEREND_SRC_DIRECTORY}/${REVEREND_FILTER}.cpp)
-# add_executable(${REVEREND_QUANTILES} ${REVEREND_SRC_DIRECTORY}/${REVEREND_QUANTILES}.cpp)
+add_executable(${REVEREND_EXECUTABLE} ${REVEREND_SRC_DIRECTORY}/${REVEREND_EXECUTABLE}.cpp)
 
-# add_custom_command(TARGET ${REVEREND_EXECUTABLE} POST_BUILD 
-                    # COMMAND ctags -R 
-                    # WORKING_DIRECTORY ${REVEREND_SRC_DIRECTORY} 
-                    # COMMENT "Creating tags" VERBATIM)
+add_custom_command(TARGET ${REVEREND_EXECUTABLE} POST_BUILD 
+                    COMMAND ctags -R 
+                    WORKING_DIRECTORY ${REVEREND_SRC_DIRECTORY} 
+                    COMMENT "Creating tags" VERBATIM)
 
-target_link_libraries(${REVEREND_REGRESSOR} 
+target_link_libraries(${REVEREND_EXECUTABLE} 
                       ${CNPY_LIBRARY}
                       ${NLOPT_LIBRARY}
                       ${Boost_FILESYSTEM_LIBRARY} )
-
-# target_link_libraries(${REVEREND_FILTER} 
-                      # ${CNPY_LIBRARY}
-                      # ${NLOPT_LIBRARY}
-                      # ${Boost_FILESYSTEM_LIBRARY} )
-                    
-# target_link_libraries(${REVEREND_QUANTILES} 
-                      # ${CNPY_LIBRARY}
-                      # ${NLOPT_LIBRARY}
-                      # ${Boost_FILESYSTEM_LIBRARY} )

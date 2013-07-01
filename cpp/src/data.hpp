@@ -28,6 +28,7 @@ struct Settings
   std::string filename_preimage;
   std::string filename_posterior;
   std::string filename_cumulative;
+  std::string filename_quantile;
   std::string cost_function;
   std::string inference_type;
   double sigma_x;
@@ -41,10 +42,12 @@ struct Settings
   double preimage_reg_min;
   double preimage_reg_max;
   double preimage_walltime;
+  double quantile;
   uint folds;
   uint observation_period;
   bool normed_weights;
   bool cumulative_estimate;
+  bool quantile_estimate;
 };
 
 

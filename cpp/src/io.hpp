@@ -42,6 +42,7 @@ Settings getSettings(const std::string& filename)
   s.filename_preimage = pt.get<std::string>("Output.filename_preimage"); 
   s.filename_posterior = pt.get<std::string>("Output.filename_posterior"); 
   s.filename_cumulative = pt.get<std::string>("Output.filename_cumulative"); 
+  s.filename_quantile = pt.get<std::string>("Output.filename_quantile"); 
   s.sigma_x = pt.get<double>("Kernel.sigma_x"); 
   s.sigma_x_min = pt.get<double>("Kernel.sigma_x_min"); 
   s.sigma_x_max = pt.get<double>("Kernel.sigma_x_max"); 
@@ -59,6 +60,8 @@ Settings getSettings(const std::string& filename)
   s.inference_type = pt.get<std::string>("Algorithm.inference_type"); 
   s.observation_period = pt.get<uint>("Algorithm.observation_period");
   s.cumulative_estimate = pt.get<bool>("Algorithm.cumulative_estimate");
+  s.quantile_estimate = pt.get<bool>("Algorithm.quantile_estimate");
+  s.quantile = pt.get<double>("Algorithm.quantile");
   return s;
 }
 

@@ -18,6 +18,7 @@
 import ConfigParser
 import numpy as np
 import subprocess
+import os.path
 
 
 class Settings(object):
@@ -32,6 +33,7 @@ class Settings(object):
             self.filename_preimage = prefix + 'R.npy'
             self.filename_posterior = prefix + 'P.npy'
             self.filename_cumulative = prefix + 'C.npy'
+            self.filename_quantile = prefix + 'Q.npy'
 
 def write_config_file(settings, filename):
     config = ConfigParser.RawConfigParser()
@@ -39,6 +41,8 @@ def write_config_file(settings, filename):
     config.set('Algorithm', 'observation_period', settings.observation_period)
     config.set('Algorithm', 'inference_type', settings.inference_type)
     config.set('Algorithm', 'cumulative_estimate', int(settings.cumulative_estimate))
+    config.set('Algorithm', 'quantile_estimate', int(settings.quantile_estimate))
+    config.set('Algorithm', 'quantile', settings.quantile)
     config.add_section('Input')
     config.set('Input', 'filename_x', settings.filename_X)
     config.set('Input', 'filename_y', settings.filename_Y)
@@ -57,6 +61,7 @@ def write_config_file(settings, filename):
     config.set('Output', 'filename_preimage', settings.filename_preimage)
     config.set('Output', 'filename_posterior', settings.filename_posterior)
     config.set('Output', 'filename_cumulative', settings.filename_cumulative)
+    config.set('Output', 'filename_quantile', settings.filename_quantile)
     config.add_section('Training')
     config.set('Training', 'walltime', settings.walltime)
     config.set('Training', 'preimage_walltime', settings.preimage_walltime)
@@ -79,7 +84,8 @@ def write_data_files(settings,U, X, Y, X_s, Y_s):
     np.save(settings.filename_Y_s, Y_s)
 
 
-def run(filename_config, path):
+def run(filename_config, directory):
+    path = os.path.join(os.path.abspath(directory), 'kbrcpp')
     proc = subprocess.Popen([path, filename_config],
                             stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT)

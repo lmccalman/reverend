@@ -81,7 +81,7 @@ class Kernel
     
     double approximateHalfSupport() const
     {
-      return k_.approxmateHalfSupport(width_);
+      return k_.approximateHalfSupport(width_);
     }
     
     double operator()(const Eigen::VectorXd& x1, const Eigen::VectorXd& x2) const
@@ -93,6 +93,7 @@ class Kernel
     {
       return k_.embedIndicator(cutoff, X_, width_, weights);
     };
+    
     double cumulative(const Eigen::VectorXd& cutoff, const Eigen::VectorXd& centre) const
     {
       return k_.cumulative(cutoff, centre, width_); 

@@ -22,6 +22,7 @@
 #makes life a bit easier
 import sys;
 sys.path.append("../") #might need to change to backslash on windows
+kbrcpp_directory = "../cpp"
 
 #3rd party imports
 import numpy as np
@@ -31,33 +32,6 @@ import matplotlib.cm as cm
 #local imports
 from reverend import distrib
 from reverend import kbrcpp
-
-def evaluate_Log_GM(points, means, sigma, coefficients):
-    assert(points.ndim == 2)
-    assert(means.ndim == 2)
-    assert(coefficients.ndim == 1)
-    assert(coefficients.shape[0] == means.shape[0])
-    coefficients = np.maximum(coefficients, 0.0)
-    log_scale_factor = -1*np.log(float( sigma * np.sqrt( 2. * np.pi)))
-    p = points.reshape((points.shape[0],1, -1))
-    q = means.reshape((1,means.shape[0], -1))
-    deltas_squared = np.sum((p-q) ** 2,axis=-1)
-    exp_coeffs = -1 * deltas_squared / float(2. * (sigma * sigma))
-    #now find the min power of this
-    max_power = np.amax(exp_coeffs,axis=1)
-    #and subtract it off
-    adj_exp_coeffs = exp_coeffs - max_power[:,np.newaxis]
-    adj_probs = coefficients * np.exp(adj_exp_coeffs)
-    log_sum_adj_probs = np.log(np.sum(adj_probs, axis=1) + 1e-100)
-    log_probs = (log_scale_factor + max_power + log_sum_adj_probs) 
-    return log_probs
-
-def posterior_embedding_image(weights, Y, Y_s, sigma_y):
-    image = np.zeros((weights.shape[0], Y_s.shape[0]))
-    for i, w in enumerate(weights):
-        image[i] = evaluate_Log_GM(Y_s, Y, sigma_y, w.flatten())
-    return np.exp(image)
-
 
 #evaluation image size
 xssize = (200, 200)
@@ -93,6 +67,9 @@ settings.walltime = 12.0
 settings.preimage_walltime = 12.0
 settings.folds = 2
 settings.observation_period = 1
+settings.cumulative_estimate = False
+settings.quantile_estimate = False
+settings.quantile = 0.5
 
 def main():
     data = np.load('lorenz.npy')
@@ -131,7 +108,7 @@ def main():
     kbrcpp.write_data_files(settings, U=U, X=X, Y=Y, X_s=X_s, Y_s=Y_s,)
 
     #now we're ready to invoke the regressor
-    kbrcpp.run(filename_config, '../cpp/kbrregressor')
+    kbrcpp.run(filename_config, kbrcpp_directory)
 
     #read in the weights we've just calculated
     W = np.load(settings.filename_weights)
@@ -140,12 +117,10 @@ def main():
         P = np.load(settings.filename_preimage)
     pdf = np.load(settings.filename_posterior)
     pdf = pdf.reshape((testing_size,xssize[0],xssize[1]))
-    # pdf = pdf.reshape((testing_size,xssize[0],xssize[1]))
 
+    # our filter lops of the last training point to get deltas
     X = X[:-1]
 
-    pdf2 = posterior_embedding_image(W, X, X_s, settings.sigma_x)
-    pdf2 = pdf2.reshape((testing_size, xssize[0], xssize[1]))
     
     fig = pl.figure()
     for i, frame in enumerate(pdf):

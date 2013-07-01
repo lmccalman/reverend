@@ -18,6 +18,7 @@
 #define EIGEN_DEFAULT_TO_ROW_MAJOR
 #include <cmath>
 #include <iostream>
+#include <boost/math/tools/roots.hpp>
 #include <Eigen/Core>
 #include "data.hpp"
 #include "kernel.hpp"
@@ -59,9 +60,23 @@ class Cumulative
         return fromWeights(x);
       }
     }
+    
+    double operator()(double x)
+    {
+      Eigen::VectorXd v(1); 
+      v(0) = x;
+      if (settings_.normed_weights)
+      {
+        return fromNormedWeights(v);
+      }
+      else
+      {
+        return fromWeights(v);
+      }
+    }
 
   protected:
-    double fromNormedWeights(const Eigen::VectorXd& x);
+    double fromNormedWeights(const Eigen::VectorXd& x) const;
     double fromWeights(const Eigen::VectorXd& x);
     
     const Eigen::VectorXd& coeffs_;
@@ -74,7 +89,7 @@ class Cumulative
 };
 
 template <class K>
-double Cumulative<K>::fromNormedWeights(const Eigen::VectorXd& x)
+double Cumulative<K>::fromNormedWeights(const Eigen::VectorXd& x) const
 {
   double result = 0.0;
   uint n = X_.rows();
@@ -116,3 +131,63 @@ void computeCumulates(const TrainingData& trainingData, const TestingData& testi
     }
   }
 }
+
+template <class K>
+class QuantileWrapper
+{
+  public:
+    QuantileWrapper(Cumulative<K>& c, double tau)
+      : c_(c), tau_(tau){}
+    double operator()(double x) const
+    {
+      return c_(x) - tau_;
+    }
+  protected:
+    Cumulative<K>& c_;
+    double tau_;
+};
+
+template <class K>
+class Quantile
+{
+  public:
+    Quantile(const Eigen::VectorXd& coeffs, const Eigen::MatrixXd& X,
+        const K& kx, const Settings& settings):
+      c_(coeffs, X, kx, settings)
+  {
+    xmin_ = X.minCoeff() - kx.approximateHalfSupport();
+    xmax_ = X.maxCoeff() + kx.approximateHalfSupport();
+  }
+
+    double operator()(double tau) 
+    {
+      QuantileWrapper<K> F(c_,tau);
+      boost::math::tools::eps_tolerance<double> tol(11); 
+      long unsigned int maxIterations = 1000;
+      auto result = boost::math::tools::toms748_solve(F, xmin_, xmax_,
+         F(xmin_), F(xmax_), tol, maxIterations);
+      return 0.5*(result.first + result.second);
+    }
+
+  protected:
+    Cumulative<K> c_;
+    double xmin_;
+    double xmax_;
+};
+  
+template <class K>
+void computeQuantiles(const TrainingData& trainingData, const TestingData& testingData,
+    const Eigen::MatrixXd& weights, const K& kx, const Settings& settings,
+    Eigen::VectorXd& quantiles)
+{
+  uint testPoints = weights.rows(); 
+  #pragma omp parallel for
+  for (int i=0;i<testPoints;i++)  
+  {
+    Eigen::VectorXd coeffs = weights.row(i);
+    Quantile<K> qEstimator(coeffs, trainingData.x, kx, settings);
+    quantiles(i) = qEstimator(settings.quantile);
+  }
+}
+
+

@@ -22,6 +22,7 @@
 #makes life a bit easier
 import sys;
 sys.path.append("../") #might need to change to backslash on windows
+kbrcpp_directory = "../cpp"
 
 #3rd party imports
 import numpy as np
@@ -52,10 +53,12 @@ settings.sigma_y_max = 0.5
 settings.preimage_reg = 1e-6
 settings.preimage_reg_min = 1e-10
 settings.preimage_reg_max = 1e1
-settings.normed_weights = False
+settings.normed_weights = True
 #Some other settings
 settings.inference_type = 'regress'
 settings.cumulative_estimate = True
+settings.quantile_estimate = True
+settings.quantile = 0.5
 settings.walltime = 5.0
 settings.preimage_walltime = 5.0
 settings.folds = 5
@@ -89,7 +92,7 @@ def main():
     kbrcpp.write_data_files(settings, U=U, X=X, Y=Y, X_s=X_s, Y_s=Y_s,)
 
     #now we're ready to invoke the regressor
-    kbrcpp.run(filename_config, '../cpp/kbrregressor')
+    kbrcpp.run(filename_config, kbrcpp_directory)
 
     #read in the weights we've just calculated
     W = np.load(settings.filename_weights)
@@ -99,6 +102,9 @@ def main():
     cdf = None
     if settings.cumulative_estimate:
         cdf = np.load(settings.filename_cumulative)
+    quantile = None
+    if settings.quantile_estimate:
+        quantile = np.load(settings.filename_quantile)
 
     #And plot...
     fig = pl.figure()
@@ -107,6 +113,7 @@ def main():
     axes.imshow(pdf.T, origin='lower', 
                 extent=(ysmin, ysmax, xsmin, xsmax),cmap=cm.hot)
     axes.scatter(Y, X, c='y')
+    axes.plot(Y_s[:,0], quantile[:,0], 'r-')
     axes.set_xlim(ysmin, ysmax)
     axes.set_ylim(xsmin, xsmax)
     axes = fig.add_subplot(122)
@@ -114,6 +121,7 @@ def main():
     axes.imshow(cdf.T, origin='lower', 
             extent=(ysmin, ysmax, xsmin, xsmax), cmap=cm.hot)
     axes.scatter(Y, X, c='y')
+    axes.plot(Y_s[:,0], quantile[:,0], 'r-')
     axes.set_xlim(ysmin, ysmax)
     axes.set_ylim(xsmin, xsmax)
     pl.show()
