@@ -23,7 +23,6 @@
 #include "data.hpp"
 #include "matvec.hpp"
 #include "kernel.hpp"
-#include "rkhs.hpp"
 
 
 template <class K>

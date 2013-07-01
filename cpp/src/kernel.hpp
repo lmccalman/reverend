@@ -88,6 +88,15 @@ class Kernel
     {
       return k_(x1,x2, width_);
     }
+    
+    void embedIndicator(const Eigen::VectorXd& cutoff, Eigen::VectorXd& weights) const
+    {
+      return k_.embedIndicator(cutoff, X_, width_, weights);
+    };
+    double cumulative(const Eigen::VectorXd& cutoff, const Eigen::VectorXd& centre) const
+    {
+      return k_.cumulative(cutoff, centre, width_); 
+    }
       
   protected:
     T k_;
@@ -111,8 +120,42 @@ class RBFKernel
     {
       return 5.0*width; 
     }
+
+    void embedIndicator(const Eigen::VectorXd& cutoff,
+        const Eigen::MatrixXd& X, double sigma_x, Eigen::VectorXd& weights) const
+    {
+      uint n = X.rows();
+      uint dx = X.cols();
+      double a = std::sqrt(2.0 * M_PI) * sigma_x;
+      double denom = 1.0 / (sigma_x*std::sqrt(2.0));
+      for (int i=0; i<n; i++)
+      {
+        double dim_result = 1.0;
+        for (int d=0; d<dx; d++)
+        {
+          double p = cutoff(d);
+          double m = X(i,d);
+          dim_result *= a * 0.5 * (1.0 + std::erf((p - m)*denom));
+        }
+        weights[i] = dim_result;
+      }
+    }
+    double cumulative(const Eigen::VectorXd& cutoff,
+                      const Eigen::VectorXd& centre,
+                      double sigma_x) const
+    {
+      double denom = 1.0 / (sigma_x*std::sqrt(2.0));
+      uint dx = cutoff.rows(); 
+      double dim_result = 1.0;
+      for (int d=0; d<dx; d++)
+      {
+        double p = cutoff(d);
+        double m = centre(d);
+        dim_result *= 0.5 * (1.0 + std::erf( (p - m)*denom ));
+      }
+    
+    }
+
+
+
 };
-
-
-
-

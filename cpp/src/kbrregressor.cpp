@@ -24,6 +24,7 @@
 #include "io.hpp"
 #include "train.hpp"
 #include "preimage.hpp"
+#include "cumulative.hpp"
 
 int main(int argc, char** argv)
 {
@@ -90,7 +91,15 @@ int main(int argc, char** argv)
   }
   //and write the posterior
   writeNPY(posterior, settings.filename_posterior);
+
+  //compute cumulative estimates
+  std::cout << "Estimates Cumulative distributions..." << std::endl;
+  Eigen::MatrixXd cumulates(testData.ys.rows(), testData.xs.rows());
+  computeCumulates(trainData, testData, weights, kx, settings, cumulates);
+  writeNPY(cumulates, "testcumulative.npy");
+  
   std::cout << "kbrcpp task complete." << std::endl;
+
   return 0;
 }
 
