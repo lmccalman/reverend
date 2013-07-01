@@ -93,10 +93,13 @@ int main(int argc, char** argv)
   writeNPY(posterior, settings.filename_posterior);
 
   //compute cumulative estimates
-  std::cout << "Estimates Cumulative distributions..." << std::endl;
-  Eigen::MatrixXd cumulates(testData.ys.rows(), testData.xs.rows());
-  computeCumulates(trainData, testData, weights, kx, settings, cumulates);
-  writeNPY(cumulates, "testcumulative.npy");
+  if (settings.cumulative_estimate)
+  {
+    std::cout << "Estimates Cumulative distributions..." << std::endl;
+    Eigen::MatrixXd cumulates(testData.ys.rows(), testData.xs.rows());
+    computeCumulates(trainData, testData, weights, kx, settings, cumulates);
+    writeNPY(cumulates, settings.filename_cumulative);
+  }
   
   std::cout << "kbrcpp task complete." << std::endl;
 

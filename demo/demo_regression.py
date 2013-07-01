@@ -52,9 +52,10 @@ settings.sigma_y_max = 0.5
 settings.preimage_reg = 1e-6
 settings.preimage_reg_min = 1e-10
 settings.preimage_reg_max = 1e1
-settings.normed_weights = True
+settings.normed_weights = False
 #Some other settings
 settings.inference_type = 'regress'
+settings.cumulative_estimate = True
 settings.walltime = 5.0
 settings.preimage_walltime = 5.0
 settings.folds = 5
@@ -94,7 +95,10 @@ def main():
     W = np.load(settings.filename_weights)
     P = np.load(settings.filename_preimage)
     pdf = np.load(settings.filename_posterior)
-    cdf = np.load("testcumulative.npy")
+
+    cdf = None
+    if settings.cumulative_estimate:
+        cdf = np.load(settings.filename_cumulative)
 
     #And plot...
     fig = pl.figure()

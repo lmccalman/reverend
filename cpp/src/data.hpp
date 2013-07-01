@@ -27,6 +27,7 @@ struct Settings
   std::string filename_weights;
   std::string filename_preimage;
   std::string filename_posterior;
+  std::string filename_cumulative;
   std::string cost_function;
   std::string inference_type;
   double sigma_x;
@@ -43,6 +44,7 @@ struct Settings
   uint folds;
   uint observation_period;
   bool normed_weights;
+  bool cumulative_estimate;
 };
 
 

@@ -31,12 +31,14 @@ class Settings(object):
             self.filename_weights = prefix + 'W.npy'
             self.filename_preimage = prefix + 'R.npy'
             self.filename_posterior = prefix + 'P.npy'
+            self.filename_cumulative = prefix + 'C.npy'
 
 def write_config_file(settings, filename):
     config = ConfigParser.RawConfigParser()
     config.add_section('Algorithm')
     config.set('Algorithm', 'observation_period', settings.observation_period)
     config.set('Algorithm', 'inference_type', settings.inference_type)
+    config.set('Algorithm', 'cumulative_estimate', int(settings.cumulative_estimate))
     config.add_section('Input')
     config.set('Input', 'filename_x', settings.filename_X)
     config.set('Input', 'filename_y', settings.filename_Y)
@@ -54,6 +56,7 @@ def write_config_file(settings, filename):
     config.set('Output', 'filename_weights', settings.filename_weights)
     config.set('Output', 'filename_preimage', settings.filename_preimage)
     config.set('Output', 'filename_posterior', settings.filename_posterior)
+    config.set('Output', 'filename_cumulative', settings.filename_cumulative)
     config.add_section('Training')
     config.set('Training', 'walltime', settings.walltime)
     config.set('Training', 'preimage_walltime', settings.preimage_walltime)
