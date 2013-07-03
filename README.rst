@@ -10,7 +10,7 @@ Requirements
 For the C++ Executables:
 * Boost 1.53 (may work with earlier versions)
 * Eigen3
-* Nlopt
+* Nlopt (included in this source tree)
 
 For the Python scripts:
 * Python2
@@ -20,10 +20,10 @@ For the Python scripts:
 Building
 --------
 
-First you need to check out cnpy as a submodule:
+First you need to build cnpy. In the directory cnpy type:
 
-$ git submodule init
-$ git submodule update
+$ cmake .
+$ make
 
 Now, go into the cpp directory and build the executable in-source:
 
