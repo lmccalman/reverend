@@ -81,10 +81,10 @@ class LogPCost:Cost
 
 
 template <class T, class K>
-class JointCost:Cost
+class JointLogPCost:Cost
 {
   public:
-    JointCost(const TrainingData& train, const TestingData& test, const Settings& settings)
+    JointLogPCost(const TrainingData& train, const TestingData& test, const Settings& settings)
       : Cost(train, test), 
       algo_(train.x.rows(), train.u.rows(), settings),
       weights_(test.ys.rows(), train.x.rows()),
@@ -261,5 +261,59 @@ class PinballCost:Cost
     Kernel<K> ky_;
     T algo_;
     Eigen::MatrixXd weights_;
+    const Settings& settings_;
+};
+
+template <class T, class K>
+class JointPinballCost:Cost
+{
+  public:
+    JointPinballCost(const TrainingData& train, const TestingData& test, const Settings& settings)
+      : Cost(train, test), 
+      algo_(train.x.rows(), train.u.rows(), settings),
+      weights_(test.ys.rows(), train.x.rows()),
+      posWeights_(train.x.rows()),
+      kx_(train.x, 1.0), ky_(train.y, 1.0),
+      settings_(settings)
+  {
+  }; 
+
+    double operator()(const std::vector<double>&x, std::vector<double>&grad)
+    {
+      double sigma_x = x[0];
+      double sigma_y = x[1];
+      kx_.setWidth(sigma_x);
+      ky_.setWidth(sigma_y);
+      double preimage_reg = exp(x[2]);
+      uint dim = trainingData_.x.cols();
+      algo_(trainingData_, kx_, ky_, testingData_.ys, weights_);
+      uint testPoints = testingData_.xs.rows();
+      double tau = settings_.quantile;
+      double totalCost = 0.0;
+      for (int i=0;i<testPoints;i++)
+      {
+        positiveNormedCoeffs(weights_.row(i), kx_, dim, preimage_reg, posWeights_);
+        Quantile<Kernel<K> > q(posWeights_, trainingData_.x, kx_, settings_);
+        double z = q(tau);
+        double y = testingData_.xs(i,0);
+        if (y >= z)
+        {
+          totalCost += (y-z)*tau;
+        }
+        else
+        {
+          totalCost += (z-y)*(1.0 - tau);
+        }
+      }
+      return totalCost;
+
+    };
+
+  private: 
+    T algo_;
+    Eigen::MatrixXd weights_;
+    Eigen::VectorXd posWeights_;
+    Kernel<K> kx_;
+    Kernel<K> ky_;
     const Settings& settings_;
 };

@@ -42,24 +42,24 @@ filename_config = 'motorcycle_regressor.ini'
 prefix = 'mc'  # will automatically construct all filenames
 settings = kbrcpp.Settings(prefix)
 #some training parameters for kernel width
-settings.cost_function = 'pinball'  # {'logp', 'hilbert', 'joint', 'pinball'}
-settings.sigma_x_min = 0.02
+settings.cost_function = 'jointpinball'  # {'logp', 'hilbert', 'jointlogp', 'pinball', 'jointpinball'}
+settings.sigma_x_min = 0.002
 settings.sigma_x = 0.236
 settings.sigma_x_max = 0.3
 settings.sigma_y_min = 0.03
 settings.sigma_y = 0.08
-settings.sigma_y_max = 0.5
+settings.sigma_y_max = 0.9
 #for preimage
 settings.preimage_reg = 1e-6
 settings.preimage_reg_min = 1e-10
 settings.preimage_reg_max = 1e1
-settings.normed_weights = True
+settings.normed_weights = False
 #Some other settings
 settings.inference_type = 'regress'
 settings.cumulative_estimate = True
 settings.quantile_estimate = True
-settings.quantile = 0.5
-settings.walltime = 12.0
+settings.quantile = 0.9
+settings.walltime = 120.0
 settings.preimage_walltime = 5.0
 settings.folds = 5
 settings.observation_period = 1
