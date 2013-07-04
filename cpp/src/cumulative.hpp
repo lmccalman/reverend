@@ -177,11 +177,11 @@ class Quantile
       {
         if (fmax > 0)
         {
-          result = xmax_;
+          result = 1e3;
         }
         else
         {
-          result = xmin_;
+          result = -1e3;
         }
       }
       return result;
