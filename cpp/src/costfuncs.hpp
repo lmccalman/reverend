@@ -214,3 +214,45 @@ class PreimageCost:Cost
     Kernel<K> kx_;
     Kernel<K> ky_;
 };
+
+template <class T, class K>
+class PinballCost:Cost
+{
+  public:
+    PinballCost(const TrainingData& train, const TestingData& test, const Settings& settings)
+      : Cost(train, test), 
+      algo_(train.x.rows(), train.u.rows(), settings),
+      weights_(test.ys.rows(), train.x.rows()),
+      kx_(train.x, 1.0), ky_(train.y, 1.0)
+      q_(const Eigen::VectorXd& coeffs, const Eigen::MatrixXd& X,
+            const K& kx, const Settings& settings):
+  {
+  }; 
+
+    double operator()(const std::vector<double>&x, std::vector<double>&grad)
+    {
+      double sigma_x = x[0];
+      double sigma_y = x[1];
+      kx_.setWidth(sigma_x);
+      ky_.setWidth(sigma_y);
+      algo_(trainingData_, kx_, ky_, testingData_.ys, weights_);
+      uint testPoints = testingData_.xs.rows();
+      double totalCost = 0.0;
+      for (int i=0;i<testPoints;i++)
+      {
+        totalCost += logGaussianMixture(testingData_.xs.row(i),
+            trainingData_.x,
+            weights_.row(i),
+            sigma_x);
+      }
+      totalCost *= -1; // minimize this maximizes probability
+      return totalCost;
+
+    };
+
+  private: 
+    Kernel<K> kx_;
+    Kernel<K> ky_;
+    T algo_;
+    Eigen::MatrixXd weights_;
+};

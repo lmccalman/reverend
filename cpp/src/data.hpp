@@ -27,6 +27,7 @@ struct Settings
   std::string filename_weights;
   std::string filename_preimage;
   std::string filename_posterior;
+  std::string filename_embedding;
   std::string filename_cumulative;
   std::string filename_quantile;
   std::string cost_function;

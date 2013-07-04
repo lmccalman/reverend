@@ -23,6 +23,7 @@ import os.path
 
 class Settings(object):
     def __init__(self, prefix=None):
+        self.prefix = prefix
         if prefix is not None:
             self.filename_X = prefix + 'X.npy'
             self.filename_Y = prefix + 'Y.npy'
@@ -30,12 +31,14 @@ class Settings(object):
             self.filename_Y_s = prefix + 'Y_s.npy'
             self.filename_U = prefix + 'U.npy'
             self.filename_weights = prefix + 'W.npy'
-            self.filename_preimage = prefix + 'R.npy'
+            self.filename_preimage = prefix + 'PW.npy'
+            self.filename_embedding = prefix + 'E.npy'
             self.filename_posterior = prefix + 'P.npy'
             self.filename_cumulative = prefix + 'C.npy'
-            self.filename_quantile = prefix + 'Q.npy'
 
 def write_config_file(settings, filename):
+    
+    settings.filename_quantile = settings.prefix + 'Q_{}.npy'.format(settings.quantile)
     config = ConfigParser.RawConfigParser()
     config.add_section('Algorithm')
     config.set('Algorithm', 'observation_period', settings.observation_period)
@@ -60,6 +63,7 @@ def write_config_file(settings, filename):
     config.set('Output', 'filename_weights', settings.filename_weights)
     config.set('Output', 'filename_preimage', settings.filename_preimage)
     config.set('Output', 'filename_posterior', settings.filename_posterior)
+    config.set('Output', 'filename_embedding', settings.filename_embedding)
     config.set('Output', 'filename_cumulative', settings.filename_cumulative)
     config.set('Output', 'filename_quantile', settings.filename_quantile)
     config.add_section('Training')

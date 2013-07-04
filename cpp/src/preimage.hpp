@@ -68,5 +68,29 @@ void computePosterior(const TrainingData& trainingData, const TestingData& testi
   }
 }
 
+template <class K>
+void computeEmbedding(const TrainingData& trainingData, const TestingData& testingData,
+    const Eigen::MatrixXd& weights, const K& kx, Eigen::MatrixXd& embedding)
+{
+  uint s = weights.rows(); 
+  uint p = testingData.xs.rows();
+  uint n = trainingData.x.rows();
+  #pragma omp parallel for
+  for (int i=0;i<s;i++)  
+  {
+    for (int j=0;j<p;j++)
+    {
+      Eigen::VectorXd w_i = weights.row(i);
+      Eigen::VectorXd testpoint = testingData.xs.row(j);
+      double result = 0.0;
+      for (int k=0;k<n;k++)
+      {
+        result += w_i(k) * kx(trainingData.x.row(k), testpoint); 
+      } 
+      embedding(i,j) = result;
+    }
+  }
+}
+
 
 

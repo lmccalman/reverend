@@ -41,6 +41,7 @@ Settings getSettings(const std::string& filename)
   s.filename_weights = pt.get<std::string>("Output.filename_weights"); 
   s.filename_preimage = pt.get<std::string>("Output.filename_preimage"); 
   s.filename_posterior = pt.get<std::string>("Output.filename_posterior"); 
+  s.filename_embedding = pt.get<std::string>("Output.filename_embedding"); 
   s.filename_cumulative = pt.get<std::string>("Output.filename_cumulative"); 
   s.filename_quantile = pt.get<std::string>("Output.filename_quantile"); 
   s.sigma_x = pt.get<double>("Kernel.sigma_x"); 

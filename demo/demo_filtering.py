@@ -112,13 +112,17 @@ def main():
 
     #read in the weights we've just calculated
     W = np.load(settings.filename_weights)
-    P = None
+    
+    WP = None
     if settings.normed_weights is False:
-        P = np.load(settings.filename_preimage)
+        WP = np.load(settings.filename_preimage)
+    
+    embedding = np.load(settings.filename_embedding)
+    embedding = embedding.reshape((testing_size,xssize[0],xssize[1]))
     pdf = np.load(settings.filename_posterior)
     pdf = pdf.reshape((testing_size,xssize[0],xssize[1]))
 
-    # our filter lops of the last training point to get deltas
+    # our filter lops off the last training point to get deltas
     X = X[:-1]
 
     

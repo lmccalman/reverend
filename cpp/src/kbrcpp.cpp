@@ -69,6 +69,12 @@ int main(int argc, char** argv)
  
   //write out the results 
   writeNPY(weights, settings.filename_weights);
+  
+  //evaluate the raw posterior 
+  Eigen::MatrixXd embedding(testData.ys.rows(), testData.xs.rows());
+  std::cout << "Evaluating embedded posterior..." << std::endl;
+  computeEmbedding(trainData, testData, weights, kx, embedding);
+  writeNPY(embedding, settings.filename_embedding);
 
   //Normalise and compute posterior
   Eigen::MatrixXd posterior(testData.ys.rows(), testData.xs.rows());
@@ -79,8 +85,9 @@ int main(int argc, char** argv)
     computeNormedWeights(weights, kx, trainData.x.cols(),
                          settings, preimageWeights);
     writeNPY(preimageWeights, settings.filename_preimage);
+    
     std::cout << "Evaluating posterior..." << std::endl;
-    computePosterior(trainData, testData, weights, settings.sigma_x,
+    computePosterior(trainData, testData, preimageWeights, settings.sigma_x,
         posterior);
   }
   else

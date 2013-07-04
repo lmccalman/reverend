@@ -44,22 +44,22 @@ settings = kbrcpp.Settings(prefix)
 #some training parameters for kernel width
 settings.cost_function = 'logp'  # {'logp', 'hilbert', 'joint'}
 settings.sigma_x_min = 0.02
-settings.sigma_x = 0.2
-settings.sigma_x_max = 0.5
-settings.sigma_y_min = 0.05
-settings.sigma_y = 0.3
+settings.sigma_x = 0.236
+settings.sigma_x_max = 0.3
+settings.sigma_y_min = 0.03
+settings.sigma_y = 0.08
 settings.sigma_y_max = 0.5
 #for preimage
 settings.preimage_reg = 1e-6
 settings.preimage_reg_min = 1e-10
 settings.preimage_reg_max = 1e1
-settings.normed_weights = True
+settings.normed_weights = False
 #Some other settings
 settings.inference_type = 'regress'
 settings.cumulative_estimate = True
 settings.quantile_estimate = True
 settings.quantile = 0.5
-settings.walltime = 5.0
+settings.walltime = 12.0
 settings.preimage_walltime = 5.0
 settings.folds = 5
 settings.observation_period = 1
@@ -95,10 +95,10 @@ def main():
     kbrcpp.run(filename_config, kbrcpp_directory)
 
     #read in the weights we've just calculated
-    W = np.load(settings.filename_weights)
-    P = np.load(settings.filename_preimage)
+    #W = np.load(settings.filename_weights)
+    #PW = np.load(settings.filename_preimage)
+    E = np.load(settings.filename_embedding)
     pdf = np.load(settings.filename_posterior)
-
     cdf = None
     if settings.cumulative_estimate:
         cdf = np.load(settings.filename_cumulative)
@@ -109,21 +109,37 @@ def main():
     #And plot...
     fig = pl.figure()
     axes = fig.add_subplot(121)
-    axes.set_title('PDF estimate')
-    axes.imshow(pdf.T, origin='lower', 
-                extent=(ysmin, ysmax, xsmin, xsmax),cmap=cm.hot)
+    axes.set_title('Posterior Embedding')
+    axes.imshow(E.T, origin='lower', 
+                extent=(ysmin, ysmax, xsmin, xsmax),cmap=cm.hot, aspect='auto')
     axes.scatter(Y, X, c='y')
-    axes.plot(Y_s[:,0], quantile[:,0], 'r-')
     axes.set_xlim(ysmin, ysmax)
     axes.set_ylim(xsmin, xsmax)
     axes = fig.add_subplot(122)
-    axes.set_title('CDF estimate')
-    axes.imshow(cdf.T, origin='lower', 
-            extent=(ysmin, ysmax, xsmin, xsmax), cmap=cm.hot)
+    axes.set_title('PDF estimate')
+    axes.imshow(pdf.T, origin='lower', 
+            extent=(ysmin, ysmax, xsmin, xsmax), cmap=cm.hot, aspect='auto')
     axes.scatter(Y, X, c='y')
-    axes.plot(Y_s[:,0], quantile[:,0], 'r-')
     axes.set_xlim(ysmin, ysmax)
     axes.set_ylim(xsmin, xsmax)
+    
+    if settings.cumulative_estimate:
+        fig = pl.figure()
+        axes = fig.add_subplot(121)
+        axes.set_title('CDF Estimate')
+        axes.imshow(cdf.T, origin='lower', 
+                extent=(ysmin, ysmax, xsmin, xsmax),cmap=cm.hot, aspect='auto')
+        axes.scatter(Y, X, c='y')
+        axes.set_xlim(ysmin, ysmax)
+        axes.set_ylim(xsmin, xsmax)
+        axes = fig.add_subplot(122)
+        axes.set_title('Quantile Estimate')
+        axes.imshow(pdf.T, origin='lower', 
+                extent=(ysmin, ysmax, xsmin, xsmax),cmap=cm.hot, aspect='auto')
+        axes.scatter(Y, X, c='y')
+        axes.set_xlim(ysmin, ysmax)
+        axes.set_ylim(xsmin, xsmax)
+        axes.plot(Y_s[:,0], quantile[:,0], 'b-',linewidth=2.0)
     pl.show()
 
 if __name__ == "__main__":
