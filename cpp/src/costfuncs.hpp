@@ -21,6 +21,7 @@
 #include "filter.hpp"
 #include "preimage.hpp"
 #include "distrib.hpp"
+#include "cumulative.hpp"
 
 
 //This is a 'Raw' cost function, which must be wrapped in some way to become an
@@ -223,9 +224,8 @@ class PinballCost:Cost
       : Cost(train, test), 
       algo_(train.x.rows(), train.u.rows(), settings),
       weights_(test.ys.rows(), train.x.rows()),
-      kx_(train.x, 1.0), ky_(train.y, 1.0)
-      q_(const Eigen::VectorXd& coeffs, const Eigen::MatrixXd& X,
-            const K& kx, const Settings& settings):
+      kx_(train.x, 1.0), ky_(train.y, 1.0),
+      settings_(settings)
   {
   }; 
 
@@ -237,17 +237,23 @@ class PinballCost:Cost
       ky_.setWidth(sigma_y);
       algo_(trainingData_, kx_, ky_, testingData_.ys, weights_);
       uint testPoints = testingData_.xs.rows();
+      double tau = settings_.quantile;
       double totalCost = 0.0;
       for (int i=0;i<testPoints;i++)
       {
-        totalCost += logGaussianMixture(testingData_.xs.row(i),
-            trainingData_.x,
-            weights_.row(i),
-            sigma_x);
+        Quantile<Kernel<K> > q(weights_.row(i), trainingData_.x, kx_, settings_);
+        double z = q(tau);
+        double y = testingData_.xs(i,0);
+        if (y >= z)
+        {
+          totalCost += (y-z)*tau;
+        }
+        else
+        {
+          totalCost += (z-y)*(1.0 - tau);
+        }
       }
-      totalCost *= -1; // minimize this maximizes probability
       return totalCost;
-
     };
 
   private: 
@@ -255,4 +261,5 @@ class PinballCost:Cost
     Kernel<K> ky_;
     T algo_;
     Eigen::MatrixXd weights_;
+    const Settings& settings_;
 };

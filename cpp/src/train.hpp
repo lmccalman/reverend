@@ -101,6 +101,14 @@ void trainSettings(const TrainingData& data, Settings& settings)
       settings.sigma_x = thetaBest[0];
       settings.sigma_y = thetaBest[1];
     }
+    else if (settings.cost_function == std::string("pinball"))
+    {
+      KFoldCVCost< PinballCost<A,K> > costfunc(
+          folds, data, settings);
+      thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
+      settings.sigma_x = thetaBest[0];
+      settings.sigma_y = thetaBest[1];
+    }
     else
     {
       KFoldCVCost< LogPCost<A,K> > costfunc(folds,

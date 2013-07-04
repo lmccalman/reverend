@@ -164,9 +164,27 @@ class Quantile
       QuantileWrapper<K> F(c_,tau);
       boost::math::tools::eps_tolerance<double> tol(11); 
       long unsigned int maxIterations = 1000;
-      auto result = boost::math::tools::toms748_solve(F, xmin_, xmax_,
-         F(xmin_), F(xmax_), tol, maxIterations);
-      return 0.5*(result.first + result.second);
+      double result;
+      double fmin = F(xmin_);
+      double fmax = F(xmax_);
+      try
+      {
+        auto boundingPair = boost::math::tools::toms748_solve(F, xmin_, xmax_,
+           F(xmin_), F(xmax_), tol, maxIterations);
+        result = 0.5*(boundingPair.first + boundingPair.second);
+      }
+      catch (...)
+      {
+        if (fmax > 0)
+        {
+          result = xmax_;
+        }
+        else
+        {
+          result = xmin_;
+        }
+      }
+      return result;
     }
 
   protected:
