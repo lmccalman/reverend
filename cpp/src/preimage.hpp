@@ -3,19 +3,19 @@
 #include <Eigen/Dense>
 #include "eiquadprog.hpp"
 #include "data.hpp"
-#include "kernel.hpp"
 #include "distrib.hpp"
 
 template <class K>
 void positiveNormedCoeffs(const Eigen::VectorXd& embedding,
-      const Kernel<K>& kx, uint k, double regulariser, Eigen::VectorXd& mixtureCoeffs)
+      const K& kx, uint k, double regulariser, Eigen::VectorXd& mixtureCoeffs)
 {
   uint n = kx.gramMatrix().rows();
   uint p = 1;
   uint m = n;
 
   Eigen::MatrixXd G(n,n);
-  G = kx.gramMatrix() + regulariser*Eigen::MatrixXd::Identity(n, n); 
+  G = kx.gramMatrix();
+  G += regulariser*Eigen::MatrixXd::Identity(n, n); 
 
   Eigen::VectorXd g0(n);
   g0 = -1.0 * pow(2.0, k/2.0) * embedding.transpose() * kx.gramMatrix();
@@ -33,7 +33,7 @@ void positiveNormedCoeffs(const Eigen::VectorXd& embedding,
 
 template <class K>
 void computeNormedWeights(const Eigen::MatrixXd& weights,
-   const Kernel<K>& kx, uint dimension, const Settings& settings,
+   const K& kx, uint dimension, const Settings& settings,
    Eigen::MatrixXd& preimageWeights)
 {
   uint n = weights.cols();

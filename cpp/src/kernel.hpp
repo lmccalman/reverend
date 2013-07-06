@@ -79,9 +79,9 @@ class Kernel
       return (double)(x1.transpose() * g_xx_ * x2);
     }
     
-    double approximateHalfSupport() const
+    double halfSupport() const
     {
-      return k_.approximateHalfSupport(width_);
+      return k_.halfSupport(width_);
     }
     
     double operator()(const Eigen::VectorXd& x1, const Eigen::VectorXd& x2) const
@@ -102,10 +102,10 @@ class Kernel
   protected:
     T k_;
     const Eigen::MatrixXd& X_;
-    Eigen::MatrixXd g_xx_;
     double width_ = 1.0;
+  private:
+    Eigen::MatrixXd g_xx_;
 };
-
 
 class RBFKernel
 {
@@ -117,7 +117,7 @@ class RBFKernel
     {
       return exp(-0.5 * (x - x_dash).squaredNorm() / (sigma*sigma));
     }
-    double approximateHalfSupport(double width) const
+    double halfSupport(double width) const
     {
       return 5.0*width; 
     }

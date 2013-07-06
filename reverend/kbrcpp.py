@@ -95,3 +95,11 @@ def run(filename_config, directory):
                             stderr=subprocess.STDOUT)
     for line in iter(proc.stdout.readline, ""):
         print line,
+
+def run_sparse(filename_config, directory):
+    path = os.path.join(os.path.abspath(directory), 'skbrcpp')
+    proc = subprocess.Popen([path, filename_config],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
+    for line in iter(proc.stdout.readline, ""):
+        print line,

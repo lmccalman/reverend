@@ -16,6 +16,9 @@
 // along with Reverend.  If not, see <http://www.gnu.org/licenses/>.
 #pragma once
 #include <Eigen/Core>
+#include <Eigen/Sparse>
+
+typedef Eigen::SparseMatrix<double> SparseMatrix;
 
 struct Settings
 {

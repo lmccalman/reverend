@@ -45,11 +45,11 @@ int main(int argc, char** argv)
   //how about some training  
   if (settings.inference_type == std::string("filter"))
   {
-    trainSettings<Filter<RBFKernel>, RBFKernel>(trainData, settings);
+    trainSettings<Filter< Kernel<RBFKernel> >, Kernel<RBFKernel> >(trainData, settings);
   }
   else
   {
-    trainSettings<Regressor<RBFKernel>, RBFKernel>(trainData, settings);
+    trainSettings<Regressor<Kernel<RBFKernel> >, Kernel<RBFKernel> >(trainData, settings);
   }
 
   //Create kernels and algorithm 
@@ -58,12 +58,12 @@ int main(int argc, char** argv)
   Kernel<RBFKernel> ky(trainData.y, settings.sigma_y);
   if (settings.inference_type == std::string("filter"))
   {
-    Filter<RBFKernel> f(n, m, settings);
+    Filter<Kernel<RBFKernel> > f(n, m, settings);
     f(trainData, kx, ky, testData.ys, weights);
   }
   else
   {
-    Regressor<RBFKernel> r(n, m, settings);
+    Regressor<Kernel<RBFKernel> > r(n, m, settings);
     r(trainData, kx, ky, testData.ys, weights);
   }
  

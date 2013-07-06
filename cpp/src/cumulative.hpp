@@ -155,8 +155,8 @@ class Quantile
         const K& kx, const Settings& settings):
       c_(coeffs, X, kx, settings)
   {
-    xmin_ = X.minCoeff() - kx.approximateHalfSupport();
-    xmax_ = X.maxCoeff() + kx.approximateHalfSupport();
+    xmin_ = X.minCoeff() - kx.halfSupport();
+    xmax_ = X.maxCoeff() + kx.halfSupport();
   }
 
     double operator()(double tau) 

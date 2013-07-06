@@ -30,11 +30,11 @@ class Regressor
   public:
     Regressor(uint trainingLength, uint priorLength, const Settings& settings);
     void operator()(const TrainingData& data, 
-               const Kernel<K>& kx,
-               const Kernel<K>& ky, 
+               const K& kx,
+               const K& ky, 
                const Eigen::MatrixXd& ys,
                Eigen::MatrixXd& weights); 
-
+  
   private:
 
     //Settings
@@ -52,8 +52,8 @@ class Regressor
     Eigen::MatrixXd beta_g_yy_;
     Eigen::MatrixXd beta_diag_;
     Eigen::MatrixXd r_xy_;
-    VerifiedCholeskySolver<Eigen::VectorXd> chol_g_xx_;
-    VerifiedCholeskySolver<Eigen::MatrixXd> chol_beta_g_yy_;
+    VerifiedCholeskySolver<Eigen::MatrixXd, Eigen::VectorXd> chol_g_xx_;
+    VerifiedCholeskySolver<Eigen::MatrixXd, Eigen::MatrixXd> chol_beta_g_yy_;
     Eigen::VectorXd w_;
 
 };
@@ -72,8 +72,8 @@ Regressor<K>::Regressor(uint trainLength, uint testLength, const Settings& setti
 
 template <class K>
 void Regressor<K>::operator()(const TrainingData& data, 
-                          const Kernel<K>& kx,
-                          const Kernel<K>& ky, 
+                          const K& kx,
+                          const K& ky, 
                           const Eigen::MatrixXd& ys,
                           Eigen::MatrixXd& weights)
 {

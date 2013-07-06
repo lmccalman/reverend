@@ -50,7 +50,8 @@ class SparseRegressor
     Eigen::VectorXd mu_pi_;
     Eigen::VectorXd beta_;
     Eigen::VectorXd w_;
-
+    VerifiedCholeskySolver<SparseMatrix, Eigen::VectorXd> chol_g_xx_;
+    VerifiedCholeskySolver<SparseMatrix, Eigen::MatrixXd> chol_beta_g_yy_;
 };
 
 template <class K>
@@ -63,8 +64,8 @@ SparseRegressor<K>::SparseRegressor(uint trainLength, uint testLength, const Set
 
 template <class K>
 void SparseRegressor<K>::operator()(const TrainingData& data, 
-                          const Kernel<K>& kx,
-                          const Kernel<K>& ky, 
+                          const CompactKernel<K>& kx,
+                          const CompactKernel<K>& ky, 
                           const Eigen::MatrixXd& ys,
                           Eigen::MatrixXd& weights)
 {

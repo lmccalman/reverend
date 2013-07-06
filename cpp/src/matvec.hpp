@@ -21,8 +21,16 @@
 #include <Eigen/Core>
 #include <Eigen/Cholesky>
 
-template <class T>
+template <class M, class T>
 class VerifiedCholeskySolver
+{
+  public:
+    VerifiedCholeskySolver(uint A_n, uint bRows, uint bCols);
+    void solve(const Eigen::MatrixXd& A, const Eigen::MatrixXd& b, T& x);
+};
+
+template <class T>
+class VerifiedCholeskySolver<Eigen::MatrixXd, T>
 {
   public:
     VerifiedCholeskySolver(uint A_n, uint bRows, uint bCols)
@@ -42,7 +50,27 @@ class VerifiedCholeskySolver
 };
 
 template <class T>
-void VerifiedCholeskySolver<T>::solve(const Eigen::MatrixXd& A, const Eigen::MatrixXd& b, T& x)
+class VerifiedCholeskySolver<SparseMatrix, T>
+{
+  public:
+    VerifiedCholeskySolver(uint A_n, uint bRows, uint bCols)
+      : bDash_(bRows, bCols), xDashDown_(bRows, bCols)
+    { 
+      jitter_ = 1e-7;
+    };
+
+    void solve(const SparseMatrix& A, const Eigen::MatrixXd& b, T& x);
+
+  private:
+    Eigen::ConjugateGradient<SparseMatrix> cholSolver_;
+    Eigen::MatrixXd bDash_;
+    Eigen::MatrixXd xDashDown_;
+    SparseMatrix aJit_;
+    double jitter_;
+};
+
+template <class T>
+void VerifiedCholeskySolver<Eigen::MatrixXd, T>::solve(const Eigen::MatrixXd& A, const Eigen::MatrixXd& b, T& x)
 {
   uint n = A.rows();
   double maxJitter = 1.0e10;
@@ -85,6 +113,73 @@ void VerifiedCholeskySolver<T>::solve(const Eigen::MatrixXd& A, const Eigen::Mat
       jitter_ *= 2.0;
       //compute Cholesky decomposition
       cholSolver_.compute(aJit_);
+      x = cholSolver_.solve(b);
+      bDash_ = aJit_ * x;
+      solved = (bDash_).isApprox(b, precision);
+    }
+    if (!solved)
+    {
+      std::cout << "WARNING: max jitter reached" << std::endl;
+      jitter_ /=2.0;
+    }
+  }
+}
+ 
+void setJitter(const SparseMatrix& A, double jitter, int n, SparseMatrix& aJit)
+{
+  std::vector< Eigen::Triplet<double> > coeffs;
+  for(uint i=0; i<n;i++)
+  {
+    coeffs.push_back(Eigen::Triplet<double>(i,i,jitter));
+  }
+  aJit.setFromTriplets(coeffs.begin(), coeffs.end()); 
+  aJit += A;
+}
+
+template <class T>
+void VerifiedCholeskySolver<SparseMatrix, T>::solve(const SparseMatrix& A, const Eigen::MatrixXd& b, T& x)
+{
+  uint n = b.rows();
+  double maxJitter = 1.0e20;
+  double minJitter = 1.0e-10;
+  double precision = 1e-6;
+  // start with the jitter from last time
+  setJitter(A, jitter_, n, aJit_);
+  cholSolver_.analyzePattern(aJit_); // for this step the numerical values of A are not used
+  cholSolver_.factorize(aJit_);
+  x = cholSolver_.solve(b);
+  bDash_ = aJit_ * x;
+  bool solved = (bDash_).isApprox(b, precision);
+  //if we solved, the jitter may be too big
+  bool smallestFound = false;
+  if (solved)
+  {
+    while (!smallestFound && (jitter_ > minJitter))
+    {
+      //decrease the jitter
+      setJitter(A, jitter_/2.0,n, aJit_);
+      cholSolver_.factorize(aJit_);
+      //compute Cholesky decomposition
+      xDashDown_ = cholSolver_.solve(b);
+      bDash_ = aJit_ * xDashDown_;
+      smallestFound = !((bDash_).isApprox(b, precision));
+      if (!smallestFound)
+      {
+        x = xDashDown_;
+        jitter_ /= 2.0;
+      }
+    }
+  }
+  //if we didn't solve, the jitter is too small
+  else
+  {
+    while ((jitter_ < maxJitter) && (!solved))
+    {
+      //increase the jitter
+      jitter_ *= 2.0;
+      setJitter(A, jitter_,n, aJit_);
+      //compute Cholesky decomposition
+      cholSolver_.factorize(aJit_);
       x = cholSolver_.solve(b);
       bDash_ = aJit_ * x;
       solved = (bDash_).isApprox(b, precision);

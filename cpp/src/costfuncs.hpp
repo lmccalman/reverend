@@ -73,8 +73,8 @@ class LogPCost:Cost
     };
   
   private: 
-    Kernel<K> kx_;
-    Kernel<K> ky_;
+    K kx_;
+    K ky_;
     T algo_;
     Eigen::MatrixXd weights_;
 };
@@ -122,8 +122,8 @@ class JointLogPCost:Cost
     T algo_;
     Eigen::MatrixXd weights_;
     Eigen::VectorXd posWeights_;
-    Kernel<K> kx_;
-    Kernel<K> ky_;
+    K kx_;
+    K ky_;
 };
 
 
@@ -162,8 +162,8 @@ struct HilbertCost:Cost
   private: 
     T algo_;
     Eigen::MatrixXd weights_;
-    Kernel<K> kx_;
-    Kernel<K> ky_;
+    K kx_;
+    K ky_;
 };
 
 
@@ -212,8 +212,8 @@ class PreimageCost:Cost
     Regressor<K> regressor_;
     Eigen::MatrixXd weights_;
     Eigen::MatrixXd preimageWeights_;
-    Kernel<K> kx_;
-    Kernel<K> ky_;
+    K kx_;
+    K ky_;
 };
 
 template <class T, class K>
@@ -241,7 +241,7 @@ class PinballCost:Cost
       double totalCost = 0.0;
       for (int i=0;i<testPoints;i++)
       {
-        Quantile<Kernel<K> > q(weights_.row(i), trainingData_.x, kx_, settings_);
+        Quantile<K> q(weights_.row(i), trainingData_.x, kx_, settings_);
         double z = q(tau);
         double y = testingData_.xs(i,0);
         if (y >= z)
@@ -257,8 +257,8 @@ class PinballCost:Cost
     };
 
   private: 
-    Kernel<K> kx_;
-    Kernel<K> ky_;
+    K kx_;
+    K ky_;
     T algo_;
     Eigen::MatrixXd weights_;
     const Settings& settings_;
@@ -293,7 +293,7 @@ class JointPinballCost:Cost
       for (int i=0;i<testPoints;i++)
       {
         positiveNormedCoeffs(weights_.row(i), kx_, dim, preimage_reg, posWeights_);
-        Quantile<Kernel<K> > q(posWeights_, trainingData_.x, kx_, settings_);
+        Quantile<K> q(posWeights_, trainingData_.x, kx_, settings_);
         double z = q(tau);
         double y = testingData_.xs(i,0);
         if (y >= z)
@@ -313,7 +313,7 @@ class JointPinballCost:Cost
     T algo_;
     Eigen::MatrixXd weights_;
     Eigen::VectorXd posWeights_;
-    Kernel<K> kx_;
-    Kernel<K> ky_;
+    K kx_;
+    K ky_;
     const Settings& settings_;
 };

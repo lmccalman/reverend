@@ -24,12 +24,12 @@
 #include "io.hpp"
 #include "train.hpp"
 #include "preimage.hpp"
-#include "cumulative.hpp"
+#include "compactkernel.hpp"
 
 int main(int argc, char** argv)
 {
   
-  std::cout << "kbrcpp initialised." << std::endl;
+  std::cout << "skbrcpp initialised." << std::endl;
   srand(time(NULL));
   auto settings = getSettings(argv[1]);
 
@@ -42,30 +42,16 @@ int main(int argc, char** argv)
   Eigen::MatrixXd weights(s,n);
 
   std::cout << "Training..." << std::endl;
-  //how about some training  
-  if (settings.inference_type == std::string("filter"))
-  {
-    trainSettings<Filter<RBFKernel>, RBFKernel>(trainData, settings);
-  }
-  else
-  {
-    trainSettings<Regressor<RBFKernel>, RBFKernel>(trainData, settings);
-  }
+  trainSettings<Regressor<CompactKernel<Q1CompactKernel<2> > >,
+                CompactKernel<Q1CompactKernel<2> > >(trainData, settings);
 
   //Create kernels and algorithm 
   std::cout << "Inferring..." << std::endl;
-  Kernel<RBFKernel> kx(trainData.x, settings.sigma_x);
-  Kernel<RBFKernel> ky(trainData.y, settings.sigma_y);
-  if (settings.inference_type == std::string("filter"))
-  {
-    Filter<RBFKernel> f(n, m, settings);
-    f(trainData, kx, ky, testData.ys, weights);
-  }
-  else
-  {
-    Regressor<RBFKernel> r(n, m, settings);
-    r(trainData, kx, ky, testData.ys, weights);
-  }
+  CompactKernel<Q1CompactKernel<2> > kx(trainData.x, settings.sigma_x);
+  CompactKernel<Q1CompactKernel<2> > ky(trainData.y, settings.sigma_y);
+  
+  Regressor<CompactKernel<Q1CompactKernel<2> > > r(n, m, settings);
+  r(trainData, kx, ky, testData.ys, weights);
  
   //write out the results 
   writeNPY(weights, settings.filename_weights);
@@ -76,7 +62,7 @@ int main(int argc, char** argv)
   computeEmbedding(trainData, testData, weights, kx, embedding);
   writeNPY(embedding, settings.filename_embedding);
 
-  //Normalise and compute posterior
+  // //Normalise and compute posterior
   Eigen::MatrixXd posterior(testData.ys.rows(), testData.xs.rows());
   if (!settings.normed_weights)
   {
@@ -99,26 +85,7 @@ int main(int argc, char** argv)
   //and write the posterior
   writeNPY(posterior, settings.filename_posterior);
 
-  //compute cumulative estimates
-  if (settings.cumulative_estimate)
-  {
-    std::cout << "Estimates Cumulative distributions..." << std::endl;
-    Eigen::MatrixXd cumulates(testData.ys.rows(), testData.xs.rows());
-    computeCumulates(trainData, testData, weights, kx, settings, cumulates);
-    writeNPY(cumulates, settings.filename_cumulative);
-  }
-  
-  //compute quantile estimates
-  if (settings.quantile_estimate && (trainData.x.cols() == 1))
-  {
-    std::cout << "Estimating " << settings.quantile
-      << " quantile..." << std::endl;
-    Eigen::VectorXd quantiles(testData.ys.rows());
-    computeQuantiles(trainData, testData, weights, kx, settings, quantiles);
-    writeNPY(quantiles, settings.filename_quantile);
-  }
-  
-  std::cout << "kbrcpp task complete." << std::endl;
+  std::cout << "skbrcpp task complete." << std::endl;
 
   return 0;
 }

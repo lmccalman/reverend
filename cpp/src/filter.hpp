@@ -31,8 +31,8 @@ class Filter
   public:
     Filter(uint trainingLength, uint priorLength, const Settings& settings);
     void operator()(const TrainingData& data, 
-               const Kernel<K>& kx,
-               const Kernel<K>& ky, 
+               const K& kx,
+               const K& ky, 
                const Eigen::MatrixXd& ys,
                Eigen::MatrixXd& weights); 
 
@@ -55,10 +55,10 @@ class Filter
     Eigen::MatrixXd beta_g_yy_;
     Eigen::MatrixXd beta_diag_;
     Eigen::MatrixXd r_xy_;
-    VerifiedCholeskySolver<Eigen::VectorXd> chol_g_yy_;
-    VerifiedCholeskySolver<Eigen::VectorXd> chol_beta_0_;
-    VerifiedCholeskySolver<Eigen::VectorXd> chol_beta_;
-    VerifiedCholeskySolver<Eigen::MatrixXd> chol_beta_g_yy_;
+    VerifiedCholeskySolver<Eigen::MatrixXd, Eigen::VectorXd> chol_g_yy_;
+    VerifiedCholeskySolver<Eigen::MatrixXd, Eigen::VectorXd> chol_beta_0_;
+    VerifiedCholeskySolver<Eigen::MatrixXd, Eigen::VectorXd> chol_beta_;
+    VerifiedCholeskySolver<Eigen::MatrixXd, Eigen::MatrixXd> chol_beta_g_yy_;
     Eigen::VectorXd w_;
 
 };
@@ -82,8 +82,8 @@ Filter<K>::Filter(uint trainLength, uint testLength, const Settings& settings)
 
 template <class K>
 void Filter<K>::operator()(const TrainingData& data, 
-                          const Kernel<K>& kx,
-                          const Kernel<K>& ky, 
+                          const K& kx,
+                          const K& ky, 
                           const Eigen::MatrixXd& ys,
                           Eigen::MatrixXd& weights)
 {
