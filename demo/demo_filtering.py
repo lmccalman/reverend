@@ -67,6 +67,7 @@ settings.walltime = 12.0
 settings.preimage_walltime = 12.0
 settings.folds = 2
 settings.observation_period = 1
+settings.preimage_estimate = True
 settings.cumulative_estimate = False
 settings.quantile_estimate = False
 settings.quantile = 0.5

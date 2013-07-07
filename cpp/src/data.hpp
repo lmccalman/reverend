@@ -48,6 +48,7 @@ struct Settings
   uint observation_period;
   bool normed_weights;
   bool cumulative_estimate;
+  bool preimage_estimate;
   bool quantile_estimate;
 };
 

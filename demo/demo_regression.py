@@ -56,6 +56,7 @@ settings.preimage_reg_max = 1e1
 settings.normed_weights = False
 #Some other settings
 settings.inference_type = 'regress'
+settings.preimage_estimate = True
 settings.cumulative_estimate = True
 settings.quantile_estimate = True
 settings.quantile = 0.9
