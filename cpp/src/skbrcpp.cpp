@@ -25,6 +25,7 @@
 #include "train.hpp"
 #include "preimage.hpp"
 #include "compactkernel.hpp"
+#include "sparseregressor.hpp"
 
 int main(int argc, char** argv)
 {
@@ -42,7 +43,7 @@ int main(int argc, char** argv)
   Eigen::MatrixXd weights(s,n);
 
   std::cout << "Training..." << std::endl;
-  trainSettings<Regressor<CompactKernel<Q1CompactKernel<2> > >,
+  trainSettings<SparseRegressor<CompactKernel<Q1CompactKernel<2> > >,
                 CompactKernel<Q1CompactKernel<2> > >(trainData, settings);
 
   //Create kernels and algorithm 
@@ -50,7 +51,7 @@ int main(int argc, char** argv)
   CompactKernel<Q1CompactKernel<2> > kx(trainData.x, settings.sigma_x);
   CompactKernel<Q1CompactKernel<2> > ky(trainData.y, settings.sigma_y);
   
-  Regressor<CompactKernel<Q1CompactKernel<2> > > r(n, m, settings);
+  SparseRegressor<CompactKernel<Q1CompactKernel<2> > > r(n, m, settings);
   r(trainData, kx, ky, testData.ys, weights);
  
   //write out the results 

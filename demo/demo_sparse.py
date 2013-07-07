@@ -36,6 +36,8 @@ from reverend import kbrcpp
 #evaluation image size
 xssize = 100
 yssize = 100
+training_size = 5000
+testing_size = 5000
     
 #construct settings and data files for kbrcpp
 filename_config = 'sparse_regressor.ini'
@@ -66,26 +68,29 @@ settings.observation_period = 1
 
 
 def main():
-    X = np.load('motorcycle_X.npy')
-    Y = np.load('motorcycle_Y.npy')
+    data = np.load('housing.npy')
+    all_X = data[:, 2:]
+    all_Y = data[:, 0:2]
     # Make sure we shuffle for the benefit of cross-validation
-    random_indices = np.random.permutation(X.shape[0])
-    X = X[random_indices]
-    Y = Y[random_indices]
+    random_indices = np.random.permutation(all_X.shape[0])
+    all_X = all_X[random_indices]
+    all_Y = all_Y[random_indices]
+    #create training and testing data
+    X = all_X[0:training_size]
+    Y = all_Y[0:training_size]
+    Y_s = all_Y[training_size:training_size+testing_size]
+    X_s = all_X[training_size:training_size+testing_size]
+
     #whiten and rescale inputs
     X_mean, X_sd = distrib.scale_factors(X)
     Y_mean, Y_sd = distrib.scale_factors(Y)
     X = distrib.scale(X, X_mean, X_sd)
     Y = distrib.scale(Y, Y_mean, Y_sd)
+    Y_s = distrib.scale(Y_s, Y_mean, Y_sd)
+    X_s = distrib.scale(X_s, X_mean, X_sd)
+
     # simple prior
     U = X
-    # We just want to plot the result, not evaluate it
-    xsmin = np.amin(X) - 1.0
-    xsmax = np.amax(X) + 1.0
-    ysmin = np.amin(Y)
-    ysmax = np.amax(Y)
-    Y_s = np.linspace(ysmin, ysmax, yssize)[:, np.newaxis]
-    X_s = np.linspace(xsmin, xsmax, xssize)[:, np.newaxis]
 
     #parameters
     kbrcpp.write_config_file(settings, filename_config)
@@ -99,22 +104,22 @@ def main():
     pdf = np.load(settings.filename_posterior)
 
     #And plot...
-    fig = pl.figure()
-    axes = fig.add_subplot(121)
-    axes.set_title('Posterior Embedding')
-    axes.imshow(E.T, origin='lower',
-                extent=(ysmin, ysmax, xsmin, xsmax),cmap=cm.hot, aspect='auto')
-    axes.scatter(Y, X, c='y')
-    axes.set_xlim(ysmin, ysmax)
-    axes.set_ylim(xsmin, xsmax)
-    axes = fig.add_subplot(122)
-    axes.set_title('PDF estimate')
-    axes.imshow(pdf.T, origin='lower', 
-            extent=(ysmin, ysmax, xsmin, xsmax), cmap=cm.hot, aspect='auto')
-    axes.scatter(Y, X, c='y')
-    axes.set_xlim(ysmin, ysmax)
-    axes.set_ylim(xsmin, xsmax)
-    pl.show()
+    # fig = pl.figure()
+    # axes = fig.add_subplot(121)
+    # axes.set_title('Posterior Embedding')
+    # axes.imshow(E.T, origin='lower',
+                # extent=(ysmin, ysmax, xsmin, xsmax),cmap=cm.hot, aspect='auto')
+    # axes.scatter(Y, X, c='y')
+    # axes.set_xlim(ysmin, ysmax)
+    # axes.set_ylim(xsmin, xsmax)
+    # axes = fig.add_subplot(122)
+    # axes.set_title('PDF estimate')
+    # axes.imshow(pdf.T, origin='lower', 
+            # extent=(ysmin, ysmax, xsmin, xsmax), cmap=cm.hot, aspect='auto')
+    # axes.scatter(Y, X, c='y')
+    # axes.set_xlim(ysmin, ysmax)
+    # axes.set_ylim(xsmin, xsmax)
+    # pl.show()
 
 if __name__ == "__main__":
     main()

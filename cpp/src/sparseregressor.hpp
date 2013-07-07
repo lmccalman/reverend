@@ -22,7 +22,7 @@
 #include <Eigen/Cholesky>
 #include "data.hpp"
 #include "matvec.hpp"
-#include "compactkernel.hpp"
+#include "kernel.hpp"
 
 template <class K>
 class SparseRegressor
@@ -30,13 +30,13 @@ class SparseRegressor
   public:
     SparseRegressor(uint trainingLength, uint priorLength, const Settings& settings);
     void operator()(const TrainingData& data, 
-               const CompactKernel<K>& kx,
-               const CompactKernel<K>& ky, 
+               const K& kx,
+               const K& ky, 
                const Eigen::MatrixXd& ys,
                Eigen::MatrixXd& weights); 
-
+  
   private:
-    
+
     //Settings
     const Settings& settings_;
  
@@ -49,23 +49,28 @@ class SparseRegressor
     //stuff I'm going to compute
     Eigen::VectorXd mu_pi_;
     Eigen::VectorXd beta_;
-    Eigen::VectorXd w_;
+    SparseMatrix beta_g_yy_;
+    Eigen::MatrixXd beta_diag_;
+    SparseMatrix r_xy_;
     VerifiedCholeskySolver<SparseMatrix, Eigen::VectorXd> chol_g_xx_;
     VerifiedCholeskySolver<SparseMatrix, Eigen::MatrixXd> chol_beta_g_yy_;
+    Eigen::VectorXd w_;
+
 };
 
 template <class K>
 SparseRegressor<K>::SparseRegressor(uint trainLength, uint testLength, const Settings& settings)
-  : 
-    beta_(trainLength),
+  : beta_(trainLength),
     mu_pi_(trainLength),
+    chol_g_xx_(trainLength,trainLength,1),
+    chol_beta_g_yy_(trainLength,trainLength,trainLength),
     w_(trainLength),
     settings_(settings){}
 
 template <class K>
 void SparseRegressor<K>::operator()(const TrainingData& data, 
-                          const CompactKernel<K>& kx,
-                          const CompactKernel<K>& ky, 
+                          const K& kx,
+                          const K& ky, 
                           const Eigen::MatrixXd& ys,
                           Eigen::MatrixXd& weights)
 {

@@ -88,7 +88,7 @@ def main():
     Y_mean, Y_sd = distrib.scale_factors(Y)
     X = distrib.scale(X, X_mean, X_sd)
     Y = distrib.scale(Y, Y_mean, Y_sd)
-    Y_s = distrib.scale(Y_s, X_mean, X_sd)
+    Y_s = distrib.scale(Y_s, Y_mean, Y_sd)
 
     # simple prior
     U = X
