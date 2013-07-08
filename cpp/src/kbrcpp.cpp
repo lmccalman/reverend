@@ -77,11 +77,11 @@ int main(int argc, char** argv)
   writeNPY(embedding, settings.filename_embedding);
 
   //Normalise and compute posterior
+  Eigen::MatrixXd preimageWeights(s,n);
   Eigen::MatrixXd posterior(testData.ys.rows(), testData.xs.rows());
-  if (!settings.normed_weights)
+  if (!settings.normed_weights && settings.preimage_estimate)
   {
     std::cout << "Computing normed weights..." << std::endl;
-    Eigen::MatrixXd preimageWeights(s,n);
     computeNormedWeights(weights, kx, trainData.x.cols(),
                          settings, preimageWeights);
     writeNPY(preimageWeights, settings.filename_preimage);
@@ -89,22 +89,33 @@ int main(int argc, char** argv)
     std::cout << "Evaluating posterior..." << std::endl;
     computePosterior(trainData, testData, preimageWeights, settings.sigma_x,
         posterior);
+    //and write the posterior
+    writeNPY(posterior, settings.filename_posterior);
   }
-  else
+  
+  //Just compute posterior if normed weights 
+  if (settings.normed_weights && settings.preimage_estimate)
   {
     std::cout << "Evaluating posterior..." << std::endl;
     computePosterior(trainData, testData, weights, settings.sigma_x,
                           posterior);
+    //and write the posterior
+    writeNPY(posterior, settings.filename_posterior);
   }
-  //and write the posterior
-  writeNPY(posterior, settings.filename_posterior);
 
   //compute cumulative estimates
   if (settings.cumulative_estimate)
   {
     std::cout << "Estimates Cumulative distributions..." << std::endl;
     Eigen::MatrixXd cumulates(testData.ys.rows(), testData.xs.rows());
-    computeCumulates(trainData, testData, weights, kx, settings, cumulates);
+    if (settings.preimage_estimate)
+    {
+      computeCumulates(trainData, testData, preimageWeights, kx, settings, cumulates);
+    }
+    else
+    {
+      computeCumulates(trainData, testData, weights, kx, settings, cumulates);
+    }
     writeNPY(cumulates, settings.filename_cumulative);
   }
   
@@ -114,7 +125,14 @@ int main(int argc, char** argv)
     std::cout << "Estimating " << settings.quantile
       << " quantile..." << std::endl;
     Eigen::VectorXd quantiles(testData.ys.rows());
-    computeQuantiles(trainData, testData, weights, kx, settings, quantiles);
+    if (settings.preimage_estimate)
+    {
+      computeQuantiles(trainData, testData, preimageWeights, kx, settings, quantiles);
+    }
+    else
+    {
+      computeQuantiles(trainData, testData, weights, kx, settings, quantiles);
+    }
     writeNPY(quantiles, settings.filename_quantile);
   }
   
