@@ -20,7 +20,9 @@
 #include <cmath>
 #include <iostream>
 #include <Eigen/Core>
+#include <Eigen/Sparse>
 #include <Eigen/Cholesky>
+#include <Eigen/IterativeLinearSolvers>
 #include "data.hpp"
 #include "matvec.hpp"
 #include "kernel.hpp"
@@ -50,11 +52,12 @@ class Regressor
     //stuff I'm going to compute
     Eigen::VectorXd mu_pi_;
     Eigen::VectorXd beta_;
-    Eigen::MatrixXd beta_g_yy_;
-    Eigen::MatrixXd beta_diag_;
-    Eigen::MatrixXd r_xy_;
-    VerifiedCholeskySolver<Eigen::VectorXd> chol_g_xx_;
-    VerifiedCholeskySolver<Eigen::MatrixXd> chol_beta_g_yy_;
+    Eigen::SparseMatrix<double> beta_g_yy_;
+    Eigen::SparseMatrix<double> r_xy_;
+    SparseCholeskySolver<Eigen::VectorXd> chol_g_xx_;
+    SparseCholeskySolver<Eigen::SparseMatrix<double> > chol_beta_g_yy_;
+    // Eigen::ConjugateGradient<Eigen::SparseMatrix<double> > chol_g_xx_;
+    // Eigen::ConjugateGradient<Eigen::SparseMatrix<double> > chol_beta_g_yy_;
     Eigen::VectorXd w_;
 
 };
@@ -64,11 +67,9 @@ Regressor<K>::Regressor(uint trainLength, uint testLength, const Settings& setti
   : beta_g_yy_(trainLength,trainLength),
     beta_(trainLength),
     mu_pi_(trainLength),
-    beta_diag_(trainLength, trainLength),
     r_xy_(trainLength,trainLength),
-    chol_g_xx_(trainLength,trainLength,1),
-    chol_beta_g_yy_(trainLength,trainLength,trainLength),
     w_(trainLength),
+    n_(trainLength),
     settings_(settings){}
 
 template <class K>
@@ -85,25 +86,29 @@ void Regressor<K>::operator()(const TrainingData& data,
   kx.embed(data.u, data.lambda, mu_pi_);
   //get jitchol of gram matrix
   chol_g_xx_.solve(kx.gramMatrix(), mu_pi_, beta_);
-  
+  std::vector< Eigen::Triplet<double> > coeffs;
+  Eigen::SparseMatrix<double> beta_diag_(n_,n_);
+  for(uint j=0;j<n_;j++)
+  {
+    coeffs.push_back(Eigen::Triplet<double>(j,j,beta_(j)));
+  }
+  beta_diag_.setFromTriplets(coeffs.begin(), coeffs.end()); 
   if (settings_.normed_weights)
   {
     beta_ = beta_.cwiseMax(0.0);
     beta_ = beta_ / beta_.sum();
-    beta_diag_ = beta_.asDiagonal();
-    beta_g_yy_ = beta_diag_ * ky.gramMatrix();
-    chol_beta_g_yy_.solve(beta_g_yy_, beta_diag_, r_xy_);
+    chol_beta_g_yy_.solve(beta_diag_ * ky.gramMatrix(), beta_diag_, r_xy_);
   }
-  else
-  {
-    double scaleFactor = beta_.cwiseAbs().maxCoeff();
-    beta_ /= scaleFactor;
-    beta_ = beta_.cwiseAbs2();
-    beta_diag_ = beta_.asDiagonal();
-    Eigen::MatrixXd b = ky.gramMatrix() * beta_diag_;
-    Eigen::MatrixXd A = b * ky.gramMatrix();
-    chol_beta_g_yy_.solve(A, b, r_xy_);
-  }
+  // else
+  // {
+    // double scaleFactor = beta_.cwiseAbs().maxCoeff();
+    // beta_ /= scaleFactor;
+    // beta_ = beta_.cwiseAbs2();
+    // beta_diag_ = beta_.asDiagonal();
+    // Eigen::MatrixXd b = ky.gramMatrix() * beta_diag_;
+    // Eigen::MatrixXd A = b * ky.gramMatrix();
+    // chol_beta_g_yy_.solve(A, b, r_xy_);
+  // }
   //now infer
   auto s = weights.rows();
   for (uint i=0; i<s; i++)

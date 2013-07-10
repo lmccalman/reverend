@@ -18,6 +18,7 @@
 #define EIGEN_DONT_PARALLELIZE
 #include <cmath>
 #include <Eigen/Core>
+#include <Eigen/Sparse>
 #include <boost/function.hpp>
 
 template <class T>
@@ -30,22 +31,28 @@ class Kernel
     setWidth(width); 
   }
     
-    const Eigen::MatrixXd& gramMatrix() const {return g_xx_;}
+    const Eigen::SparseMatrix<double>& gramMatrix() const {return g_xx_;}
     
     double width() const {return width_;}
     
     void setWidth(double w)
     {
-      width_ = w;
-      //recompute gram matrix
+      width_ = w; //recompute gram matrix
+      std::vector< Eigen::Triplet<double> > coeffs;
       uint n = X_.rows();
       for(uint i=0; i<n;i++)
       {
         for(uint j=0;j<n;j++)
         {
-          g_xx_(i,j) = k_(X_.row(i), X_.row(j), width_);
+          double r = (X_.row(i) - X_.row(j)).norm();
+          if (r < w)
+          {
+            double val = k_(X_.row(i),X_.row(j), w);
+            coeffs.push_back(Eigen::Triplet<double>(i,j,val));
+          }
         }
       }
+      g_xx_.setFromTriplets(coeffs.begin(), coeffs.end()); 
     }
 
     void embed(const Eigen::MatrixXd& u,
@@ -103,7 +110,7 @@ class Kernel
   protected:
     T k_;
     const Eigen::MatrixXd& X_;
-    Eigen::MatrixXd g_xx_;
+    Eigen::SparseMatrix<double> g_xx_;
     double width_ = 1.0;
 };
 
@@ -161,4 +168,42 @@ class RBFKernel
 
 
 
+};
+
+class Q1CompactKernel
+{
+  public:
+    Q1CompactKernel(){}
+    double operator()(const Eigen::VectorXd& x,
+        const Eigen::VectorXd& x_dash,
+        double sigma) const
+    {
+      int D = 2.0;
+      double j = D/2.0 + 2;
+      double r = (x-x_dash).norm() / (sigma * 4.0);
+      double result = 0;
+      if (r < 1.0)
+      {
+        result = pow((1-r),(j+1)) * ((j+1)*r + 1);
+      }
+      return result;
+    }
+    double approximateHalfSupport(double width) const
+    {
+      return width * 4.0; 
+    }
+
+    void embedIndicator(const Eigen::VectorXd& cutoff,
+        const Eigen::MatrixXd& X, double sigma_x, Eigen::VectorXd& weights) const
+    {
+      std::cout << "COMPACT KERNEL SUPPORT FOR CUMULATIVE NOT IMPLEMENTED" << std::endl;
+    }
+
+    double cumulative(const Eigen::VectorXd& cutoff,
+        const Eigen::VectorXd& centre,
+        double sigma_x) const
+    {
+      std::cout << "COMPACT KERNEL SUPPORT FOR CUMULATIVE NOT IMPLEMENTED" << std::endl;
+      return 0.0;
+    }
 };

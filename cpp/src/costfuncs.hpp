@@ -62,10 +62,10 @@ class LogPCost:Cost
       double totalCost = 0.0;
       for (int i=0;i<testPoints;i++)
       {
-        totalCost += logGaussianMixture(testingData_.xs.row(i),
+        totalCost += logKernelMixture(testingData_.xs.row(i),
                                         trainingData_.x,
                                         weights_.row(i),
-                                        sigma_x);
+                                        kx_);
       }
       totalCost *= -1; // minimize this maximizes probability
       return totalCost;

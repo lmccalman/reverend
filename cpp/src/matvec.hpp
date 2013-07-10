@@ -21,6 +21,9 @@
 #include <iostream>
 #include <Eigen/Core>
 #include <Eigen/Cholesky>
+#include <Eigen/IterativeLinearSolvers>
+
+typedef Eigen::SparseMatrix<double> SparseMatrix;
 
 template <class T>
 class VerifiedCholeskySolver
@@ -97,3 +100,85 @@ void VerifiedCholeskySolver<T>::solve(const Eigen::MatrixXd& A, const Eigen::Mat
     }
   }
 }
+
+template <class T>
+class SparseCholeskySolver
+{
+  public:
+    SparseCholeskySolver(){};
+    void solve(const SparseMatrix& A, const T& b, T& x);
+
+  private:
+    Eigen::ConjugateGradient<SparseMatrix> cholSolver_;
+    T bDash_;
+    T xDashDown_;
+    double jitter_ = 1e-7;
+};
+
+void setJitter(const SparseMatrix& A, double jitter, int n, SparseMatrix& aJit)
+{
+  std::vector< Eigen::Triplet<double> > coeffs;
+  for(uint i=0; i<n;i++)
+  {
+    coeffs.push_back(Eigen::Triplet<double>(i,i,jitter));
+  }
+  aJit.setFromTriplets(coeffs.begin(), coeffs.end()); 
+  aJit += A;
+}
+
+template <class T>
+void SparseCholeskySolver<T>::solve(const SparseMatrix& A, const T& b, T& x)
+{
+  uint n = A.rows();
+  SparseMatrix aJit_(n,n);
+  double maxJitter = 1.0e10;
+  double minJitter = 1.0e-10;
+  double precision = 1e-4;
+  // start with the jitter from last time
+  setJitter(A, jitter_, n, aJit_);
+  cholSolver_.compute(aJit_);
+  x = cholSolver_.solve(b);
+  bDash_ = aJit_ * x;
+  bool solved = (bDash_).isApprox(b, precision);
+  //if we solved, the jitter may be too big
+  bool smallestFound = false;
+  if (solved)
+  {
+    while (!smallestFound && (jitter_ > minJitter))
+    {
+      //decrease the jitter
+      setJitter(A, jitter_/2.0, n, aJit_);
+      //compute Cholesky decomposition
+      cholSolver_.compute(aJit_);
+      xDashDown_ = cholSolver_.solve(b);
+      bDash_ = aJit_ * xDashDown_;
+      smallestFound = !((bDash_).isApprox(b, precision));
+      if (!smallestFound)
+      {
+        x = xDashDown_;
+        jitter_ /= 2.0;
+      }
+    }
+  }
+  //if we didn't solve, the jitter is too small
+  else
+  {
+    while ((jitter_ < maxJitter) && (!solved))
+    {
+      //increase the jitter
+      jitter_ *= 2.0;
+      setJitter(A, jitter_, n, aJit_);
+      //compute Cholesky decomposition
+      cholSolver_.compute(aJit_);
+      x = cholSolver_.solve(b);
+      bDash_ = aJit_ * x;
+      solved = (bDash_).isApprox(b, precision);
+    }
+    if (!solved)
+    {
+      std::cout << "WARNING: max jitter reached" << std::endl;
+      jitter_ /=2.0;
+    }
+  }
+}
+
