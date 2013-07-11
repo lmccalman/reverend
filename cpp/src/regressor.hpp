@@ -26,6 +26,7 @@
 #include "data.hpp"
 #include "matvec.hpp"
 #include "kernel.hpp"
+#include "lowrank.hpp"
 
 template <class K>
 class Regressor
