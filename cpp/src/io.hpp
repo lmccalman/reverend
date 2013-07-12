@@ -124,7 +124,7 @@ Eigen::MatrixXd readNPY(const std::string& filename)
   assert(arr.shape.size() == 2);
   uint rows = arr.shape[0];
   uint cols = arr.shape[1];
-  Eigen::MatrixXd mat(rows, cols);
+  Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> mat(rows, cols);
   uint counter = 0;
   for (uint i=0;i<rows;i++)
   {

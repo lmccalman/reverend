@@ -20,7 +20,6 @@
 #include <time.h>
 #include <math.h>
 
-#define EIGEN_DEFAULT_TO_ROW_MAJOR
 #define EIGEN_DONT_PARALLELIZE
 #include "io.hpp"
 #include "train.hpp"
@@ -44,7 +43,7 @@ int main(int argc, char** argv)
 
   std::cout << "Training..." << std::endl;
   //how about some training  
-  trainSettings<Regressor<Q1CompactKernel>, Q1CompactKernel>(trainData, settings);
+  // trainSettings<Regressor<Q1CompactKernel>, Q1CompactKernel>(trainData, settings);
 
   //Create kernels and algorithm 
   std::cout << "Inferring..." << std::endl;

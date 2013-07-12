@@ -15,15 +15,14 @@
 // You should have received a copy of the GNU General Public License
 // along with Reverend.  If not, see <http://www.gnu.org/licenses/>.
 #pragma once
-#define EIGEN_DEFAULT_TO_ROW_MAJOR
 #define EIGEN_DONT_PARALLELIZE
 #include <cmath>
 #include <iostream>
 #include <Eigen/Core>
 #include <Eigen/Cholesky>
-#include <Eigen/IterativeLinearSolvers>
+#include <Eigen/CholmodSupport>
 
-typedef Eigen::SparseMatrix<double> SparseMatrix;
+typedef Eigen::SparseMatrix<double,0> SparseMatrix;
 
 template <class T>
 class VerifiedCholeskySolver
@@ -109,7 +108,7 @@ class SparseCholeskySolver
     void solve(const SparseMatrix& A, const T& b, T& x);
 
   private:
-    Eigen::ConjugateGradient<SparseMatrix> cholSolver_;
+    Eigen::CholmodSupernodalLLT<SparseMatrix> cholSolver_;
     T bDash_;
     T xDashDown_;
     double jitter_ = 1e-7;
@@ -131,7 +130,7 @@ void SparseCholeskySolver<T>::solve(const SparseMatrix& A, const T& b, T& x)
 {
   uint n = A.rows();
   SparseMatrix aJit_(n,n);
-  double maxJitter = 1.0e10;
+  double maxJitter = 1.0e20;
   double minJitter = 1.0e-10;
   double precision = 1e-4;
   // start with the jitter from last time
@@ -166,6 +165,7 @@ void SparseCholeskySolver<T>::solve(const SparseMatrix& A, const T& b, T& x)
     while ((jitter_ < maxJitter) && (!solved))
     {
       //increase the jitter
+      std::cout << "increasing jitter to " << jitter_ << std::endl;
       jitter_ *= 2.0;
       setJitter(A, jitter_, n, aJit_);
       //compute Cholesky decomposition

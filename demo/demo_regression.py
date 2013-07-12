@@ -16,7 +16,7 @@
 # along with Reverend.  If not, see <http://www.gnu.org/licenses/>.
 
 ###################################################################
-# Regression Demo -- Motorcycle Dataset
+# Regression Demo -- Housing Dataset
 ###################################################################
 
 #makes life a bit easier
@@ -38,8 +38,8 @@ xssize = 100
 yssize = 100
     
 #construct settings and data files for kbrcpp
-filename_config = 'motorcycle_regressor.ini'
-prefix = 'mc'  # will automatically construct all filenames
+filename_config = 'housing_regressor.ini'
+prefix = 'cs'  # will automatically construct all filenames
 settings = kbrcpp.Settings(prefix)
 #some training parameters for kernel width
 settings.cost_function = 'logp'  # {'logp', 'hilbert', 'jointlogp', 'pinball', 'jointpinball'}
@@ -73,6 +73,8 @@ def main():
     random_indices = np.random.permutation(X.shape[0])
     X = X[random_indices]
     Y = Y[random_indices]
+    
+    
     #whiten and rescale inputs
     X_mean, X_sd = distrib.scale_factors(X)
     Y_mean, Y_sd = distrib.scale_factors(Y)

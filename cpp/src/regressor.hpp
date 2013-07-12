@@ -15,7 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Reverend.  If not, see <http://www.gnu.org/licenses/>.
 #pragma once
-#define EIGEN_DEFAULT_TO_ROW_MAJOR
 #define EIGEN_DONT_PARALLELIZE
 #include <cmath>
 #include <iostream>
@@ -53,22 +52,18 @@ class Regressor
     //stuff I'm going to compute
     Eigen::VectorXd mu_pi_;
     Eigen::VectorXd beta_;
-    Eigen::SparseMatrix<double> beta_g_yy_;
-    Eigen::SparseMatrix<double> r_xy_;
+    Eigen::VectorXd embed_y_;
     SparseCholeskySolver<Eigen::VectorXd> chol_g_xx_;
-    SparseCholeskySolver<Eigen::SparseMatrix<double> > chol_beta_g_yy_;
-    // Eigen::ConjugateGradient<Eigen::SparseMatrix<double> > chol_g_xx_;
-    // Eigen::ConjugateGradient<Eigen::SparseMatrix<double> > chol_beta_g_yy_;
+    SparseCholeskySolver<Eigen::VectorXd > chol_R_xy_;
     Eigen::VectorXd w_;
 
 };
 
 template <class K>
 Regressor<K>::Regressor(uint trainLength, uint testLength, const Settings& settings)
-  : beta_g_yy_(trainLength,trainLength),
-    beta_(trainLength),
+  : beta_(trainLength),
     mu_pi_(trainLength),
-    r_xy_(trainLength,trainLength),
+    embed_y_(trainLength),
     w_(trainLength),
     n_(trainLength),
     settings_(settings){}
@@ -84,39 +79,40 @@ void Regressor<K>::operator()(const TrainingData& data,
   const Eigen::MatrixXd& y = data.y;
 
   //compute prior embedding
+  std::cout << "Embedding prior..." << std::endl;
   kx.embed(data.u, data.lambda, mu_pi_);
   //get jitchol of gram matrix
+  std::cout << "Computing joint..." << std::endl;
   chol_g_xx_.solve(kx.gramMatrix(), mu_pi_, beta_);
+  if (settings_.normed_weights)
+  {
+    beta_ = beta_.cwiseMax(0.0);
+    beta_ = beta_ / beta_.sum();
+  }
+  // add low rank update with bigger kernel.
+  double sigma_lr = 1.0;
+  Kernel<RBFKernel> kx_lr(data.x);
+  lowRankGramUpdate(data.x, kx_lr, sigma_lr, n_*0.05, n_*0.06, 
+                      kx.gramMatrix(),beta_);
+  
+  
+  
   std::vector< Eigen::Triplet<double> > coeffs;
-  Eigen::SparseMatrix<double> beta_diag_(n_,n_);
+  Eigen::SparseMatrix<double, 0> beta_diag_(n_,n_);
   for(uint j=0;j<n_;j++)
   {
     coeffs.push_back(Eigen::Triplet<double>(j,j,beta_(j)));
   }
   beta_diag_.setFromTriplets(coeffs.begin(), coeffs.end()); 
-  if (settings_.normed_weights)
-  {
-    beta_ = beta_.cwiseMax(0.0);
-    beta_ = beta_ / beta_.sum();
-    chol_beta_g_yy_.solve(beta_diag_ * ky.gramMatrix(), beta_diag_, r_xy_);
-  }
-  // else
-  // {
-    // double scaleFactor = beta_.cwiseAbs().maxCoeff();
-    // beta_ /= scaleFactor;
-    // beta_ = beta_.cwiseAbs2();
-    // beta_diag_ = beta_.asDiagonal();
-    // Eigen::MatrixXd b = ky.gramMatrix() * beta_diag_;
-    // Eigen::MatrixXd A = b * ky.gramMatrix();
-    // chol_beta_g_yy_.solve(A, b, r_xy_);
-  // }
-  //now infer
+  
   auto s = weights.rows();
   for (uint i=0; i<s; i++)
   {
+    std::cout << "Evaluating conditional "<< i+1 << " of " << s << "..." << std::endl;
     auto yi = ys.row(i);
-    ky.embed(yi, w_);
-    w_ = r_xy_ * w_;
+    ky.embed(yi, embed_y_);
+    embed_y_ = beta_.asDiagonal() * embed_y_;
+    chol_R_xy_.solve(beta_diag_ * ky.gramMatrix(), embed_y_, w_);
     if (settings_.normed_weights)
     {
       w_ = w_.cwiseMax(0.0);

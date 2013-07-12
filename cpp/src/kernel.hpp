@@ -25,11 +25,12 @@ template <class T>
 class Kernel
 {
   public:
+    Kernel(const Eigen::MatrixXd& X):X_(X){};
     Kernel(const Eigen::MatrixXd& X, double width):
       X_(X), g_xx_(X.rows(), X.rows())
-  {
+    {
     setWidth(width); 
-  }
+    }
     
     const Eigen::SparseMatrix<double>& gramMatrix() const {return g_xx_;}
     
@@ -53,6 +54,9 @@ class Kernel
         }
       }
       g_xx_.setFromTriplets(coeffs.begin(), coeffs.end()); 
+      double sparsity = g_xx_.nonZeros() / (double(n*n));
+      std::cout << "Gram matrix Fill: " << sparsity*100 << "%" << std::endl;
+
     }
 
     void embed(const Eigen::MatrixXd& u,
@@ -97,6 +101,11 @@ class Kernel
       return k_(x1,x2, width_);
     }
     
+    double operator()(const Eigen::VectorXd& x1, const Eigen::VectorXd& x2, double width) const
+    {
+      return k_(x1,x2, width);
+    }
+    
     void embedIndicator(const Eigen::VectorXd& cutoff, Eigen::VectorXd& weights) const
     {
       return k_.embedIndicator(cutoff, X_, width_, weights);
@@ -110,7 +119,7 @@ class Kernel
   protected:
     T k_;
     const Eigen::MatrixXd& X_;
-    Eigen::SparseMatrix<double> g_xx_;
+    Eigen::SparseMatrix<double, 0> g_xx_;
     double width_ = 1.0;
 };
 

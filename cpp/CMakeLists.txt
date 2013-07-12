@@ -31,12 +31,13 @@ find_library(NLOPT_LIBRARY NAMES "nlopt")
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -std=c++11")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -std=c++11")
-set(CMAKE_BUILD_TYPE release)
+set(CMAKE_BUILD_TYPE debug)
 
 set(CMAKE_VERBOSE_MAKEFILE on)
 
 find_package(Boost COMPONENTS filesystem REQUIRED)
 find_package(Eigen3)
+find_package(SuiteSparse)
 
 include_directories( ${EIGEN3_INCLUDE_DIR}
                      ${Boost_INCLUDE_DIR}
@@ -51,6 +52,14 @@ add_custom_command(TARGET ${REVEREND_EXECUTABLE} POST_BUILD
                     COMMENT "Creating tags" VERBATIM)
 
 target_link_libraries(${REVEREND_EXECUTABLE} 
+                      cholmod
+                      ccolamd
+                      camd
+                      colamd
+                      amd
+                      suitesparseconfig
+                      lapack
+                      blas
                       ${CNPY_LIBRARY}
                       ${NLOPT_LIBRARY}
                       ${Boost_FILESYSTEM_LIBRARY} )
