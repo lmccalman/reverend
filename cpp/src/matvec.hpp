@@ -47,6 +47,7 @@ class VerifiedCholeskySolver
 template <class T>
 void VerifiedCholeskySolver<T>::solve(const Eigen::MatrixXd& A, const Eigen::MatrixXd& b, T& x)
 {
+  
   uint n = A.rows();
   double maxJitter = 1.0e10;
   double minJitter = 1.0e-10;
@@ -106,12 +107,13 @@ class SparseCholeskySolver
   public:
     SparseCholeskySolver(){};
     void solve(const SparseMatrix& A, const T& b, T& x);
+    double jitter(){return jitter_;}
 
   private:
     Eigen::CholmodSupernodalLLT<SparseMatrix> cholSolver_;
     T bDash_;
     T xDashDown_;
-    double jitter_ = 1e-7;
+    double jitter_ = 1e-1;
 };
 
 void setJitter(const SparseMatrix& A, double jitter, int n, SparseMatrix& aJit)
@@ -165,7 +167,7 @@ void SparseCholeskySolver<T>::solve(const SparseMatrix& A, const T& b, T& x)
     while ((jitter_ < maxJitter) && (!solved))
     {
       //increase the jitter
-      std::cout << "increasing jitter to " << jitter_ << std::endl;
+      // std::cout << "increasing jitter to " << jitter_ << std::endl;
       jitter_ *= 2.0;
       setJitter(A, jitter_, n, aJit_);
       //compute Cholesky decomposition

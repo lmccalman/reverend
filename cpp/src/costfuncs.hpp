@@ -47,7 +47,7 @@ class LogPCost:Cost
       : Cost(train, test), 
       algo_(train.x.rows(), train.u.rows(), settings),
       weights_(test.ys.rows(), train.x.rows()),
-      kx_(train.x, 1.0), ky_(train.y, 1.0)
+      kx_(train.x, 1.0e-10), ky_(train.y, 1.0e-10)
   {
   }; 
 

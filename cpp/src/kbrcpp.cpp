@@ -43,8 +43,7 @@ int main(int argc, char** argv)
 
   std::cout << "Training..." << std::endl;
   //how about some training  
-  // trainSettings<Regressor<Q1CompactKernel>, Q1CompactKernel>(trainData, settings);
-
+  trainSettings<Regressor<Q1CompactKernel>, Q1CompactKernel>(trainData, settings);
   //Create kernels and algorithm 
   std::cout << "Inferring..." << std::endl;
   Kernel<Q1CompactKernel> kx(trainData.x, settings.sigma_x);
@@ -55,10 +54,10 @@ int main(int argc, char** argv)
   writeNPY(weights, settings.filename_weights);
   
   // //evaluate the raw posterior 
-  // Eigen::MatrixXd embedding(testData.ys.rows(), testData.xs.rows());
-  // std::cout << "Evaluating embedded posterior..." << std::endl;
-  // computeEmbedding(trainData, testData, weights, kx, embedding);
-  // writeNPY(embedding, settings.filename_embedding);
+  Eigen::MatrixXd embedding(testData.ys.rows(), testData.xs.rows());
+  std::cout << "Evaluating embedded posterior..." << std::endl;
+  computeEmbedding(trainData, testData, weights, kx, embedding);
+  writeNPY(embedding, settings.filename_embedding);
 
   // //Normalise and compute posterior
   // Eigen::MatrixXd preimageWeights(s,n);

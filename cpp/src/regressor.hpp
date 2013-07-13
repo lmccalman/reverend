@@ -55,8 +55,9 @@ class Regressor
     Eigen::VectorXd embed_y_;
     SparseCholeskySolver<Eigen::VectorXd> chol_g_xx_;
     SparseCholeskySolver<Eigen::VectorXd > chol_R_xy_;
+    SparseCholeskySolver<Eigen::MatrixXd> chol_lowrank_1_;
+    SparseCholeskySolver<Eigen::MatrixXd> chol_lowrank_2_;
     Eigen::VectorXd w_;
-
 };
 
 template <class K>
@@ -79,10 +80,10 @@ void Regressor<K>::operator()(const TrainingData& data,
   const Eigen::MatrixXd& y = data.y;
 
   //compute prior embedding
-  std::cout << "Embedding prior..." << std::endl;
+  // std::cout << "Embedding prior..." << std::endl;
   kx.embed(data.u, data.lambda, mu_pi_);
   //get jitchol of gram matrix
-  std::cout << "Computing joint..." << std::endl;
+  // std::cout << "Computing joint..." << std::endl;
   chol_g_xx_.solve(kx.gramMatrix(), mu_pi_, beta_);
   if (settings_.normed_weights)
   {
@@ -90,10 +91,13 @@ void Regressor<K>::operator()(const TrainingData& data,
     beta_ = beta_ / beta_.sum();
   }
   // add low rank update with bigger kernel.
-  double sigma_lr = 1.0;
+  double sigma_lrx = 1.0;
+  double sigma_lry = 1.0;
   Kernel<RBFKernel> kx_lr(data.x);
-  lowRankGramUpdate(data.x, kx_lr, sigma_lr, n_*0.05, n_*0.06, 
-                      kx.gramMatrix(),beta_);
+  Kernel<RBFKernel> ky_lr(data.y);
+  double jit = chol_g_xx_.jitter();
+  // lowRankGramUpdate(data.x, kx_lr, sigma_lrx, n_*0.05, n_*0.06, 
+                      // kx.gramMatrix(),jit,1.0,chol_lowrank_1_, beta_);
   
   
   
@@ -108,11 +112,15 @@ void Regressor<K>::operator()(const TrainingData& data,
   auto s = weights.rows();
   for (uint i=0; i<s; i++)
   {
-    std::cout << "Evaluating conditional "<< i+1 << " of " << s << "..." << std::endl;
+    // std::cout << "Evaluating conditional "<< i+1 << " of " << s << "..." << std::endl;
     auto yi = ys.row(i);
     ky.embed(yi, embed_y_);
     embed_y_ = beta_.asDiagonal() * embed_y_;
     chol_R_xy_.solve(beta_diag_ * ky.gramMatrix(), embed_y_, w_);
+    jit = chol_R_xy_.jitter(); 
+    // lowRankGramUpdate(data.y, ky_lr, sigma_lry, n_*0.05, n_*0.06, 
+        // ky.gramMatrix(),jit,beta_diag_,chol_lowrank_2_, w_);
+    
     if (settings_.normed_weights)
     {
       w_ = w_.cwiseMax(0.0);

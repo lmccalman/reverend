@@ -33,7 +33,6 @@ void nystromApproximation(const Eigen::MatrixXd& X, const Kernel<K>& kx,
                           Eigen::MatrixXd& C,
                           Eigen::MatrixXd& W_k)
 {
-  std::cout << "Computing low-rank update..." << std::endl;
   uint n = X.rows();
   Eigen::MatrixXd W(columns, columns);
   double scaleFactor = 1.0 / sqrt(columns/double(n));
@@ -42,7 +41,6 @@ void nystromApproximation(const Eigen::MatrixXd& X, const Kernel<K>& kx,
   for (int t=0; t<columns; t++)
   {
     uint i = rand() % n;
-    assert (i < n);
     for (int j=0; j<n; j++)
     {
       C(j,t) = kx(X.row(j),X.row(i)) * scaleFactor;
@@ -50,40 +48,51 @@ void nystromApproximation(const Eigen::MatrixXd& X, const Kernel<K>& kx,
     I.push_back(i);
   }
   double scaleFactor2 = 1.0 / (columns / double(n));
-  for (int i : I)
+  for (int i=0;i<columns;i++)
   {
-    for (int j : I)
+    for (int j=0;j<columns;j++)
     {
-      W(i,j) = kx(X.row(i),X.row(j), sigma) * scaleFactor2;
+      W(i,j) = kx(X.row(I[i]),X.row(I[j]), sigma) * scaleFactor2;
     }
   } 
   // compute best rank-k approximation of W
   Eigen::JacobiSVD<Eigen::MatrixXd> svd(W, Eigen::ComputeFullU | Eigen::ComputeFullV);
-  W_k = svd.matrixU().block(0, 0, columns, rank) *
-        svd.singularValues().head(rank).asDiagonal() *
-        svd.matrixV().block(0,0,columns,rank).transpose();
+  Eigen::VectorXd newDiags = svd.singularValues();
+  for (int i=rank;i<columns;i++)
+  {
+    newDiags(i) = 0;
+  }
+  W_k = svd.matrixU() * newDiags.asDiagonal() * svd.matrixV().transpose();
 }
 
-template<class K>
+template<class K, class T>
 void lowRankGramUpdate(const Eigen::MatrixXd& X, const Kernel<K>& kx,
     double sigma, uint rank, uint columns, 
-    const SparseMatrix& A,
+    const SparseMatrix& G,
+    double jitter,
+    const T& diag_a,
+    SparseCholeskySolver<Eigen::MatrixXd>& chol_c,
     Eigen::VectorXd& x) 
 {
+  // std::cout << "Computing low-rank update..." << std::endl;
   uint r = rank;
   uint n = X.rows();
+  SparseMatrix A(n,n);
+  setJitter(G,jitter,n,A);
+  A = diag_a * A;
+
   Eigen::MatrixXd C(n,columns);
-  Eigen::MatrixXd W(r,r);
+  Eigen::MatrixXd W(columns,columns);
   nystromApproximation(X, kx, rank, columns,sigma, C, W);
-  SparseCholeskySolver<Eigen::MatrixXd> chol_c;
-  Eigen::MatrixXd L(n,r);
-  chol_c.solve(A, C, L);
+  Eigen::MatrixXd U = diag_a * C;
+  Eigen::MatrixXd L(n,columns);
+  chol_c.solve(A, U, L);
   Eigen::VectorXd M(n);
   Eigen::MatrixXd A_dash =  W + C.transpose() * L;
   Eigen::ColPivHouseholderQR<Eigen::MatrixXd> solver(A_dash);
   M = solver.solve(C.transpose()* x);
-  x = x - L * C * M;
-  std::cout << "Low rank update complete." << std::endl;
+  x = x - (L * M);
+  // std::cout << "Low rank update complete." << std::endl;
 }
 
 
