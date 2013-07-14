@@ -55,7 +55,7 @@ class Kernel
       }
       g_xx_.setFromTriplets(coeffs.begin(), coeffs.end()); 
       double sparsity = g_xx_.nonZeros() / (double(n*n));
-      std::cout << "Gram matrix Fill: " << sparsity*100 << "%" << std::endl;
+      // std::cout << "Gram matrix Fill: " << sparsity*100 << "%" << std::endl;
       // if (sparsity <= 0.0 || sparsity > 0.1)
       // {
         // throw(0);

@@ -20,6 +20,7 @@
 #include <iostream>
 #include <Eigen/Core>
 #include <Eigen/Cholesky>
+#include <Eigen/QR>
 #include <Eigen/CholmodSupport>
 
 typedef Eigen::SparseMatrix<double,0> SparseMatrix;
@@ -184,3 +185,86 @@ void SparseCholeskySolver<T>::solve(const SparseMatrix& A, const T& b, T& x)
   }
 }
 
+class LowRankCholeskySolver
+{
+  public:
+    LowRankCholeskySolver(){};
+    void solve(const Eigen::VectorXd& diag,
+               const Eigen::MatrixXd& C, 
+               const Eigen::MatrixXd& W, 
+               const Eigen::MatrixXd& W_plus, 
+               const Eigen::VectorXd& b,
+               Eigen::VectorXd& x);
+    double jitter(){return jitter_;}
+
+  private:
+    Eigen::VectorXd bDash_;
+    Eigen::VectorXd xDashDown_;
+    double jitter_ = 1e-1;
+};
+
+void woodburySolve(const Eigen::VectorXd& diag,
+                   const Eigen::MatrixXd& C,
+                   const Eigen::MatrixXd& W,
+                   double jitter,
+                   const Eigen::VectorXd& b,
+                   Eigen::VectorXd& x)
+{
+  Eigen::MatrixXd A = W + (1.0/jitter) * C.transpose() * diag.asDiagonal() * C; 
+  Eigen::ColPivHouseholderQR<Eigen::MatrixXd> alphaSolver(A);
+  Eigen::VectorXd alpha = alphaSolver.solve( C.transpose() * b);
+  x = (1.0/jitter) * b + (1.0/(jitter*jitter)) * diag.asDiagonal() * C * alpha;
+}
+
+void LowRankCholeskySolver::solve(const Eigen::VectorXd& diag,
+                                  const Eigen::MatrixXd& C, 
+                                  const Eigen::MatrixXd& W, 
+                                  const Eigen::MatrixXd& W_plus,
+                                  const Eigen::VectorXd& b,
+                                  Eigen::VectorXd& x)
+{
+  uint n = C.rows();
+  double maxJitter = 1.0e20;
+  double minJitter = 1.0e-10;
+  double precision = 1e-4;
+  // start with the jitter from last time
+  woodburySolve(diag, C, W, jitter_, b, x);
+  bDash_ = diag.asDiagonal() * (C * (W_plus * (C.transpose() * x))) + (jitter_ * x);
+  bool solved = (bDash_).isApprox(b, precision);
+  //if we solved, the jitter may be too big
+  bool smallestFound = false;
+  if (solved)
+  {
+    while (!smallestFound && (jitter_ > minJitter))
+    {
+      //decrease the jitter
+      woodburySolve(diag, C, W, jitter_/2.0, b, xDashDown_);
+      bDash_ = diag.asDiagonal() * (C * (W_plus * (C.transpose() * xDashDown_))) + (jitter_/2.0 * xDashDown_);
+      //compute Cholesky decomposition
+      smallestFound = !((bDash_).isApprox(b, precision));
+      if (!smallestFound)
+      {
+        x = xDashDown_;
+        jitter_ /= 2.0;
+      }
+    }
+  }
+  //if we didn't solve, the jitter is too small
+  else
+  {
+    while ((jitter_ < maxJitter) && (!solved))
+    {
+      //increase the jitter
+      // std::cout << "increasing jitter to " << jitter_ << std::endl;
+      jitter_ *= 2.0;
+      woodburySolve(diag, C, W, jitter_, b, x);
+      bDash_ = diag.asDiagonal() * (C * (W_plus * (C.transpose() * x))) + (jitter_ * x);
+      solved = (bDash_).isApprox(b, precision);
+    }
+    if (!solved)
+    {
+      // std::cout << "WARNING: max jitter reached" << std::endl;
+      jitter_ /=2.0;
+    }
+  }
+}

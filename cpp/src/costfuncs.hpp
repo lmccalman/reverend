@@ -69,7 +69,6 @@ class LogPCost:Cost
       }
       totalCost *= -1; // minimize this maximizes probability
       return totalCost;
-
     };
   
   private: 

@@ -69,11 +69,11 @@ double logKernelMixture(const Eigen::VectorXd& point,
   assert(means.rows() == coeffs.size());
   uint numberOfMeans = means.rows();
   //find the min exp coeff
-  double maxPower = -1e200; // ie infinity;
+  double maxPower = 0.0; // ie infinity;
   for (uint i=0; i<numberOfMeans; i++)
   {
     double val = kx(point, means.row(i).transpose());
-    double expCoeff = log(std::max(val,1e-200));
+    double expCoeff = log(std::max(val,1e-20));
     maxPower = std::max(maxPower, expCoeff);
   }
   //now compute everything

@@ -55,8 +55,8 @@ class Regressor
     Eigen::VectorXd embed_y_;
     SparseCholeskySolver<Eigen::VectorXd> chol_g_xx_;
     SparseCholeskySolver<Eigen::VectorXd > chol_R_xy_;
-    SparseCholeskySolver<Eigen::MatrixXd> chol_lowrank_1_;
-    SparseCholeskySolver<Eigen::MatrixXd> chol_lowrank_2_;
+    LowRankCholeskySolver chol_lr_g_xx_;
+    LowRankCholeskySolver chol_lr_w_;
     Eigen::VectorXd w_;
 };
 
@@ -82,24 +82,30 @@ void Regressor<K>::operator()(const TrainingData& data,
   //compute prior embedding
   // std::cout << "Embedding prior..." << std::endl;
   kx.embed(data.u, data.lambda, mu_pi_);
-  //get jitchol of gram matrix
-  // std::cout << "Computing joint..." << std::endl;
-  chol_g_xx_.solve(kx.gramMatrix(), mu_pi_, beta_);
+ 
+  //Sparse section 
+  // chol_g_xx_.solve(kx.gramMatrix(), mu_pi_, beta_);
+  //end sparse section
+  
+  // add low rank update with bigger kernel.
+  int columns = n_*0.1;
+  int rank = int(columns*0.9);
+  Eigen::MatrixXd C(n_, columns);
+  Eigen::MatrixXd W(columns, columns);
+  Eigen::MatrixXd W_plus(columns, columns);
+  double sigma_lrx = kx.width();
+  double sigma_lry = ky.width();
+  Kernel<Q1CompactKernel> kx_lr(data.x);
+  Kernel<Q1CompactKernel> ky_lr(data.y);
+  nystromApproximation(data.x,kx_lr, rank, columns, sigma_lrx, C, W, W_plus);
+  chol_lr_g_xx_.solve(Eigen::VectorXd::Ones(n_),C, W, W_plus, mu_pi_, beta_);
+  //END LOW RANK SECTION
+  
   if (settings_.normed_weights)
   {
     beta_ = beta_.cwiseMax(0.0);
     beta_ = beta_ / beta_.sum();
   }
-  // add low rank update with bigger kernel.
-  double sigma_lrx = 1.0;
-  double sigma_lry = 1.0;
-  Kernel<RBFKernel> kx_lr(data.x);
-  Kernel<RBFKernel> ky_lr(data.y);
-  double jit = chol_g_xx_.jitter();
-  // lowRankGramUpdate(data.x, kx_lr, sigma_lrx, n_*0.05, n_*0.06, 
-                      // kx.gramMatrix(),jit,1.0,chol_lowrank_1_, beta_);
-  
-  
   
   std::vector< Eigen::Triplet<double> > coeffs;
   Eigen::SparseMatrix<double, 0> beta_diag_(n_,n_);
@@ -112,19 +118,26 @@ void Regressor<K>::operator()(const TrainingData& data,
   auto s = weights.rows();
   for (uint i=0; i<s; i++)
   {
-    // std::cout << "Evaluating conditional "<< i+1 << " of " << s << "..." << std::endl;
     auto yi = ys.row(i);
     ky.embed(yi, embed_y_);
     embed_y_ = beta_.asDiagonal() * embed_y_;
-    chol_R_xy_.solve(beta_diag_ * ky.gramMatrix(), embed_y_, w_);
-    jit = chol_R_xy_.jitter(); 
-    // lowRankGramUpdate(data.y, ky_lr, sigma_lry, n_*0.05, n_*0.06, 
-        // ky.gramMatrix(),jit,beta_diag_,chol_lowrank_2_, w_);
+
+    //sparse section
+    // chol_R_xy_.solve(beta_diag_ * ky.gramMatrix(), embed_y_, w_);
+    //end sparse section
+    
+    //low rank section 
+    nystromApproximation(data.y,ky_lr, rank, columns, sigma_lry, C, W, W_plus);
+    chol_lr_w_.solve(beta_, C, W, W_plus, embed_y_, w_);
+    //end low rank section
     
     if (settings_.normed_weights)
     {
       w_ = w_.cwiseMax(0.0);
-      w_ = w_ / w_.sum();
+      if (w_.sum() > 0.0)
+      {
+        w_ = w_ / w_.sum();
+      }
     }
     weights.row(i) = w_;
   }
