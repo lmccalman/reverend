@@ -38,6 +38,12 @@ struct Settings
   double sigma_y;
   double sigma_y_min;
   double sigma_y_max;
+  double low_rank_scale;
+  double low_rank_scale_min;
+  double low_rank_scale_max;
+  double low_rank_weight;
+  double low_rank_weight_min;
+  double low_rank_weight_max;
   double walltime;
   double preimage_reg;
   double preimage_reg_min;

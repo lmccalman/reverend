@@ -55,17 +55,22 @@ class LogPCost:Cost
     {
       double sigma_x = x[0];
       double sigma_y = x[1];
+      double lowRankScale = x[2];
+      double lowRankWeight = x[3];
       kx_.setWidth(sigma_x);
       ky_.setWidth(sigma_y);
-      algo_(trainingData_, kx_, ky_, testingData_.ys, weights_);
+      algo_(trainingData_, kx_, ky_, testingData_.ys, lowRankScale,
+          lowRankWeight, weights_);
       uint testPoints = testingData_.xs.rows();
       double totalCost = 0.0;
       for (int i=0;i<testPoints;i++)
       {
-        totalCost += logKernelMixture(testingData_.xs.row(i),
-                                        trainingData_.x,
-                                        weights_.row(i),
-                                        kx_);
+        totalCost += multiLogKernelMixture(testingData_.xs.row(i),
+                                            trainingData_.x,
+                                            weights_.row(i),
+                                            kx_,
+                                            lowRankScale,
+                                            lowRankWeight);
       }
       totalCost *= -1; // minimize this maximizes probability
       return totalCost;
@@ -76,243 +81,4 @@ class LogPCost:Cost
     Kernel<K> ky_;
     T algo_;
     Eigen::MatrixXd weights_;
-};
-
-
-template <class T, class K>
-class JointLogPCost:Cost
-{
-  public:
-    JointLogPCost(const TrainingData& train, const TestingData& test, const Settings& settings)
-      : Cost(train, test), 
-      algo_(train.x.rows(), train.u.rows(), settings),
-      weights_(test.ys.rows(), train.x.rows()),
-      posWeights_(train.x.rows()),
-      kx_(train.x, 1.0), ky_(train.y, 1.0)
-
-  {
-  }; 
-
-    double operator()(const std::vector<double>&x, std::vector<double>&grad)
-    {
-      double sigma_x = x[0];
-      double sigma_y = x[1];
-      kx_.setWidth(sigma_x);
-      ky_.setWidth(sigma_y);
-      double preimage_reg = exp(x[2]);
-      algo_(trainingData_, kx_, ky_, testingData_.ys, weights_);
-      uint testPoints = testingData_.xs.rows();
-      double totalCost = 0.0;
-      double dim = trainingData_.x.cols();
-      for (int i=0;i<testPoints;i++)
-      {
-        positiveNormedCoeffs(weights_.row(i), kx_, dim, preimage_reg, posWeights_);
-        totalCost += logGaussianMixture(testingData_.xs.row(i),
-            trainingData_.x,
-            weights_.row(i),
-            sigma_x);
-      }
-      totalCost *= -1; // minimize this maximizes probability
-      return totalCost;
-
-    };
-
-  private: 
-    T algo_;
-    Eigen::MatrixXd weights_;
-    Eigen::VectorXd posWeights_;
-    Kernel<K> kx_;
-    Kernel<K> ky_;
-};
-
-
-template <class T, class K>
-struct HilbertCost:Cost
-{
-  public:
-    HilbertCost(const TrainingData& train, const TestingData& test, const Settings& settings)
-      : Cost(train, test), 
-      algo_(train.x.rows(), train.u.rows(), settings),
-      weights_(test.ys.rows(), train.x.rows()),
-      kx_(train.x, 1.0), ky_(train.y, 1.0)
-  {
-  }; 
-
-    double operator()(const std::vector<double>&x, std::vector<double>&grad)
-    {
-      double sigma_x = x[0];
-      double sigma_y = x[1];
-      kx_.setWidth(sigma_x);
-      ky_.setWidth(sigma_y);
-      algo_(trainingData_, kx_, ky_, testingData_.ys, weights_);
-      uint testPoints = testingData_.xs.rows();
-      uint n = trainingData_.x.rows();
-      Eigen::VectorXd pointEmbedding(n);
-      double totalCost = 0.0;
-      for (int i=0;i<testPoints;i++)
-      {
-        kx_.embed(testingData_.xs.row(i), pointEmbedding);
-        totalCost += kx_.innerProduct(weights_.row(i), weights_.row(i))
-              -2 * kx_.innerProduct(weights_.row(i), pointEmbedding);
-      }
-      return totalCost;
-    };
-
-  private: 
-    T algo_;
-    Eigen::MatrixXd weights_;
-    Kernel<K> kx_;
-    Kernel<K> ky_;
-};
-
-
-template <class K>
-class PreimageCost:Cost
-{
-  public:
-    PreimageCost(const TrainingData& train, const TestingData& test, const Settings& settings)
-      : Cost(train, test), 
-      regressor_(train.x.rows(), train.u.rows(), settings),
-      weights_(test.ys.rows(), train.x.rows()),
-      preimageWeights_(test.ys.rows(), train.x.rows()),
-      kx_(train.x, settings.sigma_x), ky_(train.y, settings.sigma_y)
-      {
-        regressor_(trainingData_, kx_, ky_, testingData_.ys, weights_);
-      }; 
-
-    double operator()(const std::vector<double>&x, std::vector<double>&grad)
-    {
-      double sigma_x = kx_.width();
-      uint n = trainingData_.x.rows();
-      double preimage_reg = exp(x[0]);
-      uint dim = trainingData_.x.cols();
-      Eigen::VectorXd coeff_i(n);
-      uint testPoints = testingData_.xs.rows();
-      for (int i=0; i<testPoints; i++)
-      {
-        coeff_i = Eigen::VectorXd::Ones(n) * (1.0/double(n));
-        positiveNormedCoeffs(weights_.row(i), kx_, dim, preimage_reg, coeff_i);
-        preimageWeights_.row(i) = coeff_i;
-      }
-      
-      double totalCost = 0.0;
-      for (int i=0;i<testPoints;i++)
-      {
-        totalCost += logGaussianMixture(testingData_.xs.row(i),
-            trainingData_.x,
-            preimageWeights_.row(i),
-            sigma_x);
-      }
-      totalCost *= -1; // minimize this maximizes probability
-      return totalCost;
-    };
-
-  private: 
-    Regressor<K> regressor_;
-    Eigen::MatrixXd weights_;
-    Eigen::MatrixXd preimageWeights_;
-    Kernel<K> kx_;
-    Kernel<K> ky_;
-};
-
-template <class T, class K>
-class PinballCost:Cost
-{
-  public:
-    PinballCost(const TrainingData& train, const TestingData& test, const Settings& settings)
-      : Cost(train, test), 
-      algo_(train.x.rows(), train.u.rows(), settings),
-      weights_(test.ys.rows(), train.x.rows()),
-      kx_(train.x, 1.0), ky_(train.y, 1.0),
-      settings_(settings)
-  {
-  }; 
-
-    double operator()(const std::vector<double>&x, std::vector<double>&grad)
-    {
-      double sigma_x = x[0];
-      double sigma_y = x[1];
-      kx_.setWidth(sigma_x);
-      ky_.setWidth(sigma_y);
-      algo_(trainingData_, kx_, ky_, testingData_.ys, weights_);
-      uint testPoints = testingData_.xs.rows();
-      double tau = settings_.quantile;
-      double totalCost = 0.0;
-      for (int i=0;i<testPoints;i++)
-      {
-        Quantile<Kernel<K> > q(weights_.row(i), trainingData_.x, kx_, settings_);
-        double z = q(tau);
-        double y = testingData_.xs(i,0);
-        if (y >= z)
-        {
-          totalCost += (y-z)*tau;
-        }
-        else
-        {
-          totalCost += (z-y)*(1.0 - tau);
-        }
-      }
-      return totalCost;
-    };
-
-  private: 
-    Kernel<K> kx_;
-    Kernel<K> ky_;
-    T algo_;
-    Eigen::MatrixXd weights_;
-    const Settings& settings_;
-};
-
-template <class T, class K>
-class JointPinballCost:Cost
-{
-  public:
-    JointPinballCost(const TrainingData& train, const TestingData& test, const Settings& settings)
-      : Cost(train, test), 
-      algo_(train.x.rows(), train.u.rows(), settings),
-      weights_(test.ys.rows(), train.x.rows()),
-      posWeights_(train.x.rows()),
-      kx_(train.x, 1.0), ky_(train.y, 1.0),
-      settings_(settings)
-  {
-  }; 
-
-    double operator()(const std::vector<double>&x, std::vector<double>&grad)
-    {
-      double sigma_x = x[0];
-      double sigma_y = x[1];
-      kx_.setWidth(sigma_x);
-      ky_.setWidth(sigma_y);
-      double preimage_reg = exp(x[2]);
-      uint dim = trainingData_.x.cols();
-      algo_(trainingData_, kx_, ky_, testingData_.ys, weights_);
-      uint testPoints = testingData_.xs.rows();
-      double tau = settings_.quantile;
-      double totalCost = 0.0;
-      for (int i=0;i<testPoints;i++)
-      {
-        positiveNormedCoeffs(weights_.row(i), kx_, dim, preimage_reg, posWeights_);
-        Quantile<Kernel<K> > q(posWeights_, trainingData_.x, kx_, settings_);
-        double z = q(tau);
-        double y = testingData_.xs(i,0);
-        if (y >= z)
-        {
-          totalCost += (y-z)*tau;
-        }
-        else
-        {
-          totalCost += (z-y)*(1.0 - tau);
-        }
-      }
-      return totalCost;
-
-    };
-
-  private: 
-    T algo_;
-    Eigen::MatrixXd weights_;
-    Eigen::VectorXd posWeights_;
-    Kernel<K> kx_;
-    Kernel<K> ky_;
-    const Settings& settings_;
 };

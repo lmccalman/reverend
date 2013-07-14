@@ -49,14 +49,16 @@ int main(int argc, char** argv)
   Kernel<Q1CompactKernel> kx(trainData.x, settings.sigma_x);
   Kernel<Q1CompactKernel> ky(trainData.y, settings.sigma_y);
   Regressor<Q1CompactKernel> r(n, m, settings);
-  r(trainData, kx, ky, testData.ys, weights);
+  r(trainData, kx, ky, testData.ys, settings.low_rank_scale,
+     settings.low_rank_weight, weights);
   //write out the results 
   writeNPY(weights, settings.filename_weights);
   
   // //evaluate the raw posterior 
   Eigen::MatrixXd embedding(testData.ys.rows(), testData.xs.rows());
   std::cout << "Evaluating embedded posterior..." << std::endl;
-  computeEmbedding(trainData, testData, weights, kx, embedding);
+  computeEmbedding(trainData, testData, weights, kx, embedding, settings.low_rank_scale,
+      settings.low_rank_weight);
   writeNPY(embedding, settings.filename_embedding);
 
   // //Normalise and compute posterior

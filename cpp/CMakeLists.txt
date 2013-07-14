@@ -55,14 +55,6 @@ add_custom_command(TARGET ${REVEREND_EXECUTABLE} POST_BUILD
 target_link_libraries(${REVEREND_EXECUTABLE} 
                       ${SUITESPARSE_LIBRARIES}
                       ${LAPACK_LIBRARIES}
-                      # cholmod
-                      # ccolamd
-                      # camd
-                      # colamd
-                      # amd
-                      # suitesparseconfig
-                      # lapack
-                      # blas
                       ${CNPY_LIBRARY}
                       ${NLOPT_LIBRARY}
                       ${Boost_FILESYSTEM_LIBRARY} )

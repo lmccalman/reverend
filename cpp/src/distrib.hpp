@@ -92,3 +92,42 @@ double logKernelMixture(const Eigen::VectorXd& point,
   double result =  log(std::max(sumAdjProb,1e-200)) + maxPower;
   return result;
 }
+
+template <class K>
+double multiLogKernelMixture(const Eigen::VectorXd& point,
+    const Eigen::MatrixXd& means,
+    const Eigen::VectorXd& coeffs,
+    const Kernel<K>& kx,
+    double lowRankScale,
+    double lowRankWeight)
+{
+  Kernel<Q1CompactKernel> kx_lr(means);
+  assert(point.size() == means.cols());
+  assert(means.rows() == coeffs.size());
+  uint numberOfMeans = means.rows();
+  double sigma = kx.width();
+  //find the min exp coeff
+  double maxPower = 0.0; // ie infinity;
+  for (uint i=0; i<numberOfMeans; i++)
+  {
+    double val = (1.0 - lowRankWeight) * kx(point, means.row(i).transpose()) + 
+                 lowRankWeight * kx_lr(point, means.row(i).transpose(), sigma*lowRankScale);
+    double expCoeff = log(std::max(val,1e-20));
+    maxPower = std::max(maxPower, expCoeff);
+  }
+  //now compute everything
+  double sumAdjProb = 0.0; 
+  for (uint i=0; i<numberOfMeans; i++)
+  {
+    double alpha = coeffs[i];
+    double val = kx(point, means.row(i).transpose());
+    double expCoeff = log(std::max(val,1e-200));
+    double adjExpCoeff = expCoeff - maxPower;
+    double adjProbs = alpha*exp(adjExpCoeff);
+    sumAdjProb += adjProbs;
+  }
+  // this means that if my sumAdjProb is zero or negative, things don't
+  // actually break I just get a very low result
+  double result =  log(std::max(sumAdjProb,1e-200)) + maxPower;
+  return result;
+}

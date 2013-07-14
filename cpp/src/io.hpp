@@ -50,6 +50,12 @@ Settings getSettings(const std::string& filename)
   s.sigma_y = pt.get<double>("Kernel.sigma_y");
   s.sigma_y_min = pt.get<double>("Kernel.sigma_y_min");
   s.sigma_y_max = pt.get<double>("Kernel.sigma_y_max");
+  s.low_rank_scale = pt.get<double>("Kernel.low_rank_scale");
+  s.low_rank_scale_min = pt.get<double>("Kernel.low_rank_scale_min");
+  s.low_rank_scale_max = pt.get<double>("Kernel.low_rank_scale_max");
+  s.low_rank_weight = pt.get<double>("Kernel.low_rank_weight");
+  s.low_rank_weight_min = pt.get<double>("Kernel.low_rank_weight_min");
+  s.low_rank_weight_max = pt.get<double>("Kernel.low_rank_weight_max");
   s.walltime = pt.get<double>("Training.walltime");
   s.preimage_walltime = pt.get<double>("Training.preimage_walltime");
   s.folds = pt.get<uint>("Training.folds");

@@ -58,33 +58,27 @@ void trainSettings(const TrainingData& data, Settings& settings)
 {
   uint folds = settings.folds;
   double wallTime = settings.walltime;
-  std::vector<double> thetaMin(2);
-  std::vector<double> thetaMax(2);
-  std::vector<double> theta0(2);
+  std::vector<double> thetaMin(4);
+  std::vector<double> thetaMax(4);
+  std::vector<double> theta0(4);
   theta0[0] = settings.sigma_x;
   theta0[1] = settings.sigma_y;
+  theta0[2] = settings.low_rank_scale;
+  theta0[3] = settings.low_rank_weight;
   thetaMin[0] = settings.sigma_x_min;
   thetaMin[1] = settings.sigma_y_min;
+  thetaMin[2] = settings.low_rank_scale_min;
+  thetaMin[3] = settings.low_rank_weight_min;
   thetaMax[0] = settings.sigma_x_max;
   thetaMax[1] = settings.sigma_y_max;
+  thetaMax[2] = settings.low_rank_scale_max;
+  thetaMax[3] = settings.low_rank_weight_max;
   std::vector<double> thetaBest(2);
   KFoldCVCost< LogPCost<A,K> > costfunc(folds,
       data, settings);
   thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
   settings.sigma_x = thetaBest[0];
   settings.sigma_y = thetaBest[1];
-  // if (!settings.normed_weights)
-  // { 
-    // KFoldCVCost<PreimageCost<K> > pmcostfunc(folds, data, settings);
-    // std::vector<double> thetaPMin(1);
-    // std::vector<double> thetaPMax(1);
-    // std::vector<double> thetaP0(1);
-    // thetaP0[0] = log(settings.preimage_reg);
-    // thetaPMin[0] = log(settings.preimage_reg_min);
-    // thetaPMax[0] = log(settings.preimage_reg_max);
-    // double preimageWalltime = settings.preimage_walltime;
-    // auto thetaPBest = globalOptimum(pmcostfunc, thetaPMin, thetaPMax, thetaP0,
-        // preimageWalltime);
-    // settings.preimage_reg = thetaPBest[0];
-  // }
+  settings.low_rank_scale = thetaBest[2];
+  settings.low_rank_weight = thetaBest[3];
 }

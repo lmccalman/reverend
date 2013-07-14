@@ -36,6 +36,8 @@ class Regressor
                const Kernel<K>& kx,
                const Kernel<K>& ky, 
                const Eigen::MatrixXd& ys,
+               double lowRankScale,
+               double lowRankWeight,
                Eigen::MatrixXd& weights); 
 
   private:
@@ -54,9 +56,12 @@ class Regressor
     Eigen::VectorXd beta_;
     Eigen::VectorXd embed_y_;
     SparseCholeskySolver<Eigen::VectorXd> chol_g_xx_;
+    SparseCholeskySolver<Eigen::MatrixXd> chol_u_;
+    SparseCholeskySolver<Eigen::MatrixXd> chol_ur_;
     SparseCholeskySolver<Eigen::VectorXd > chol_R_xy_;
-    LowRankCholeskySolver chol_lr_g_xx_;
-    LowRankCholeskySolver chol_lr_w_;
+    VerifiedCholeskySolver<Eigen::VectorXd > chol_n_;
+    VerifiedCholeskySolver<Eigen::VectorXd > chol_nr_;
+    
     Eigen::VectorXd w_;
 };
 
@@ -67,6 +72,8 @@ Regressor<K>::Regressor(uint trainLength, uint testLength, const Settings& setti
     embed_y_(trainLength),
     w_(trainLength),
     n_(trainLength),
+    chol_n_(int(trainLength*0.1), int(trainLength*0.1),1),
+    chol_nr_(int(trainLength*0.1), int(trainLength*0.1),1),
     settings_(settings){}
 
 template <class K>
@@ -74,31 +81,39 @@ void Regressor<K>::operator()(const TrainingData& data,
                           const Kernel<K>& kx,
                           const Kernel<K>& ky, 
                           const Eigen::MatrixXd& ys,
+                          double lowRankScale,
+                          double lowRankWeight,
                           Eigen::MatrixXd& weights)
 {
   const Eigen::MatrixXd& x = data.x;
   const Eigen::MatrixXd& y = data.y;
+  //low rank stuff 
+  int columns = n_*0.1;
+  int rank = int(columns*0.9);
+  Eigen::MatrixXd C(n_, columns);
+  Eigen::MatrixXd W(columns, columns);
+  Eigen::MatrixXd W_plus(columns, columns);
+  double sigma_lrx = kx.width() * lowRankScale;
+  double sigma_lry = ky.width() * lowRankScale;
+  Kernel<Q1CompactKernel> kx_lr(data.x);
+  Kernel<Q1CompactKernel> ky_lr(data.y);
 
   //compute prior embedding
   // std::cout << "Embedding prior..." << std::endl;
   kx.embed(data.u, data.lambda, mu_pi_);
  
   //Sparse section 
-  // chol_g_xx_.solve(kx.gramMatrix(), mu_pi_, beta_);
+  Eigen::VectorXd L(n_);
+  chol_g_xx_.solve((1.0 - lowRankWeight) * kx.gramMatrix(), mu_pi_, L);
   //end sparse section
   
   // add low rank update with bigger kernel.
-  int columns = n_*0.1;
-  int rank = int(columns*0.9);
-  Eigen::MatrixXd C(n_, columns);
-  Eigen::MatrixXd W(columns, columns);
-  Eigen::MatrixXd W_plus(columns, columns);
-  double sigma_lrx = kx.width();
-  double sigma_lry = ky.width();
-  Kernel<Q1CompactKernel> kx_lr(data.x);
-  Kernel<Q1CompactKernel> ky_lr(data.y);
   nystromApproximation(data.x,kx_lr, rank, columns, sigma_lrx, C, W, W_plus);
-  chol_lr_g_xx_.solve(Eigen::VectorXd::Ones(n_),C, W, W_plus, mu_pi_, beta_);
+  Eigen::MatrixXd M(n_, columns);  
+  chol_u_.solve((1.0 - lowRankWeight) * kx.gramMatrix(), lowRankWeight * C , M);
+  Eigen::VectorXd N(n_);
+  chol_n_.solve(W + C.transpose() * M, C.transpose()*L, N);
+  beta_ = L - M*N;
   //END LOW RANK SECTION
   
   if (settings_.normed_weights)
@@ -108,7 +123,7 @@ void Regressor<K>::operator()(const TrainingData& data,
   }
   
   std::vector< Eigen::Triplet<double> > coeffs;
-  Eigen::SparseMatrix<double, 0> beta_diag_(n_,n_);
+  Eigen::SparseMatrix<double> beta_diag_(n_,n_);
   for(uint j=0;j<n_;j++)
   {
     coeffs.push_back(Eigen::Triplet<double>(j,j,beta_(j)));
@@ -123,12 +138,14 @@ void Regressor<K>::operator()(const TrainingData& data,
     embed_y_ = beta_.asDiagonal() * embed_y_;
 
     //sparse section
-    // chol_R_xy_.solve(beta_diag_ * ky.gramMatrix(), embed_y_, w_);
+    chol_R_xy_.solve((1.0 - lowRankWeight) * beta_diag_ * ky.gramMatrix(), embed_y_, L);
     //end sparse section
     
     //low rank section 
     nystromApproximation(data.y,ky_lr, rank, columns, sigma_lry, C, W, W_plus);
-    chol_lr_w_.solve(beta_, C, W, W_plus, embed_y_, w_);
+    chol_ur_.solve((1.0 - lowRankWeight) * beta_diag_ * ky.gramMatrix(), lowRankWeight * C , M);
+    chol_nr_.solve(W + C.transpose() * M, C.transpose()*L, N);
+    w_ = L - M*N;
     //end low rank section
     
     if (settings_.normed_weights)
