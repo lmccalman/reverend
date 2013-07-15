@@ -96,7 +96,6 @@ void VerifiedCholeskySolver<T>::solve(const Eigen::MatrixXd& A, const Eigen::Mat
     }
     if (!solved)
     {
-      std::cout << "WARNING: max jitter reached" << std::endl;
       jitter_ /=2.0;
     }
   }
@@ -131,11 +130,16 @@ void setJitter(const SparseMatrix& A, double jitter, int n, SparseMatrix& aJit)
 template <class T>
 void SparseCholeskySolver<T>::solve(const SparseMatrix& A, const T& b, T& x)
 {
+  cholmod_common& config = cholSolver_.cholmod();
+  config.print = 1;
+  config.print_function = NULL;
+  config.try_catch = false;
+
   uint n = A.rows();
   SparseMatrix aJit_(n,n);
   double maxJitter = 1.0e20;
   double minJitter = 1.0e-10;
-  double precision = 1e-4;
+  double precision = 1e-8;
   // start with the jitter from last time
   setJitter(A, jitter_, n, aJit_);
   cholSolver_.compute(aJit_);
@@ -179,7 +183,6 @@ void SparseCholeskySolver<T>::solve(const SparseMatrix& A, const T& b, T& x)
     }
     if (!solved)
     {
-      std::cout << "WARNING: max jitter reached" << std::endl;
       jitter_ /=2.0;
     }
   }

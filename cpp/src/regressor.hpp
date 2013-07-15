@@ -58,7 +58,8 @@ class Regressor
     SparseCholeskySolver<Eigen::VectorXd> chol_g_xx_;
     SparseCholeskySolver<Eigen::MatrixXd> chol_u_;
     SparseCholeskySolver<Eigen::MatrixXd> chol_ur_;
-    SparseCholeskySolver<Eigen::VectorXd > chol_R_xy_;
+    SparseCholeskySolver<Eigen::SparseMatrix<double> > chol_R_xy_;
+    SparseCholeskySolver<Eigen::VectorXd > chol_w_;
     VerifiedCholeskySolver<Eigen::VectorXd > chol_n_;
     VerifiedCholeskySolver<Eigen::VectorXd > chol_nr_;
     
@@ -103,24 +104,21 @@ void Regressor<K>::operator()(const TrainingData& data,
   kx.embed(data.u, data.lambda, mu_pi_);
 
   //Sparse section 
-  Eigen::VectorXd L(n_);
-  chol_g_xx_.solve((1.0 - lowRankWeight) * kx.gramMatrix(), mu_pi_, L);
+  // chol_g_xx_.solve((1.0 - lowRankWeight) * kx.gramMatrix(), mu_pi_, L);
+  chol_g_xx_.solve(kx.gramMatrix(), mu_pi_, beta_);
   //end sparse section
   
   // add low rank update with bigger kernel.
-  nystromApproximation(data.x,kx_lr, rank, columns, sigma_lrx, C, W, W_plus);
-  Eigen::MatrixXd M(n_, columns);  
-  chol_u_.solve((1.0 - lowRankWeight) * kx.gramMatrix(), lowRankWeight * C , M);
-  Eigen::VectorXd N(n_);
-  chol_n_.solve(W + C.transpose() * M, C.transpose()*L, N);
-  beta_ = L - M*N;
+  // nystromApproximation(data.x,kx_lr, rank, columns, sigma_lrx, C, W, W_plus);
+  // Eigen::MatrixXd M(n_, columns);  
+  // chol_u_.solve((1.0 - lowRankWeight) * kx.gramMatrix(), lowRankWeight * C , M);
+  // Eigen::VectorXd N(n_);
+  // chol_n_.solve(W + C.transpose() * M, C.transpose()*L, N);
+  // beta_ = L - M*N;
   //END LOW RANK SECTION
   
-  if (settings_.normed_weights)
-  {
-    beta_ = beta_.cwiseMax(0.0);
-    beta_ = beta_ / beta_.sum();
-  }
+  beta_ = beta_.cwiseMax(0.0);
+  beta_ = beta_ / beta_.sum();
   
   std::vector< Eigen::Triplet<double> > coeffs;
   Eigen::SparseMatrix<double> beta_diag_(n_,n_);
@@ -129,7 +127,7 @@ void Regressor<K>::operator()(const TrainingData& data,
     coeffs.push_back(Eigen::Triplet<double>(j,j,beta_(j)));
   }
   beta_diag_.setFromTriplets(coeffs.begin(), coeffs.end()); 
-  
+ 
   auto s = weights.rows();
   for (uint i=0; i<s; i++)
   {
@@ -138,15 +136,16 @@ void Regressor<K>::operator()(const TrainingData& data,
     embed_y_ = beta_.asDiagonal() * embed_y_;
 
     //sparse section
-    chol_R_xy_.solve((1.0 - lowRankWeight) * beta_diag_ * ky.gramMatrix(), embed_y_, L);
+    // chol_w_.solve((1.0 - lowRankWeight) * beta_diag_ * ky.gramMatrix(), embed_y_, L);
+    chol_w_.solve(beta_diag_ * ky.gramMatrix(), embed_y_, w_);
     //end sparse section
     
     //low rank section 
-    nystromApproximation(data.y,ky_lr, rank, columns, sigma_lry, C, W, W_plus);
-    chol_ur_.solve((1.0 - lowRankWeight) * beta_diag_ * ky.gramMatrix(),
-                   lowRankWeight * beta_.asDiagonal() * C , M);
-    chol_nr_.solve(W + C.transpose() * M, C.transpose()*L, N);
-    w_ = L - M*N;
+    // nystromApproximation(data.y,ky_lr, rank, columns, sigma_lry, C, W, W_plus);
+    // chol_ur_.solve((1.0 - lowRankWeight) * beta_diag_ * ky.gramMatrix(),
+                   // lowRankWeight * beta_.asDiagonal() * C , M);
+    // chol_nr_.solve(W + C.transpose() * M, C.transpose()*L, N);
+    // w_ = L - M*N;
     //end low rank section
     
     if (settings_.normed_weights)

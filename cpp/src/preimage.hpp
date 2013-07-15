@@ -88,7 +88,6 @@ void computeEmbedding(const TrainingData& trainingData, const TestingData& testi
       double result = 0.0;
       for (int k=0;k<n;k++)
       {
-        lowRankWeight = 0.0;
         result += (1.0 - lowRankWeight) * w_i(k) 
                   * kx(trainingData.x.row(k), testpoint) 
                    / kx.volume(sigma, dim); 

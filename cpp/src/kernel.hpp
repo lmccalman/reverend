@@ -202,7 +202,7 @@ class Q1CompactKernel
     {
       int D = x.size();
       double j = D/2.0 + 2;
-      double r = (x-x_dash).norm() / (sigma * 4.0);
+      double r = (x-x_dash).norm() / sigma;
       double result = 0;
       if (r < 1.0)
       {
@@ -212,13 +212,13 @@ class Q1CompactKernel
     }
     double approximateHalfSupport(double width) const
     {
-      return width * 4.0; 
+      return width; 
     }
     
     double volume(double sigma, uint dimension) const
     {
       return 2 * pow(M_PI, dimension/2.0) 
-             * 4 * (sigma * 4.0) / tgamma(dimension/2.0) / (dimension + 10);
+             * 4 * sigma  / tgamma(dimension/2.0) / (dimension + 10);
     }
 
     void embedIndicator(const Eigen::VectorXd& cutoff,

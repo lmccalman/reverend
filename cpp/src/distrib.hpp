@@ -115,7 +115,7 @@ double multiLogKernelMixture(const Eigen::VectorXd& point,
     double val1 = (1.0 - lowRankWeight) * kx(point, means.row(i).transpose()) / kx.volume(sigma, dim);  
     double val2 = lowRankWeight * kx_lr(point, means.row(i).transpose(), sigma*lowRankScale) / kx_lr.volume(sigma*lowRankScale, dim);
     double val = val1 + val2;
-    double expCoeff = log(std::max(val,1e-20));
+    double expCoeff = log(val);
     maxPower = std::max(maxPower, expCoeff);
   }
   //now compute everything
@@ -126,13 +126,17 @@ double multiLogKernelMixture(const Eigen::VectorXd& point,
     double val1 = (1.0 - lowRankWeight) * kx(point, means.row(i).transpose()) / kx.volume(sigma, dim);  
     double val2 = lowRankWeight * kx_lr(point, means.row(i).transpose(), sigma*lowRankScale) / kx_lr.volume(sigma*lowRankScale, dim);
     double val = val1 + val2;
-    double expCoeff = log(std::max(val,1e-200));
+    double expCoeff = log(val);
     double adjExpCoeff = expCoeff - maxPower;
     double adjProbs = alpha*exp(adjExpCoeff);
     sumAdjProb += adjProbs;
   }
   // this means that if my sumAdjProb is zero or negative, things don't
   // actually break I just get a very low result
-  double result =  log(std::max(sumAdjProb,1e-200)) + maxPower;
+  double result =  log(sumAdjProb) + maxPower;
+  if (!(result == result))
+  {
+    result = -1*std::numeric_limits<double>::infinity();
+  }
   return result;
 }
