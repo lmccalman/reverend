@@ -90,12 +90,12 @@ void Regressor<K>::operator()(const TrainingData& data,
                           double lowRankWeight,
                           Eigen::MatrixXd& weights)
 {
-  std::string method = "lowrank"; 
+  std::string method = "both"; 
   
   const Eigen::MatrixXd& x = data.x;
   const Eigen::MatrixXd& y = data.y;
   //low rank stuff 
-  int columns = n_*0.9;
+  int columns = n_*0.2;
   int rank = int(columns*0.9);
   Eigen::MatrixXd C(n_, columns);
   Eigen::MatrixXd W(columns, columns);
@@ -103,6 +103,9 @@ void Regressor<K>::operator()(const TrainingData& data,
   double sigma_lry = ky.width() * lowRankScale;
   Kernel<Q1CompactKernel> kx_lr(data.x);
   Kernel<Q1CompactKernel> ky_lr(data.y);
+
+  // std::cout << "kx fill:" << kx.gramMatrix().nonZeros() / double(n_*n_) * 100 << std::endl;
+  // std::cout << "ky fill:" << ky.gramMatrix().nonZeros() / double(n_*n_) * 100 << std::endl;
 
   //compute prior embedding
   kx.embed(data.u, data.lambda, mu_pi_);
@@ -127,7 +130,8 @@ void Regressor<K>::operator()(const TrainingData& data,
     // add low rank update with bigger kernel.
     Eigen::MatrixXd M(n_, columns);  
     simpleNystromApproximation(data.x, kx_lr, columns, sigma_lrx, C, W);
-    chol_u_.solve((1.0 - lowRankWeight) * kx.gramMatrix(), lowRankWeight * C , M);
+    chol_u_.solve(kx.gramMatrix(), C , M);
+    M *= lowRankWeight / (1.0 - lowRankWeight);
     Eigen::VectorXd N(n_);
     chol_n_.solve(W + C.transpose() * M, C.transpose()*L, N);
     beta_ = L - M*N;
@@ -168,11 +172,12 @@ void Regressor<K>::operator()(const TrainingData& data,
       Eigen::VectorXd L(n_);
       Eigen::MatrixXd M(n_, columns);  
       Eigen::VectorXd N(n_);
-      chol_w_.solve((1.0 - lowRankWeight) * beta_diag_ * ky.gramMatrix(), embed_y_, L);
+      chol_w_.solve(beta_diag_ * ky.gramMatrix(), embed_y_, L);
+      L *= 1.0 / (1.0 - lowRankWeight);
       //low rank section 
       simpleNystromApproximation(data.x, kx_lr, columns, sigma_lrx, C, W);
-      chol_ur_.solve((1.0 - lowRankWeight) * beta_diag_ * ky.gramMatrix(),
-                     lowRankWeight * beta_.asDiagonal() * C , M);
+      chol_ur_.solve(beta_diag_ * ky.gramMatrix(), beta_.asDiagonal() * C , M);
+      M *= lowRankWeight / (1.0 - lowRankWeight);
       chol_nr_.solve(W + C.transpose() * M, C.transpose()*L, N);
       w_ = L - M*N;
     }
