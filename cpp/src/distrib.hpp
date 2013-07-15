@@ -68,6 +68,7 @@ double logKernelMixture(const Eigen::VectorXd& point,
   assert(point.size() == means.cols());
   assert(means.rows() == coeffs.size());
   uint numberOfMeans = means.rows();
+  double logScaleFactor = -log(kx.volume(kx.width(), means.cols()));
   //find the min exp coeff
   double maxPower = 0.0; // ie infinity;
   for (uint i=0; i<numberOfMeans; i++)
@@ -89,7 +90,7 @@ double logKernelMixture(const Eigen::VectorXd& point,
   }
   // this means that if my sumAdjProb is zero or negative, things don't
   // actually break I just get a very low result
-  double result =  log(std::max(sumAdjProb,1e-200)) + maxPower;
+  double result =  log(std::max(sumAdjProb,1e-200)) + maxPower + logScaleFactor;
   return result;
 }
 
@@ -106,12 +107,14 @@ double multiLogKernelMixture(const Eigen::VectorXd& point,
   assert(means.rows() == coeffs.size());
   uint numberOfMeans = means.rows();
   double sigma = kx.width();
+  uint dim = means.cols();
   //find the min exp coeff
   double maxPower = 0.0; // ie infinity;
   for (uint i=0; i<numberOfMeans; i++)
   {
-    double val = (1.0 - lowRankWeight) * kx(point, means.row(i).transpose()) + 
-                 lowRankWeight * kx_lr(point, means.row(i).transpose(), sigma*lowRankScale);
+    double val1 = (1.0 - lowRankWeight) * kx(point, means.row(i).transpose()) / kx.volume(sigma, dim);  
+    double val2 = lowRankWeight * kx_lr(point, means.row(i).transpose(), sigma*lowRankScale) / kx_lr.volume(sigma*lowRankScale, dim);
+    double val = val1 + val2;
     double expCoeff = log(std::max(val,1e-20));
     maxPower = std::max(maxPower, expCoeff);
   }
@@ -120,7 +123,9 @@ double multiLogKernelMixture(const Eigen::VectorXd& point,
   for (uint i=0; i<numberOfMeans; i++)
   {
     double alpha = coeffs[i];
-    double val = kx(point, means.row(i).transpose());
+    double val1 = (1.0 - lowRankWeight) * kx(point, means.row(i).transpose()) / kx.volume(sigma, dim);  
+    double val2 = lowRankWeight * kx_lr(point, means.row(i).transpose(), sigma*lowRankScale) / kx_lr.volume(sigma*lowRankScale, dim);
+    double val = val1 + val2;
     double expCoeff = log(std::max(val,1e-200));
     double adjExpCoeff = expCoeff - maxPower;
     double adjProbs = alpha*exp(adjExpCoeff);

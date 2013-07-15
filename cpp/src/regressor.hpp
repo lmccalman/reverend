@@ -101,7 +101,7 @@ void Regressor<K>::operator()(const TrainingData& data,
   //compute prior embedding
   // std::cout << "Embedding prior..." << std::endl;
   kx.embed(data.u, data.lambda, mu_pi_);
- 
+
   //Sparse section 
   Eigen::VectorXd L(n_);
   chol_g_xx_.solve((1.0 - lowRankWeight) * kx.gramMatrix(), mu_pi_, L);
@@ -143,7 +143,8 @@ void Regressor<K>::operator()(const TrainingData& data,
     
     //low rank section 
     nystromApproximation(data.y,ky_lr, rank, columns, sigma_lry, C, W, W_plus);
-    chol_ur_.solve((1.0 - lowRankWeight) * beta_diag_ * ky.gramMatrix(), lowRankWeight * C , M);
+    chol_ur_.solve((1.0 - lowRankWeight) * beta_diag_ * ky.gramMatrix(),
+                   lowRankWeight * beta_.asDiagonal() * C , M);
     chol_nr_.solve(W + C.transpose() * M, C.transpose()*L, N);
     w_ = L - M*N;
     //end low rank section

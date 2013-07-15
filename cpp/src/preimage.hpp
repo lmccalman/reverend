@@ -77,6 +77,7 @@ void computeEmbedding(const TrainingData& trainingData, const TestingData& testi
   uint p = testingData.xs.rows();
   uint n = trainingData.x.rows();
   Kernel<Q1CompactKernel> kx_lr(trainingData.x);
+  uint dim = trainingData.x.cols();
   double sigma = kx.width();
   for (int i=0;i<s;i++)  
   {
@@ -87,8 +88,13 @@ void computeEmbedding(const TrainingData& trainingData, const TestingData& testi
       double result = 0.0;
       for (int k=0;k<n;k++)
       {
-        result += (1.0 - lowRankWeight) * w_i(k) * kx(trainingData.x.row(k), testpoint); 
-        result += lowRankWeight  * w_i(k) * kx_lr(trainingData.x.row(k), testpoint, sigma*lowRankScale); 
+        lowRankWeight = 0.0;
+        result += (1.0 - lowRankWeight) * w_i(k) 
+                  * kx(trainingData.x.row(k), testpoint) 
+                   / kx.volume(sigma, dim); 
+        result += lowRankWeight  * w_i(k) 
+                  * kx_lr(trainingData.x.row(k), testpoint, sigma*lowRankScale)
+                  / kx_lr.volume(sigma*lowRankScale, dim); 
       } 
       embedding(i,j) = result;
     }

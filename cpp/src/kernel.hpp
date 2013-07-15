@@ -35,6 +35,11 @@ class Kernel
     const Eigen::SparseMatrix<double>& gramMatrix() const {return g_xx_;}
     
     double width() const {return width_;}
+
+    double volume(double sigma, uint dimension) const 
+    {
+      return k_.volume(sigma, dimension);
+    }
     
     void setWidth(double w)
     {
@@ -142,6 +147,11 @@ class RBFKernel
       return 5.0*width; 
     }
 
+    double volume(double sigma, uint dimension) const
+    {
+      return pow(2*M_PI, dimension/double(2.0)) * pow(sigma, dimension);
+    }
+
     void embedIndicator(const Eigen::VectorXd& cutoff,
         const Eigen::MatrixXd& X, double sigma_x, Eigen::VectorXd& weights) const
     {
@@ -190,7 +200,7 @@ class Q1CompactKernel
         const Eigen::VectorXd& x_dash,
         double sigma) const
     {
-      int D = 2.0;
+      int D = x.size();
       double j = D/2.0 + 2;
       double r = (x-x_dash).norm() / (sigma * 4.0);
       double result = 0;
@@ -203,6 +213,12 @@ class Q1CompactKernel
     double approximateHalfSupport(double width) const
     {
       return width * 4.0; 
+    }
+    
+    double volume(double sigma, uint dimension) const
+    {
+      return 2 * pow(M_PI, dimension/2.0) 
+             * 4 * (sigma * 4.0) / tgamma(dimension/2.0) / (dimension + 10);
     }
 
     void embedIndicator(const Eigen::VectorXd& cutoff,
