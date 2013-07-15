@@ -35,7 +35,6 @@ void nystromApproximation(const Eigen::MatrixXd& X, const Kernel<K>& kx,
 {
   uint n = X.rows();
   Eigen::MatrixXd W(columns, columns);
-  double scaleFactor = 1.0 / sqrt(columns/double(n));
   std::vector<uint> I(columns);
   Eigen::VectorXd gCol(n);
   for (int t=0; t<columns; t++)
@@ -43,16 +42,15 @@ void nystromApproximation(const Eigen::MatrixXd& X, const Kernel<K>& kx,
     uint i = rand() % n;
     for (int j=0; j<n; j++)
     {
-      C(j,t) = kx(X.row(j),X.row(i)) * scaleFactor;
+      C(j,t) = kx(X.row(j),X.row(i), sigma);
     }
     I.push_back(i);
   }
-  double scaleFactor2 = 1.0 / (columns / double(n));
   for (int i=0;i<columns;i++)
   {
     for (int j=0;j<columns;j++)
     {
-      W(i,j) = kx(X.row(I[i]),X.row(I[j]), sigma) * scaleFactor2;
+      W(i,j) = kx(X.row(I[i]),X.row(I[j]), sigma);
     }
   } 
   // compute best rank-k approximation of W
@@ -77,6 +75,35 @@ void nystromApproximation(const Eigen::MatrixXd& X, const Kernel<K>& kx,
   }
   W_k = svd.matrixU() * newDiags.asDiagonal() * svd.matrixV().transpose();
   W_plus = svd.matrixU() * invDiags.asDiagonal() * svd.matrixV().transpose();
+}
+  
+  
+template <class K>
+void simpleNystromApproximation(const Eigen::MatrixXd& X, const Kernel<K>& kx,
+    uint columns,
+    double sigma,
+    Eigen::MatrixXd& C,
+    Eigen::MatrixXd& W_k)
+{
+  uint n = X.rows();
+  std::vector<uint> I(columns);
+  Eigen::VectorXd gCol(n);
+  for (int t=0; t<columns; t++)
+  {
+    uint i = rand() % n;
+    for (int j=0; j<n; j++)
+    {
+      C(j,t) = kx(X.row(j),X.row(i), sigma);
+    }
+    I.push_back(i);
+  }
+  for (int i=0;i<columns;i++)
+  {
+    for (int j=0;j<columns;j++)
+    {
+      W_k(i,j) = kx(X.row(I[i]),X.row(I[j]), sigma);
+    }
+  } 
 }
 
 // template<class K, class T>
