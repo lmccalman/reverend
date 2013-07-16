@@ -30,7 +30,7 @@ class Cumulative
     Cumulative(const Eigen::VectorXd& coeffs, const Eigen::MatrixXd& X,
                const K& kx, const Settings& settings)
       : coeffs_(coeffs), X_(X), settings_(settings), indicator_(coeffs.rows()),
-      kx_(kx)
+      kx_(kx), g_xx_(X.rows(),X.rows())
     {
       if (!settings.normed_weights)
       {
@@ -39,11 +39,12 @@ class Cumulative
         Eigen::VectorXd oneVal = X_.colwise().maxCoeff();
         zeroVal -= 5*sigma_x*Eigen::VectorXd::Ones(zeroVal.rows());
         oneVal += 5*sigma_x*Eigen::VectorXd::Ones(oneVal.rows());
+        g_xx_ = kx.gramMatrix();
         
         kx.embedIndicator(zeroVal, indicator_);
-        double zeroResult = kx.innerProduct(indicator_, coeffs);
+        double zeroResult = indicator_.transpose() * g_xx_ * coeffs;
         kx.embedIndicator(oneVal, indicator_);
-        double oneResult = kx.innerProduct(indicator_, coeffs);
+        double oneResult = indicator_.transpose() * g_xx_ *  coeffs;
         scale_ = 1.0 / (oneResult - zeroResult);
         offset_ = zeroResult;
       }
@@ -82,8 +83,9 @@ class Cumulative
     const Eigen::VectorXd& coeffs_;
     const Eigen::MatrixXd& X_;
     const Settings& settings_;
-    Eigen::VectorXd indicator_;
     const K& kx_;
+    Eigen::VectorXd indicator_;
+    Eigen::MatrixXd g_xx_;
     double scale_;
     double offset_;
 };
@@ -106,7 +108,7 @@ template <class K>
 double Cumulative<K>::fromWeights(const Eigen::VectorXd& x)
 {
   kx_.embedIndicator(x, indicator_);
-  double rawResult = kx_.innerProduct(indicator_, coeffs_);
+  double rawResult = indicator_.transpose() * g_xx_ * coeffs_;
   double scaledResult = (rawResult - offset_) * scale_;
   return scaledResult;
 }
@@ -155,8 +157,8 @@ class Quantile
         const K& kx, const Settings& settings):
       c_(coeffs, X, kx, settings)
   {
-    xmin_ = X.minCoeff() - kx.approximateHalfSupport();
-    xmax_ = X.maxCoeff() + kx.approximateHalfSupport();
+    xmin_ = X.minCoeff() - kx.halfSupport();
+    xmax_ = X.maxCoeff() + kx.halfSupport();
   }
 
     double operator()(double tau) 

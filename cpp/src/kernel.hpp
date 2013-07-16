@@ -18,34 +18,49 @@
 #define EIGEN_DONT_PARALLELIZE
 #include <cmath>
 #include <Eigen/Core>
+#include <Eigen/Sparse>
 #include <boost/function.hpp>
+  
+template <class K>
+void computeGramMatrix(const K& k, 
+                       double width,
+                       const Eigen::MatrixXd& X,
+                       Eigen::MatrixXd& g);
+// template <class K>
+// void computeGramMatrix(const K& k,
+                       // double width, 
+                       // const Eigen::MatrixXd& X, 
+                       // Eigen::SparseMatrix<double>& g);
 
 template <class T>
 class Kernel
 {
   public:
     Kernel(const Eigen::MatrixXd& X, double width):
-      X_(X), g_xx_(X.rows(), X.rows())
-  {
-    setWidth(width); 
-  }
+      X_(X), g_xx_(X.rows(), X.rows()), width_(width), isGramUpdated_(false)
+    {
+      volume_ = k_.volume(width_, X_.cols());
+    }
     
-    const Eigen::MatrixXd& gramMatrix() const {return g_xx_;}
+    const Eigen::MatrixXd& gramMatrix() const
+    {
+      if (isGramUpdated_ == false)
+      {
+        computeGramMatrix(k_, width_, X_, g_xx_);
+        isGramUpdated_ = true;
+      }
+      return g_xx_;
+    }
     
     double width() const {return width_;}
     
+    double volume() const {return volume_;}
+    
     void setWidth(double w)
     {
+      isGramUpdated_ = false;
       width_ = w;
-      //recompute gram matrix
-      uint n = X_.rows();
-      for(uint i=0; i<n;i++)
-      {
-        for(uint j=0;j<n;j++)
-        {
-          g_xx_(i,j) = k_(X_.row(i), X_.row(j), width_);
-        }
-      }
+      volume_ = k_.volume(width_, X_.cols());
     }
 
     void embed(const Eigen::MatrixXd& u,
@@ -75,14 +90,16 @@ class Kernel
       }
     }
 
-    double innerProduct(const Eigen::VectorXd& x1, const Eigen::VectorXd& x2) const
-    {
-      return (double)(x1.transpose() * g_xx_ * x2);
-    }
+    // double innerProduct(const Eigen::VectorXd& x1, const Eigen::VectorXd& x2) const
+    // {
+      // computeGramMatrix(k_, width_, X_, g_xx_);
+      // double result = x1.transpose() * this->gramMatrix() * x2;
+      // return result;
+    // }
     
-    double approximateHalfSupport() const
+    double halfSupport() const
     {
-      return k_.approximateHalfSupport(width_);
+      return k_.halfSupport(width_);
     }
     
     double operator()(const Eigen::VectorXd& x1, const Eigen::VectorXd& x2) const
@@ -93,7 +110,7 @@ class Kernel
     void embedIndicator(const Eigen::VectorXd& cutoff, Eigen::VectorXd& weights) const
     {
       return k_.embedIndicator(cutoff, X_, width_, weights);
-    };
+    }
     
     double cumulative(const Eigen::VectorXd& cutoff, const Eigen::VectorXd& centre) const
     {
@@ -101,11 +118,46 @@ class Kernel
     }
       
   protected:
+    mutable bool isGramUpdated_ = false;
     T k_;
     const Eigen::MatrixXd& X_;
-    Eigen::MatrixXd g_xx_;
+    mutable Eigen::MatrixXd g_xx_;
     double width_ = 1.0;
+    double volume_ = 1.0;
 };
+
+template <class K>
+void computeGramMatrix(const K& k, double width, const Eigen::MatrixXd& X, Eigen::MatrixXd& g)
+{
+  uint n = X.rows();
+  for(uint i=0; i<n;i++)
+  {
+    for(uint j=0;j<n;j++)
+    {
+      g(i,j) = k(X.row(i), X.row(j), width);
+    }
+  }
+}
+
+// template <class K>
+// void computeGramMatrix(const K& k, double width, const Eigen::MatrixXd& X, Eigen::SparseMatrix<double>& g)
+// {
+  // std::vector< Eigen::Triplet<double> > coeffs;
+  // uint n = X.rows();
+  // for(uint i=0; i<n;i++)
+  // {
+    // for(uint j=0;j<n;j++)
+    // {
+      // double r = (X.row(i) - X.row(j)).norm();
+      // if (r < width)
+      // {
+        // double val = k(X.row(i),X.row(j), width);
+        // coeffs.push_back(Eigen::Triplet<double>(i,j,val));
+      // }
+    // }
+  // }
+  // g.setFromTriplets(coeffs.begin(), coeffs.end()); 
+// }
 
 
 class RBFKernel
@@ -118,9 +170,14 @@ class RBFKernel
     {
       return exp(-0.5 * (x - x_dash).squaredNorm() / (sigma*sigma));
     }
-    double approximateHalfSupport(double width) const
+    double halfSupport(double width) const
     {
       return 5.0*width; 
+    }
+
+    double volume(double sigma, uint dimension) const
+    {
+      return pow(2*M_PI, dimension/double(2.0)) * pow(sigma, dimension);
     }
 
     void embedIndicator(const Eigen::VectorXd& cutoff,
@@ -158,7 +215,48 @@ class RBFKernel
       }
       return dim_result;
     }
+};
 
+class Q1CompactKernel
+{
+  public:
+    Q1CompactKernel(){}
+    double operator()(const Eigen::VectorXd& x,
+        const Eigen::VectorXd& x_dash,
+        double sigma) const
+    {
+      int D = x.size();
+      double j = D/2.0 + 2;
+      double r = (x-x_dash).norm() / sigma;
+      double result = 0;
+      if (r < 1.0)
+      {
+        result = pow((1-r),(j+1)) * ((j+1)*r + 1);
+      }
+      return result;
+    }
+    double halfSupport(double width) const
+    {
+      return width; 
+    }
+    
+    double volume(double sigma, uint dimension) const
+    {
+      return 2 * pow(M_PI, dimension/2.0) 
+             * 4 * sigma  / tgamma(dimension/2.0) / (dimension + 10);
+    }
 
+    void embedIndicator(const Eigen::VectorXd& cutoff,
+        const Eigen::MatrixXd& X, double sigma_x, Eigen::VectorXd& weights) const
+    {
+      std::cout << "Q1 KERNEL SUPPORT FOR CUMULATIVE NOT IMPLEMENTED" << std::endl;
+    }
 
+    double cumulative(const Eigen::VectorXd& cutoff,
+        const Eigen::VectorXd& centre,
+        double sigma_x) const
+    {
+      std::cout << "Q1 KERNEL SUPPORT FOR CUMULATIVE NOT IMPLEMENTED" << std::endl;
+      return 0.0;
+    }
 };

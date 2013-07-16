@@ -153,8 +153,8 @@ struct HilbertCost:Cost
       for (int i=0;i<testPoints;i++)
       {
         kx_.embed(testingData_.xs.row(i), pointEmbedding);
-        totalCost += kx_.innerProduct(weights_.row(i), weights_.row(i))
-              -2 * kx_.innerProduct(weights_.row(i), pointEmbedding);
+        totalCost += (weights_.row(i).transpose() * kx_.gramMatrix()  * weights_.row(i)
+              -2 * weights_.row(i).transpose() * kx_.gramMatrix() * pointEmbedding)(0,0);
       }
       return totalCost;
     };
