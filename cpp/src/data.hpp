@@ -51,6 +51,32 @@ struct Settings
   bool normed_weights;
 };
 
+struct SparseSettings
+{
+  std::string filename_x;
+  std::string filename_y;
+  std::string filename_ys;
+  std::string filename_xs;
+  std::string filename_u;
+  std::string filename_weights;
+  std::string filename_embedding;
+  std::string method;
+  double sigma_x;
+  double sigma_x_min;
+  double sigma_x_max;
+  double sigma_y;
+  double sigma_y_min;
+  double sigma_y_max;
+  double walltime;
+  double low_rank_scale;
+  double low_rank_scale_min;
+  double low_rank_scale_max;
+  double low_rank_weight;
+  double low_rank_weight_min;
+  double low_rank_weight_max;
+  uint folds;
+};
+
 
 struct TrainingData
 {

@@ -48,7 +48,7 @@ settings = kbrcpp.Settings(prefix)
 # 'pinball_direct'
 # 'pinball_joint'
 # 'hilbert'
-settings.cost_function = 'hilbert'
+settings.cost_function = 'logp_joint'
 settings.sigma_x_min = 0.02
 settings.sigma_x = 0.3
 settings.sigma_x_max = 0.8
@@ -115,14 +115,14 @@ def main():
     fig = pl.figure()
     axes = fig.add_subplot(121)
     axes.set_title('Posterior Embedding')
-    axes.imshow(E.T, origin='lower', 
+    axes.imshow(E, origin='lower', 
                 extent=(ysmin, ysmax, xsmin, xsmax),cmap=cm.hot, aspect='auto')
     axes.scatter(Y, X, c='y')
     axes.set_xlim(ysmin, ysmax)
     axes.set_ylim(xsmin, xsmax)
     axes = fig.add_subplot(122)
     axes.set_title('PDF estimate')
-    axes.imshow(pdf.T, origin='lower', 
+    axes.imshow(pdf, origin='lower', 
             extent=(ysmin, ysmax, xsmin, xsmax), cmap=cm.hot, aspect='auto')
     axes.scatter(Y, X, c='y')
     axes.set_xlim(ysmin, ysmax)
@@ -132,14 +132,14 @@ def main():
         fig = pl.figure()
         axes = fig.add_subplot(121)
         axes.set_title('CDF Estimate')
-        axes.imshow(cdf.T, origin='lower', 
+        axes.imshow(cdf, origin='lower', 
                 extent=(ysmin, ysmax, xsmin, xsmax),cmap=cm.hot, aspect='auto')
         axes.scatter(Y, X, c='y')
         axes.set_xlim(ysmin, ysmax)
         axes.set_ylim(xsmin, xsmax)
         axes = fig.add_subplot(122)
         axes.set_title('Quantile Estimate')
-        axes.imshow(pdf.T, origin='lower', 
+        axes.imshow(pdf, origin='lower', 
                 extent=(ysmin, ysmax, xsmin, xsmax),cmap=cm.hot, aspect='auto')
         axes.scatter(Y, X, c='y')
         axes.set_xlim(ysmin, ysmax)

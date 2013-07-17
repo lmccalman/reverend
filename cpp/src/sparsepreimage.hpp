@@ -14,9 +14,9 @@ void computeSparseEmbedding(const TrainingData& trainingData, const TestingData&
   uint s = weights.rows(); 
   uint p = testingData.xs.rows();
   uint n = trainingData.x.rows();
-  Kernel<Q1CompactKernel> kx_lr(trainingData.x);
-  uint dim = trainingData.x.cols();
   double sigma = kx.width();
+  Kernel<Q1CompactKernel, Eigen::SparseMatrix<double> > kx_lr(trainingData.x, sigma*lowRankScale);
+  uint dim = trainingData.x.cols();
   for (int i=0;i<s;i++)  
   {
     for (int j=0;j<p;j++)
@@ -28,10 +28,10 @@ void computeSparseEmbedding(const TrainingData& trainingData, const TestingData&
       {
         result += (1.0 - lowRankWeight) * w_i(k) 
                   * kx(trainingData.x.row(k), testpoint) 
-                   / kx.volume(sigma, dim); 
+                   / kx.volume(); 
         result += lowRankWeight  * w_i(k) 
-                  * kx_lr(trainingData.x.row(k), testpoint, sigma*lowRankScale)
-                  / kx_lr.volume(sigma*lowRankScale, dim); 
+                  * kx_lr(trainingData.x.row(k), testpoint)
+                  / kx_lr.volume(); 
       } 
       embedding(i,j) = result;
     }

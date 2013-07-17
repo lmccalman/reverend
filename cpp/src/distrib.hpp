@@ -62,3 +62,45 @@ double logKernelMixture(const Eigen::VectorXd& point,
   }
   return result;
 }
+
+template <class K>
+double multiLogKernelMixture(const Eigen::VectorXd& point,
+    const Eigen::MatrixXd& means,
+    const Eigen::VectorXd& coeffs,
+    const K& kx,
+    double lowRankScale,
+    double lowRankWeight)
+{
+  double sigma = kx.width();
+  double lr_sigma = sigma*lowRankScale;
+  Kernel<Q1CompactKernel, Eigen::SparseMatrix<double> > kx_lr(means, lr_sigma);
+  assert(point.size() == means.cols());
+  assert(means.rows() == coeffs.size());
+  uint numberOfMeans = means.rows();
+  uint dim = means.cols();
+  //find the min exp coeff
+  double maxPower = 0.0; // ie infinity;
+  for (uint i=0; i<numberOfMeans; i++)
+  {
+    double val1 = (1.0 - lowRankWeight) * kx(point, means.row(i).transpose()) / kx.volume();  
+    double val2 = lowRankWeight * kx_lr(point, means.row(i).transpose()) / kx_lr.volume();
+    double val = val1 + val2;
+    double expCoeff = log(val);
+    maxPower = std::max(maxPower, expCoeff);
+  }
+  //now compute everything
+  double sumAdjProb = 0.0; 
+  for (uint i=0; i<numberOfMeans; i++)
+  {
+    double alpha = coeffs[i];
+    double val1 = (1.0 - lowRankWeight) * kx(point, means.row(i).transpose()) / kx.volume();  
+    double val2 = lowRankWeight * kx_lr(point, means.row(i).transpose()) / kx_lr.volume();
+    double val = val1 + val2;
+    double expCoeff = log(val);
+    double adjExpCoeff = expCoeff - maxPower;
+    double adjProbs = alpha*exp(adjExpCoeff);
+    sumAdjProb += adjProbs;
+  }
+  double result = log(std::max(sumAdjProb, 1e-200)) + maxPower;
+  return result;
+}

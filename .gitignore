@@ -24,6 +24,7 @@ tags
 *.pyc
 *.ini
 kbrcpp
+skbrcpp
 *.png
 *.mp4
 

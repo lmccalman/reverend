@@ -45,9 +45,16 @@ testing_size = 5
 filename_config = 'lorenz_filter.ini'
 prefix = 'lz'  # will automatically construct all filenames
 settings = kbrcpp.Settings(prefix)
-    
+
 #some training parameters for kernel width
-settings.cost_function = 'logp'  # {'logp', 'hilbert', 'joint'}
+settings.cost_function = 'logp_norm'
+# 'logp_norm'
+# 'logp_preimage'
+# 'logp_joint'
+# 'pinball_norm'
+# 'pinball_direct'
+# 'pinball_joint'
+# 'hilbert'
 settings.sigma_x_min = 0.05
 settings.sigma_x = 0.494
 settings.sigma_x_max = 0.8
@@ -59,7 +66,6 @@ settings.sigma_y_max = 0.8
 settings.preimage_reg = 1e-6
 settings.preimage_reg_min = 1e-10
 settings.preimage_reg_max = 1e1
-settings.normed_weights = True
 
 #Some other settings
 settings.inference_type = 'filter'  # {'filter', 'regress'}
@@ -67,7 +73,6 @@ settings.walltime = 12.0
 settings.preimage_walltime = 12.0
 settings.folds = 2
 settings.observation_period = 1
-settings.preimage_estimate = True
 settings.cumulative_estimate = False
 settings.quantile_estimate = False
 settings.quantile = 0.5

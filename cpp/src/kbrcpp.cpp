@@ -20,7 +20,6 @@
 #include <time.h>
 #include <math.h>
 
-#define EIGEN_DEFAULT_TO_ROW_MAJOR
 #define EIGEN_DONT_PARALLELIZE
 #include "io.hpp"
 #include "train.hpp"

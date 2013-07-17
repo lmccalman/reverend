@@ -26,13 +26,13 @@ void computeGramMatrix(const K& k,
                        double width,
                        const Eigen::MatrixXd& X,
                        Eigen::MatrixXd& g);
-// template <class K>
-// void computeGramMatrix(const K& k,
-                       // double width, 
-                       // const Eigen::MatrixXd& X, 
-                       // Eigen::SparseMatrix<double>& g);
+template <class K>
+void computeGramMatrix(const K& k,
+                       double width, 
+                       const Eigen::MatrixXd& X, 
+                       Eigen::SparseMatrix<double>& g);
 
-template <class T>
+template <class T, class M = Eigen::MatrixXd>
 class Kernel
 {
   public:
@@ -42,7 +42,7 @@ class Kernel
       volume_ = k_.volume(width_, X_.cols());
     }
     
-    const Eigen::MatrixXd& gramMatrix() const
+    const M& gramMatrix() const
     {
       if (isGramUpdated_ == false)
       {
@@ -126,7 +126,7 @@ class Kernel
     mutable bool isGramUpdated_ = false;
     T k_;
     const Eigen::MatrixXd& X_;
-    mutable Eigen::MatrixXd g_xx_;
+    mutable M g_xx_;
     double width_ = 1.0;
     double volume_ = 1.0;
 };
@@ -144,25 +144,25 @@ void computeGramMatrix(const K& k, double width, const Eigen::MatrixXd& X, Eigen
   }
 }
 
-// template <class K>
-// void computeGramMatrix(const K& k, double width, const Eigen::MatrixXd& X, Eigen::SparseMatrix<double>& g)
-// {
-  // std::vector< Eigen::Triplet<double> > coeffs;
-  // uint n = X.rows();
-  // for(uint i=0; i<n;i++)
-  // {
-    // for(uint j=0;j<n;j++)
-    // {
-      // double r = (X.row(i) - X.row(j)).norm();
-      // if (r < width)
-      // {
-        // double val = k(X.row(i),X.row(j), width);
-        // coeffs.push_back(Eigen::Triplet<double>(i,j,val));
-      // }
-    // }
-  // }
-  // g.setFromTriplets(coeffs.begin(), coeffs.end()); 
-// }
+template <class K>
+void computeGramMatrix(const K& k, double width, const Eigen::MatrixXd& X, Eigen::SparseMatrix<double>& g)
+{
+  std::vector< Eigen::Triplet<double> > coeffs;
+  uint n = X.rows();
+  for(uint i=0; i<n;i++)
+  {
+    for(uint j=0;j<n;j++)
+    {
+      double r = (X.row(i) - X.row(j)).norm();
+      if (r < width)
+      {
+        double val = k(X.row(i),X.row(j), width);
+        coeffs.push_back(Eigen::Triplet<double>(i,j,val));
+      }
+    }
+  }
+  g.setFromTriplets(coeffs.begin(), coeffs.end()); 
+}
 
 
 class RBFKernel
@@ -281,3 +281,4 @@ class Q1CompactKernel
       return 0.0;
     }
 };
+

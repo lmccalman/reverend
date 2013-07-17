@@ -17,10 +17,11 @@
 #pragma once
 #include "train.hpp"
 #include "sparsecostfuncs.hpp"
+#include "sparsecrossval.hpp"
 
 //Epic training function
 template <class A, class K>
-void sparseTrainSettings(const TrainingData& data, Settings& settings)
+void sparseTrainSettings(const TrainingData& data, SparseSettings& settings)
 {
   uint folds = settings.folds;
   double wallTime = settings.walltime;

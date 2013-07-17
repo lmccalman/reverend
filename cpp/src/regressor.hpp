@@ -15,7 +15,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Reverend.  If not, see <http://www.gnu.org/licenses/>.
 #pragma once
-#define EIGEN_DEFAULT_TO_ROW_MAJOR
 #define EIGEN_DONT_PARALLELIZE
 #include <cmath>
 #include <iostream>

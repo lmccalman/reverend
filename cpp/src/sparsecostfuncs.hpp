@@ -21,7 +21,7 @@ template <class T, class K>
 class SparseLogPCost:Cost
 {
   public:
-   LogPCost(const TrainingData& train, const TestingData& test, const Settings& settings)
+   SparseLogPCost(const TrainingData& train, const TestingData& test, const SparseSettings& settings)
       : Cost(train, test), 
       algo_(train.x.rows(), train.u.rows(), settings),
       weights_(test.ys.rows(), train.x.rows()),
@@ -55,8 +55,8 @@ class SparseLogPCost:Cost
     };
   
   private: 
-    Kernel<K> kx_;
-    Kernel<K> ky_;
+    Kernel<K, Eigen::SparseMatrix<double> > kx_;
+    Kernel<K, Eigen::SparseMatrix<double> > ky_;
     T algo_;
     Eigen::MatrixXd weights_;
 };

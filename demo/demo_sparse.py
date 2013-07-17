@@ -36,8 +36,9 @@ from reverend import kbrcpp
 #construct settings and data files for kbrcpp
 filename_config = 'sparse_motorcycle.ini'
 prefix = 'smc'  # will automatically construct all filenames
-settings = kbrcpp.Settings(prefix)
+settings = kbrcpp.SparseSettings(prefix)
 #some training parameters for kernel width
+settings.method = 'both'  # {sparse, lowrank, both}
 settings.sigma_x_min = 1.0
 settings.sigma_x = 1.2
 settings.sigma_x_max = 2.0
@@ -56,7 +57,6 @@ settings.folds = 20
 
 
 def main():
-    
     X = np.load('motorcycle_X.npy')
     Y = np.load('motorcycle_Y.npy')
     # Make sure we shuffle for the benefit of cross-validation

@@ -41,11 +41,11 @@ int main(int argc, char** argv)
 
   std::cout << "Training..." << std::endl;
   //how about some training  
-  trainSettings<SparseRegressor<Q1CompactKernel>, Q1CompactKernel>(trainData, settings);
+  sparseTrainSettings<SparseRegressor<Q1CompactKernel>, Q1CompactKernel>(trainData, settings);
   //Create kernels and algorithm 
   std::cout << "Inferring..." << std::endl;
-  Kernel<Q1CompactKernel> kx(trainData.x, settings.sigma_x);
-  Kernel<Q1CompactKernel> ky(trainData.y, settings.sigma_y);
+  Kernel<Q1CompactKernel, SparseMatrix> kx(trainData.x, settings.sigma_x);
+  Kernel<Q1CompactKernel, SparseMatrix> ky(trainData.y, settings.sigma_y);
   SparseRegressor<Q1CompactKernel> r(n, m, settings);
   r(trainData, kx, ky, testData.ys, settings.low_rank_scale,
      settings.low_rank_weight, weights);

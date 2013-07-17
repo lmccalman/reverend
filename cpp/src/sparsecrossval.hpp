@@ -23,7 +23,7 @@ template <class T>
 struct SparseKFoldCVCost : NloptCost
 {
   public:
-    KFoldCVCost(uint k, const TrainingData& data, const Settings& settings)
+    SparseKFoldCVCost(uint k, const TrainingData& data, const SparseSettings& settings)
       : data_(data), settings_(settings), k_(k), n_(data_.x.rows()){}
     
     double operator()(const std::vector<double>&x, std::vector<double>&grad)
@@ -52,7 +52,7 @@ struct SparseKFoldCVCost : NloptCost
     std::vector<TrainingData> trainingFolds_;
     std::vector<TestingData> testingFolds_;
     const TrainingData& data_;
-    const Settings& settings_;
+    const SparseSettings& settings_;
     uint n_;
     uint k_;
 };

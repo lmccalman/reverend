@@ -20,6 +20,7 @@ project(reverend)
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 set(REVEREND_SRC_DIRECTORY ${PROJECT_SOURCE_DIR}/src)
 set(REVEREND_EXECUTABLE kbrcpp)
+set(REVEREND_SPARSE_EXECUTABLE skbrcpp)
 
 set(CNPY_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/../cnpy)
 set(CNPY_LIB_DIR ${PROJECT_SOURCE_DIR}/../cnpy)
@@ -30,13 +31,15 @@ find_library(CNPY_LIBRARY NAMES "cnpy" PATHS ${CNPY_LIB_DIR})
 find_library(NLOPT_LIBRARY NAMES "nlopt") 
 
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -Wall -std=c++11")
-set(CMAKE_CXX_FLAGS_RELEASE "-O2 -DNDEBUG -std=c++11 -fopenmp")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -std=c++11 -fopenmp")
 set(CMAKE_BUILD_TYPE release)
 
 set(CMAKE_VERBOSE_MAKEFILE on)
 
 find_package(Boost COMPONENTS filesystem REQUIRED)
 find_package(Eigen3)
+find_package(SuiteSparse)
+find_package(LAPACK)
 
 include_directories( ${EIGEN3_INCLUDE_DIR}
                      ${Boost_INCLUDE_DIR}
@@ -44,13 +47,23 @@ include_directories( ${EIGEN3_INCLUDE_DIR}
                      ${QUADPROG_INCLUDE_DIR})
 
 add_executable(${REVEREND_EXECUTABLE} ${REVEREND_SRC_DIRECTORY}/${REVEREND_EXECUTABLE}.cpp)
+add_executable(${REVEREND_SPARSE_EXECUTABLE} ${REVEREND_SRC_DIRECTORY}/${REVEREND_SPARSE_EXECUTABLE}.cpp)
 
-add_custom_command(TARGET ${REVEREND_EXECUTABLE} POST_BUILD 
+add_custom_command(TARGET ${REVEREND_SPARSE_EXECUTABLE} POST_BUILD 
                     COMMAND ctags -R 
                     WORKING_DIRECTORY ${REVEREND_SRC_DIRECTORY} 
                     COMMENT "Creating tags" VERBATIM)
 
 target_link_libraries(${REVEREND_EXECUTABLE} 
+                      ${SUITESPARSE_LIBRARIES}
+                      ${LAPACK_LIBRARIES}
+                      ${CNPY_LIBRARY}
+                      ${NLOPT_LIBRARY}
+                      ${Boost_FILESYSTEM_LIBRARY} )
+                    
+target_link_libraries(${REVEREND_SPARSE_EXECUTABLE} 
+                      ${SUITESPARSE_LIBRARIES}
+                      ${LAPACK_LIBRARIES}
                       ${CNPY_LIBRARY}
                       ${NLOPT_LIBRARY}
                       ${Boost_FILESYSTEM_LIBRARY} )
