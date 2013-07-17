@@ -90,14 +90,13 @@ int main(int argc, char** argv)
   {
     std::cout << "Estimating Cumulative..." << std::endl;
     Eigen::MatrixXd cumulates(testData.ys.rows(), testData.xs.rows());
-    bool weightsAreNormed = settings.use_preimage || settings.normed_weights; 
-    if (settings.use_preimage)
+    if (settings.cost_function == "pinball_direct")
     {
-      computeCumulates(trainData,testData, preimageWeights, kx, weightsAreNormed, cumulates);
+      computeCumulates(trainData,testData, weights, kx, false, cumulates);
     }
     else
     {
-      computeCumulates(trainData,testData, weights, kx, weightsAreNormed, cumulates);
+      computeCumulates(trainData,testData, preimageWeights, kx, true, cumulates);
     }
     writeNPY(cumulates, settings.filename_cumulative);
   }
@@ -108,14 +107,13 @@ int main(int argc, char** argv)
     std::cout << "Estimating Quantile..." << std::endl;
     Eigen::VectorXd quantiles(testData.ys.rows());
     double tau = settings.quantile;
-    bool weightsAreNormed = settings.use_preimage || settings.normed_weights; 
-    if (settings.use_preimage)
+    if (settings.cost_function == "pinball_direct")
     {
-      computeQuantiles(trainData,testData,preimageWeights,kx,tau,weightsAreNormed,quantiles);
+      computeQuantiles(trainData,testData,weights,kx,tau,false,quantiles);
     }
     else
     {
-      computeQuantiles(trainData,testData,weights,kx,tau,weightsAreNormed,quantiles);
+      computeQuantiles(trainData,testData,preimageWeights,kx,tau,true,quantiles);
     }
     writeNPY(quantiles, settings.filename_quantile);
   }
@@ -129,7 +127,6 @@ int main(int argc, char** argv)
   computeEmbedding(trainData,testData,preimageWeights,kx, posterior);
   writeNPY(embedding, settings.filename_embedding);
   writeNPY(posterior, settings.filename_posterior);
-  
   std::cout << "kbrcpp task complete." << std::endl;
 
   return 0;

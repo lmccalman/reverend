@@ -62,6 +62,14 @@ class LogPCost:Cost
       algo_(train.x.rows(), train.u.rows(), settings),
       weights_(test.ys.rows(), train.x.rows())
   {
+    if (settings.normed_weights)
+    {
+      std::cout << "Initializing LogP cost with Normed weights..." << std::endl;
+    }
+    else
+    {
+      std::cout << "Initializing LogP cost with Un-normed weights..." << std::endl;
+    }
   }; 
 
     double operator()(const std::vector<double>&x, std::vector<double>&grad)
@@ -105,6 +113,7 @@ class JointLogPCost:Cost
       kx_(train.x, 1.0), ky_(train.y, 1.0)
 
   {
+      std::cout << "Initializing Joint LogP cost..." << std::endl;
   }; 
 
     double operator()(const std::vector<double>&x, std::vector<double>&grad)
@@ -150,6 +159,7 @@ struct HilbertCost:Cost
       weights_(test.ys.rows(), train.x.rows()),
       kx_(train.x, 1.0), ky_(train.y, 1.0)
   {
+    std::cout << "Initializing Hilbert cost..." << std::endl;
   }; 
 
     double operator()(const std::vector<double>&x, std::vector<double>&grad)
@@ -193,7 +203,7 @@ class PreimageCost:Cost
       regressor_(train.x.rows(), train.u.rows(), settings),
       settings_(settings)
       {
-        //compute the values
+        std::cout << "Initializing Preimage cost..." << std::endl;
         regressor_(trainingData_, kx_, ky_, testingData_.ys, weights_);
       }; 
 
@@ -216,24 +226,12 @@ class PreimageCost:Cost
       double tau = settings_.quantile;
       for (int i=0;i<testPoints;i++)
       {
-        if (settings_.cost_function == "pinball")
-        {
-          Quantile<Kernel<K> > q(preimageWeights_.row(i), trainingData_.x,
-              kx_, true);
-          double z = q(tau);
-          double y = testingData_.xs(i,0);
-          totalCost += pinballLoss(z,y,tau);
-        }
-        else
-        {
-          //note the minus to minimise negative probability
-          totalCost -= logKernelMixture(testingData_.xs.row(i),
-              trainingData_.x,
-              preimageWeights_.row(i),
-              kx_, false);
-        }
+        totalCost += logKernelMixture(testingData_.xs.row(i),
+            trainingData_.x,
+            preimageWeights_.row(i),
+            kx_, false);
       }
-      return totalCost;
+      return -1*totalCost;
     };
 
   private: 
@@ -255,7 +253,17 @@ class PinballCost:Cost
         kx_(train.x, 1.0), ky_(train.y, 1.0),
         algo_(train.x.rows(), train.u.rows(), settings),
         weights_(test.ys.rows(), train.x.rows()),
-        settings_(settings){};
+        settings_(settings)
+  {
+    if (settings.normed_weights)
+    {
+      std::cout << "Initializing Pinball cost with Normed quantiles..." << std::endl;
+    }
+    else
+    {
+      std::cout << "Initializing Pinball cost with Direct quantiles..." << std::endl;
+    }
+  };
 
     double operator()(const std::vector<double>&x, std::vector<double>&grad)
     {
@@ -299,6 +307,7 @@ class JointPinballCost:Cost
         kx_(train.x, 1.0), ky_(train.y, 1.0),
         settings_(settings)
   {
+    std::cout << "Initializing Joint Pinball cost with Normed quantiles..." << std::endl;
   }; 
 
     double operator()(const std::vector<double>&x, std::vector<double>&grad)
@@ -315,16 +324,8 @@ class JointPinballCost:Cost
       double totalCost = 0.0;
       for (int i=0;i<testPoints;i++)
       {
-        if (settings_.normed_weights)
-        {
-          std::cout << "WARNING--  NORMED WEIGHTS WITH JOINT PINBALL IS EQUIVALENT TO PINBALL" << std::endl;
-          posWeights_ = weights_;
-        }
-        else
-        {
-          positiveNormedCoeffs(weights_.row(i), kx_, 
-                              dim, preimage_reg, posWeights_);
-        }
+        positiveNormedCoeffs(weights_.row(i), kx_, 
+                            dim, preimage_reg, posWeights_);
         Quantile<Kernel<K> > q(posWeights_, trainingData_.x, kx_, true);
         double z = q(tau);
         double y = testingData_.xs(i,0);

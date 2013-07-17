@@ -55,13 +55,14 @@ std::vector<double> globalOptimum(NloptCost& costFunction, const std::vector<dou
   std::cout << " ] cost:" << minf << std::endl << std::endl;
   std::cout << "Refining..." << std::endl;
   minf = 0.0;
-  localopt.set_ftol_rel(1e-15);
-  localopt.set_ftol_abs(1e-7);
-  localopt.set_min_objective(costWrapper, &costFunction);
-  localopt.set_lower_bounds(thetaMin);
-  localopt.set_upper_bounds(thetaMax);
-  localopt.set_maxtime(wallTime/2.0);
-  localopt.optimize(x, minf);
+  nlopt::opt refopt(nlopt::LN_COBYLA, n);
+  refopt.set_ftol_rel(1e-15);
+  refopt.set_ftol_abs(1e-7);
+  refopt.set_min_objective(costWrapper, &costFunction);
+  refopt.set_lower_bounds(thetaMin);
+  refopt.set_upper_bounds(thetaMax);
+  refopt.set_maxtime(wallTime/2.0);
+  refopt.optimize(x, minf);
   std::cout << "Final Estimate" << std::endl;
   std::cout << "[ "; 
   for (uint i=0;i<x.size();i++)
@@ -78,7 +79,10 @@ void trainSettings(const TrainingData& data, Settings& settings)
 {
   uint folds = settings.folds;
   double wallTime = settings.walltime;
-  if (settings.cost_function == std::string("jointlogp"))
+  double preimageWalltime = settings.preimage_walltime;
+  std::string cf = settings.cost_function;
+  bool jointMethod = ((cf == "logp_joint") || (cf == "pinball_joint"));
+  if (jointMethod)
   {
     std::vector<double> thetaMin(3);
     std::vector<double> thetaMax(3);
@@ -93,79 +97,80 @@ void trainSettings(const TrainingData& data, Settings& settings)
     thetaMax[1] = settings.sigma_y_max;
     thetaMax[2] = settings.preimage_reg_max;
     std::vector<double> thetaBest(3);
-    KFoldCVCost< JointLogPCost<A,K> > costfunc(folds, data, settings);
-    thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
+    if (cf == "logp_joint")
+    {
+      settings.normed_weights = false;
+      KFoldCVCost< JointLogPCost<A,K> > costfunc(folds, data, settings);
+      thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
+    }
+    else // must be pinball joint
+    {
+      settings.normed_weights = false;
+      KFoldCVCost< JointPinballCost<A,K> > costfunc(folds, data, settings);
+      thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
+    }
     settings.sigma_x = thetaBest[0];
     settings.sigma_y = thetaBest[1];
     settings.preimage_reg = thetaBest[2];
   }
-  else if (settings.cost_function == std::string("jointpinball")) 
-  {
-    std::vector<double> thetaMin(3);
-    std::vector<double> thetaMax(3);
-    std::vector<double> theta0(3);
-    theta0[0] = settings.sigma_x;
-    theta0[1] = settings.sigma_y;
-    theta0[2] = settings.preimage_reg;
-    thetaMin[0] = settings.sigma_x_min;
-    thetaMin[1] = settings.sigma_y_min;
-    thetaMin[2] = settings.preimage_reg_min;
-    thetaMax[0] = settings.sigma_x_max;
-    thetaMax[1] = settings.sigma_y_max;
-    thetaMax[2] = settings.preimage_reg_max;
-    std::vector<double> thetaBest(3);
-    KFoldCVCost< JointPinballCost<A,K> > costfunc(folds, data, settings);
-    thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
-    settings.sigma_x = thetaBest[0];
-    settings.sigma_y = thetaBest[1];
-    settings.preimage_reg = thetaBest[2];
-  }
-  else
+  else // not a joint method
   {
     std::vector<double> thetaMin(2);
     std::vector<double> thetaMax(2);
     std::vector<double> theta0(2);
+    std::vector<double> thetaBest = theta0;
+    std::vector<double> thetaPMin(1);
+    std::vector<double> thetaPMax(1);
+    std::vector<double> thetaP0(1);
+    std::vector<double> thetaPBest = thetaP0;
     theta0[0] = settings.sigma_x;
     theta0[1] = settings.sigma_y;
     thetaMin[0] = settings.sigma_x_min;
     thetaMin[1] = settings.sigma_y_min;
     thetaMax[0] = settings.sigma_x_max;
     thetaMax[1] = settings.sigma_y_max;
-    std::vector<double> thetaBest(2);
-    if (settings.cost_function == std::string("hilbert"))
+    thetaP0[0] = settings.preimage_reg;
+    thetaPMin[0] = settings.preimage_reg_min;
+    thetaPMax[0] = settings.preimage_reg_max;
+    if (cf == "logp_norm")
     {
-      KFoldCVCost< HilbertCost<A,K> > costfunc(folds, data, settings);
+      settings.normed_weights = true;
+      KFoldCVCost< LogPCost<A,K> > costfunc(folds, data, settings);
       thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
-      settings.sigma_x = thetaBest[0];
-      settings.sigma_y = thetaBest[1];
     }
-    else if (settings.cost_function == std::string("pinball"))
+    else if (cf == "logp_preimage")
     {
+      settings.normed_weights = false;
+      KFoldCVCost< LogPCost<A,K> > costfunc(folds, data, settings);
+      thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
+      KFoldCVCost< PreimageCost<K> > pmcostfunc(folds, data, settings);
+      thetaPBest = globalOptimum(pmcostfunc, thetaPMin, thetaPMax, thetaP0,
+                                 preimageWalltime);
+    }
+    else if (cf == "pinball_norm")
+    {
+      settings.normed_weights = true;
       KFoldCVCost< PinballCost<A,K> > costfunc(folds, data, settings);
       thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
-      settings.sigma_x = thetaBest[0];
-      settings.sigma_y = thetaBest[1];
+    }
+    else if (cf == "pinball_direct")
+    {
+      settings.normed_weights = false;
+      KFoldCVCost< PinballCost<A,K> > costfunc(folds, data, settings);
+      thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
+    }
+    else if (cf == "hilbert")
+    {
+      settings.normed_weights = false;
+      KFoldCVCost< HilbertCost<A,K> > costfunc(folds, data, settings);
+      thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
     }
     else
     {
-      KFoldCVCost< LogPCost<A,K> > costfunc(folds, data, settings);
-      thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
-      settings.sigma_x = thetaBest[0];
-      settings.sigma_y = thetaBest[1];
+      std::cout << "ERROR -- invalid cost function" << std::endl;
     }
-    if (!settings.normed_weights)
-    { 
-      KFoldCVCost< PreimageCost<K> > pmcostfunc(folds, data, settings);
-      std::vector<double> thetaPMin(1);
-      std::vector<double> thetaPMax(1);
-      std::vector<double> thetaP0(1);
-      thetaP0[0] = settings.preimage_reg;
-      thetaPMin[0] = settings.preimage_reg_min;
-      thetaPMax[0] = settings.preimage_reg_max;
-      double preimageWalltime = settings.preimage_walltime;
-      auto thetaPBest = globalOptimum(pmcostfunc, thetaPMin, thetaPMax, thetaP0,
-          preimageWalltime);
-      settings.preimage_reg = thetaPBest[0];
-    }
+    settings.sigma_x = thetaBest[0];
+    settings.sigma_y = thetaBest[1];
+    settings.preimage_reg = thetaPBest[0];
   }
 }

@@ -36,13 +36,19 @@ from reverend import kbrcpp
 #evaluation image size
 xssize = 100
 yssize = 100
-    
+
 #construct settings and data files for kbrcpp
 filename_config = 'motorcycle_regressor.ini'
 prefix = 'mc'  # will automatically construct all filenames
 settings = kbrcpp.Settings(prefix)
-#some training parameters for kernel width
-settings.cost_function = 'jointpinball'  # {'logp', 'hilbert', 'jointlogp', 'pinball', 'jointpinball'}
+# 'logp_norm'
+# 'logp_preimage'
+# 'logp_joint'
+# 'pinball_norm'
+# 'pinball_direct'
+# 'pinball_joint'
+# 'hilbert'
+settings.cost_function = 'hilbert'
 settings.sigma_x_min = 0.02
 settings.sigma_x = 0.3
 settings.sigma_x_max = 0.8
@@ -53,15 +59,13 @@ settings.sigma_y_max = 2.0
 settings.preimage_reg = 0.07
 settings.preimage_reg_min = 0.01
 settings.preimage_reg_max = 0.1
-settings.normed_weights = False
 #Some other settings
 settings.inference_type = 'regress'
-settings.use_preimage = False
 settings.cumulative_estimate = True
 settings.quantile_estimate = True
 settings.quantile = 0.9
 settings.walltime = 12.0
-settings.preimage_walltime = 120.0
+settings.preimage_walltime = 12.0
 settings.folds = 20
 settings.observation_period = 1
 

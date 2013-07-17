@@ -57,12 +57,10 @@ Settings getSettings(const std::string& filename)
   s.preimage_reg = pt.get<double>("Preimage.preimage_reg");
   s.preimage_reg_min = pt.get<double>("Preimage.preimage_reg_min");
   s.preimage_reg_max = pt.get<double>("Preimage.preimage_reg_max");
-  s.normed_weights = pt.get<bool>("Preimage.normed_weights");
   s.inference_type = pt.get<std::string>("Algorithm.inference_type"); 
   s.observation_period = pt.get<uint>("Algorithm.observation_period");
   s.cumulative_estimate = pt.get<bool>("Algorithm.cumulative_estimate");
   s.quantile_estimate = pt.get<bool>("Algorithm.quantile_estimate");
-  s.use_preimage = pt.get<bool>("Algorithm.use_preimage");
   s.quantile = pt.get<double>("Algorithm.quantile");
   return s;
 }

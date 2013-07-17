@@ -45,7 +45,6 @@ def write_config_file(settings, filename):
     config.set('Algorithm', 'inference_type', settings.inference_type)
     config.set('Algorithm', 'cumulative_estimate', int(settings.cumulative_estimate))
     config.set('Algorithm', 'quantile_estimate', int(settings.quantile_estimate))
-    config.set('Algorithm', 'use_preimage', int(settings.use_preimage))
     config.set('Algorithm', 'quantile', settings.quantile)
     config.add_section('Input')
     config.set('Input', 'filename_x', settings.filename_X)
@@ -76,7 +75,6 @@ def write_config_file(settings, filename):
     config.set('Preimage', 'preimage_reg', settings.preimage_reg)
     config.set('Preimage', 'preimage_reg_min', settings.preimage_reg_min)
     config.set('Preimage', 'preimage_reg_max', settings.preimage_reg_max)
-    config.set('Preimage', 'normed_weights', int(settings.normed_weights))
     with open(filename, 'w') as configfile:
         config.write(configfile)
 

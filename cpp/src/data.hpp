@@ -46,10 +46,9 @@ struct Settings
   double quantile;
   uint folds;
   uint observation_period;
-  bool normed_weights;
   bool cumulative_estimate;
-  bool use_preimage;
   bool quantile_estimate;
+  bool normed_weights;
 };
 
 

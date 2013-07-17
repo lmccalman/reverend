@@ -32,3 +32,16 @@ jointpinball -- openmp, no hack
 !normed, use_preimage +
 
 
+
+training methods
+----------------
+
+'logp_norm'
+'logp_preimage'
+'logp_joint'
+'pinball_norm'
+'pinball_preimage'
+'pinball_direct'
+'pinball_joint'
+
+
