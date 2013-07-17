@@ -37,7 +37,7 @@ class Kernel
 {
   public:
     Kernel(const Eigen::MatrixXd& X, double width):
-      X_(X), g_xx_(X.rows(), X.rows()), width_(width), isGramUpdated_(false)
+      isGramUpdated_(false), X_(X), g_xx_(X.rows(), X.rows()), width_(width)
     {
       volume_ = k_.volume(width_, X_.cols());
     }
@@ -46,8 +46,8 @@ class Kernel
     {
       if (isGramUpdated_ == false)
       {
-        computeGramMatrix(k_, width_, X_, g_xx_);
         isGramUpdated_ = true;
+        computeGramMatrix(k_, width_, X_, g_xx_);
       }
       return g_xx_;
     }
@@ -90,12 +90,12 @@ class Kernel
       }
     }
 
-    // double innerProduct(const Eigen::VectorXd& x1, const Eigen::VectorXd& x2) const
-    // {
+    double innerProduct(const Eigen::VectorXd& x1, const Eigen::VectorXd& x2) const
+    {
       // computeGramMatrix(k_, width_, X_, g_xx_);
-      // double result = x1.transpose() * this->gramMatrix() * x2;
-      // return result;
-    // }
+      double result = x1.transpose() * this->gramMatrix() * x2;
+      return result;
+    }
     
     double halfSupport() const
     {
@@ -105,6 +105,11 @@ class Kernel
     double operator()(const Eigen::VectorXd& x1, const Eigen::VectorXd& x2) const
     {
       return k_(x1,x2, width_);
+    }
+    
+    double logk(const Eigen::VectorXd& x1, const Eigen::VectorXd& x2) const
+    {
+      return k_.logk(x1,x2, width_);
     }
     
     void embedIndicator(const Eigen::VectorXd& cutoff, Eigen::VectorXd& weights) const
@@ -170,6 +175,15 @@ class RBFKernel
     {
       return exp(-0.5 * (x - x_dash).squaredNorm() / (sigma*sigma));
     }
+    
+    double logk(const Eigen::VectorXd& x,
+        const Eigen::VectorXd& x_dash,
+        double sigma) const
+    {
+      return -0.5 * (x - x_dash).squaredNorm() / (sigma*sigma);
+    }
+    
+    
     double halfSupport(double width) const
     {
       return 5.0*width; 
@@ -187,10 +201,10 @@ class RBFKernel
       uint dx = X.cols();
       double a = std::sqrt(2.0 * M_PI) * sigma_x;
       double denom = 1.0 / (sigma_x*std::sqrt(2.0));
-      for (int i=0; i<n; i++)
+      for (uint i=0; i<n; i++)
       {
         double dim_result = 1.0;
-        for (int d=0; d<dx; d++)
+        for (uint d=0; d<dx; d++)
         {
           double p = cutoff(d);
           double m = X(i,d);
@@ -206,11 +220,10 @@ class RBFKernel
       double denom = 1.0 / (sigma_x*std::sqrt(2.0));
       uint dx = cutoff.size(); 
       double dim_result = 1.0;
-      for (int d=0;d<dx; d++)
+      for (uint d=0;d<dx; d++)
       {
         double p = cutoff(d);
         double m = centre(d);
-        double delta = p-m;
         dim_result *= 0.5 * (1.0 + std::erf( (p - m)*denom ));
       }
       return dim_result;
@@ -235,6 +248,14 @@ class Q1CompactKernel
       }
       return result;
     }
+    
+    double logk(const Eigen::VectorXd& x,
+        const Eigen::VectorXd& x_dash,
+        double sigma) const
+    {
+      return log( (*this)(x, x_dash, sigma) ); 
+    }
+    
     double halfSupport(double width) const
     {
       return width; 

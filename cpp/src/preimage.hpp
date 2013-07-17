@@ -28,7 +28,7 @@ void positiveNormedCoeffs(const Eigen::VectorXd& embedding,
   Eigen::VectorXd ci0(m);
   ci0 = Eigen::VectorXd::Zero(m);
   Eigen::VectorXd x(n);
-  double cost = solve_quadprog(G, g0,  CE, ce0,  CI, ci0, mixtureCoeffs);
+  solve_quadprog(G, g0,  CE, ce0,  CI, ci0, mixtureCoeffs);
 }
 
 template <class K>
@@ -45,26 +45,6 @@ void computeNormedWeights(const Eigen::MatrixXd& weights,
     coeff_i = Eigen::VectorXd::Ones(n) * (1.0/double(n));
     positiveNormedCoeffs(weights.row(i), kx, dimension, settings.preimage_reg, coeff_i);
     preimageWeights.row(i) = coeff_i;
-  }
-}
-
-void computePosterior(const TrainingData& trainingData, const TestingData& testingData,
-    const Eigen::MatrixXd& weights, double sigma_x, Eigen::MatrixXd& posterior)
-{
-  uint s = weights.rows(); 
-  uint p = testingData.xs.rows();
-  
-  #pragma omp parallel for
-  for (int i=0;i<s;i++)  
-  {
-    for (int j=0;j<p;j++)
-    {
-        double logProb = logGaussianMixture(testingData.xs.row(j),
-                                            trainingData.x,
-                                            weights.row(i),
-                                            sigma_x);
-        posterior(i,j) = exp(logProb);
-    }
   }
 }
 

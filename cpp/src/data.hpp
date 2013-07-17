@@ -48,7 +48,7 @@ struct Settings
   uint observation_period;
   bool normed_weights;
   bool cumulative_estimate;
-  bool preimage_estimate;
+  bool use_preimage;
   bool quantile_estimate;
 };
 
@@ -73,8 +73,8 @@ struct TrainingData
     Eigen::MatrixXd u;
     Eigen::VectorXd lambda;
     Eigen::MatrixXd x;
-    Eigen::MatrixXd xtp1;
     Eigen::MatrixXd y;
+    Eigen::MatrixXd xtp1;
 };
 
 struct TestingData

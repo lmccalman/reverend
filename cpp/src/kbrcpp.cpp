@@ -67,75 +67,68 @@ int main(int argc, char** argv)
     Regressor<RBFKernel> r(n, m, settings);
     r(trainData, kx, ky, testData.ys, weights);
   }
- 
   //write out the results 
   writeNPY(weights, settings.filename_weights);
-  
-  //evaluate the raw posterior 
-  Eigen::MatrixXd embedding(testData.ys.rows(), testData.xs.rows());
-  std::cout << "Evaluating embedded posterior..." << std::endl;
-  computeEmbedding(trainData, testData, weights, kx, embedding);
-  writeNPY(embedding, settings.filename_embedding);
 
-  //Normalise and compute posterior
+  //Normalise weights
   Eigen::MatrixXd preimageWeights(s,n);
-  Eigen::MatrixXd posterior(testData.ys.rows(), testData.xs.rows());
-  if (!settings.normed_weights && settings.preimage_estimate)
+  if (settings.normed_weights)
   {
-    std::cout << "Computing normed weights..." << std::endl;
-    computeNormedWeights(weights, kx, trainData.x.cols(),
-                         settings, preimageWeights);
-    writeNPY(preimageWeights, settings.filename_preimage);
-    
-    std::cout << "Evaluating posterior..." << std::endl;
-    computePosterior(trainData, testData, preimageWeights, settings.sigma_x,
-        posterior);
-    //and write the posterior
-    writeNPY(posterior, settings.filename_posterior);
+    preimageWeights = weights;
   }
-  
-  //Just compute posterior if normed weights 
-  if (settings.normed_weights && settings.preimage_estimate)
+  else
   {
-    std::cout << "Evaluating posterior..." << std::endl;
-    computePosterior(trainData, testData, weights, settings.sigma_x,
-                          posterior);
-    //and write the posterior
-    writeNPY(posterior, settings.filename_posterior);
+    std::cout << "Normalizing Weights..." << std::endl;
+    computeNormedWeights(weights, kx, trainData.x.cols(),
+    settings, preimageWeights);
   }
 
-  //compute cumulative estimates
+  //---------Post Processing------//
+
+  //Cumulative Estimates
   if (settings.cumulative_estimate)
   {
-    std::cout << "Estimates Cumulative distributions..." << std::endl;
+    std::cout << "Estimating Cumulative..." << std::endl;
     Eigen::MatrixXd cumulates(testData.ys.rows(), testData.xs.rows());
-    if (settings.preimage_estimate)
+    bool weightsAreNormed = settings.use_preimage || settings.normed_weights; 
+    if (settings.use_preimage)
     {
-      computeCumulates(trainData, testData, preimageWeights, kx, settings, cumulates);
+      computeCumulates(trainData,testData, preimageWeights, kx, weightsAreNormed, cumulates);
     }
     else
     {
-      computeCumulates(trainData, testData, weights, kx, settings, cumulates);
+      computeCumulates(trainData,testData, weights, kx, weightsAreNormed, cumulates);
     }
     writeNPY(cumulates, settings.filename_cumulative);
   }
   
-  //compute quantile estimates
-  if (settings.quantile_estimate && (trainData.x.cols() == 1))
+  //Quantile Estimates 
+  if (settings.quantile_estimate)
   {
-    std::cout << "Estimating " << settings.quantile
-      << " quantile..." << std::endl;
+    std::cout << "Estimating Quantile..." << std::endl;
     Eigen::VectorXd quantiles(testData.ys.rows());
-    if (settings.preimage_estimate)
+    double tau = settings.quantile;
+    bool weightsAreNormed = settings.use_preimage || settings.normed_weights; 
+    if (settings.use_preimage)
     {
-      computeQuantiles(trainData, testData, preimageWeights, kx, settings, quantiles);
+      computeQuantiles(trainData,testData,preimageWeights,kx,tau,weightsAreNormed,quantiles);
     }
     else
     {
-      computeQuantiles(trainData, testData, weights, kx, settings, quantiles);
+      computeQuantiles(trainData,testData,weights,kx,tau,weightsAreNormed,quantiles);
     }
     writeNPY(quantiles, settings.filename_quantile);
   }
+  
+  //Evaluate the embedding and posterior
+  Eigen::MatrixXd embedding(testData.ys.rows(), testData.xs.rows());
+  Eigen::MatrixXd posterior(testData.ys.rows(), testData.xs.rows());
+  std::cout << "Evaluating Embedding..." << std::endl;
+  computeEmbedding(trainData,testData,weights,kx, embedding);
+  std::cout << "Evaluating Posterior..." << std::endl;
+  computeEmbedding(trainData,testData,preimageWeights,kx, posterior);
+  writeNPY(embedding, settings.filename_embedding);
+  writeNPY(posterior, settings.filename_posterior);
   
   std::cout << "kbrcpp task complete." << std::endl;
 

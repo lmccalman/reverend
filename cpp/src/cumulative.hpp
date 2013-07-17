@@ -27,24 +27,28 @@ template <class K>
 class Cumulative
 {
   public:
-    Cumulative(const Eigen::VectorXd& coeffs, const Eigen::MatrixXd& X,
-               const K& kx, const Settings& settings)
-      : coeffs_(coeffs), X_(X), settings_(settings), indicator_(coeffs.rows()),
-      kx_(kx), g_xx_(X.rows(),X.rows())
+    Cumulative(const Eigen::VectorXd& coeffs,
+               const Eigen::MatrixXd& X,
+               const K& kx,
+               bool normedWeights)
+      : kx_(kx),
+        coeffs_(coeffs), 
+        X_(X),
+        indicator_(coeffs.rows()),
+        normedWeights_(normedWeights)
     {
-      if (!settings.normed_weights)
+      if (!normedWeights_)
       {
         double sigma_x = kx.width();
         Eigen::VectorXd zeroVal = X_.colwise().minCoeff();
         Eigen::VectorXd oneVal = X_.colwise().maxCoeff();
         zeroVal -= 5*sigma_x*Eigen::VectorXd::Ones(zeroVal.rows());
         oneVal += 5*sigma_x*Eigen::VectorXd::Ones(oneVal.rows());
-        g_xx_ = kx.gramMatrix();
         
         kx.embedIndicator(zeroVal, indicator_);
-        double zeroResult = indicator_.transpose() * g_xx_ * coeffs;
+        double zeroResult = kx_.innerProduct(indicator_,coeffs);
         kx.embedIndicator(oneVal, indicator_);
-        double oneResult = indicator_.transpose() * g_xx_ *  coeffs;
+        double oneResult = kx_.innerProduct(indicator_,coeffs);
         scale_ = 1.0 / (oneResult - zeroResult);
         offset_ = zeroResult;
       }
@@ -52,7 +56,7 @@ class Cumulative
 
     double operator()(const Eigen::VectorXd& x)
     {
-      if (settings_.normed_weights)
+      if (normedWeights_)
       {
         return fromNormedWeights(x);
       }
@@ -66,7 +70,7 @@ class Cumulative
     {
       Eigen::VectorXd v(1); 
       v(0) = x;
-      if (settings_.normed_weights)
+      if (normedWeights_)
       {
         return fromNormedWeights(v);
       }
@@ -80,12 +84,11 @@ class Cumulative
     double fromNormedWeights(const Eigen::VectorXd& x) const;
     double fromWeights(const Eigen::VectorXd& x);
     
+    const K& kx_;
     const Eigen::VectorXd& coeffs_;
     const Eigen::MatrixXd& X_;
-    const Settings& settings_;
-    const K& kx_;
     Eigen::VectorXd indicator_;
-    Eigen::MatrixXd g_xx_;
+    bool normedWeights_;
     double scale_;
     double offset_;
 };
@@ -108,14 +111,14 @@ template <class K>
 double Cumulative<K>::fromWeights(const Eigen::VectorXd& x)
 {
   kx_.embedIndicator(x, indicator_);
-  double rawResult = indicator_.transpose() * g_xx_ * coeffs_;
+  double rawResult = kx_.innerProduct(indicator_, coeffs_);
   double scaledResult = (rawResult - offset_) * scale_;
   return scaledResult;
 }
 
 template <class K>
 void computeCumulates(const TrainingData& trainingData, const TestingData& testingData,
-    const Eigen::MatrixXd& weights, const K& kx, const Settings& settings,
+    const Eigen::MatrixXd& weights, const K& kx, bool normedWeights,
     Eigen::MatrixXd& cumulates)
 {
   uint testPoints = weights.rows(); 
@@ -124,7 +127,7 @@ void computeCumulates(const TrainingData& trainingData, const TestingData& testi
   for (int i=0;i<testPoints;i++)  
   {
     Eigen::VectorXd coeffs = weights.row(i);
-    Cumulative<K> cumulator(coeffs, trainingData.x, kx, settings);
+    Cumulative<K> cumulator(coeffs, trainingData.x, kx, normedWeights);
     for (int j=0;j<evalPoints;j++)
     {
       Eigen::VectorXd point = testingData.xs.row(j);
@@ -154,8 +157,8 @@ class Quantile
 {
   public:
     Quantile(const Eigen::VectorXd& coeffs, const Eigen::MatrixXd& X,
-        const K& kx, const Settings& settings):
-      c_(coeffs, X, kx, settings)
+        const K& kx, bool normedWeights):
+      c_(coeffs, X, kx, normedWeights)
   {
     xmin_ = X.minCoeff() - kx.halfSupport();
     xmax_ = X.maxCoeff() + kx.halfSupport();
@@ -172,7 +175,7 @@ class Quantile
       try
       {
         auto boundingPair = boost::math::tools::toms748_solve(F, xmin_, xmax_,
-           F(xmin_), F(xmax_), tol, maxIterations);
+           fmin, fmax, tol, maxIterations);
         result = 0.5*(boundingPair.first + boundingPair.second);
       }
       catch (...)
@@ -197,7 +200,7 @@ class Quantile
   
 template <class K>
 void computeQuantiles(const TrainingData& trainingData, const TestingData& testingData,
-    const Eigen::MatrixXd& weights, const K& kx, const Settings& settings,
+    const Eigen::MatrixXd& weights, const K& kx, double quantile, bool normedWeights, 
     Eigen::VectorXd& quantiles)
 {
   uint testPoints = weights.rows(); 
@@ -205,8 +208,8 @@ void computeQuantiles(const TrainingData& trainingData, const TestingData& testi
   for (int i=0;i<testPoints;i++)  
   {
     Eigen::VectorXd coeffs = weights.row(i);
-    Quantile<K> qEstimator(coeffs, trainingData.x, kx, settings);
-    quantiles(i) = qEstimator(settings.quantile);
+    Quantile<K> qEstimator(coeffs, trainingData.x, kx, normedWeights);
+    quantiles(i) = qEstimator(quantile);
   }
 }
 

@@ -66,19 +66,19 @@ class Filter
 
 template <class K>
 Filter<K>::Filter(uint trainLength, uint testLength, const Settings& settings)
-  : g_xxtp1_(trainLength,trainLength),
-  beta_g_yy_(trainLength,trainLength),
-  beta_(trainLength),
-  beta_0_(trainLength),
-  mu_pi_(trainLength),
-  beta_diag_(trainLength, trainLength),
-  r_xy_(trainLength,trainLength),
-  chol_g_yy_(trainLength,trainLength,1),
-  chol_beta_0_(trainLength,trainLength,1),
-  chol_beta_(trainLength,trainLength,1),
-  chol_beta_g_yy_(trainLength,trainLength,trainLength),
-  w_(trainLength),
-  settings_(settings){}
+  : settings_(settings),
+    g_xxtp1_(trainLength,trainLength),
+    mu_pi_(trainLength),
+    beta_(trainLength),
+    beta_0_(trainLength),
+    beta_g_yy_(trainLength,trainLength),
+    beta_diag_(trainLength, trainLength),
+    r_xy_(trainLength,trainLength),
+    chol_g_yy_(trainLength,trainLength,1),
+    chol_beta_0_(trainLength,trainLength,1),
+    chol_beta_(trainLength,trainLength,1),
+    chol_beta_g_yy_(trainLength,trainLength,trainLength),
+    w_(trainLength){}
 
 template <class K>
 void Filter<K>::operator()(const TrainingData& data, 

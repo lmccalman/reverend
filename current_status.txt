@@ -1,0 +1,34 @@
+logp -- no openmp, no hack
+----
+normed (use_preimage) +
+normed (!use_preimage) +
+!normed (use_preimage) + 
+!normed (!use_preimage) +
+
+logp -- openmp, no hack
+----
+normed (use_preimage) +
+normed (!use_preimage) +
+!normed (use_preimage) +
+!normed (!use_preimage) +
+
+
+jointlogp -- openmp, no hack
+----------------------------
+!normed (use_preimage) +
+!normed (!use_preimage) +
+
+
+pinball -- openmp, no hack
+----
+*** fix this bullshit ***
+normed use_preimage +
+normed !use_preimage  @@@@@@@@@@@@@
+!normed use_preimage  @@@@@@@@@@@@@
+!normed !use_preimage @@@@@@@@@@@@@
+
+jointpinball -- openmp, no hack
+-------------------------------
+!normed, use_preimage +
+
+

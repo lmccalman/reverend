@@ -23,6 +23,19 @@
 #include "distrib.hpp"
 #include "cumulative.hpp"
 
+double pinballLoss(double z, double y, double tau)
+{
+  double result = 0.0;
+  if (y >= z)
+  {
+    result = (y-z)*tau;
+  }
+  else
+  {
+    result= (z-y)*(1.0 - tau);
+  }
+  return result;
+}
 
 //This is a 'Raw' cost function, which must be wrapped in some way to become an
 //NloptCost for use with the optimizer. Usually this would involve a k-fold or
@@ -45,9 +58,9 @@ class LogPCost:Cost
   public:
    LogPCost(const TrainingData& train, const TestingData& test, const Settings& settings)
       : Cost(train, test), 
+      kx_(train.x, 1.0), ky_(train.y, 1.0),
       algo_(train.x.rows(), train.u.rows(), settings),
-      weights_(test.ys.rows(), train.x.rows()),
-      kx_(train.x, 1.0), ky_(train.y, 1.0)
+      weights_(test.ys.rows(), train.x.rows())
   {
   }; 
 
@@ -62,10 +75,10 @@ class LogPCost:Cost
       double totalCost = 0.0;
       for (int i=0;i<testPoints;i++)
       {
-        totalCost += logGaussianMixture(testingData_.xs.row(i),
-                                        trainingData_.x,
-                                        weights_.row(i),
-                                        sigma_x);
+        totalCost += logKernelMixture(testingData_.xs.row(i),
+                                      trainingData_.x,
+                                      weights_.row(i),
+                                      kx_, true);
       }
       totalCost *= -1; // minimize this maximizes probability
       return totalCost;
@@ -100,7 +113,7 @@ class JointLogPCost:Cost
       double sigma_y = x[1];
       kx_.setWidth(sigma_x);
       ky_.setWidth(sigma_y);
-      double preimage_reg = exp(x[2]);
+      double preimage_reg = x[2];
       algo_(trainingData_, kx_, ky_, testingData_.ys, weights_);
       uint testPoints = testingData_.xs.rows();
       double totalCost = 0.0;
@@ -108,10 +121,10 @@ class JointLogPCost:Cost
       for (int i=0;i<testPoints;i++)
       {
         positiveNormedCoeffs(weights_.row(i), kx_, dim, preimage_reg, posWeights_);
-        totalCost += logGaussianMixture(testingData_.xs.row(i),
+        totalCost += logKernelMixture(testingData_.xs.row(i),
             trainingData_.x,
             weights_.row(i),
-            sigma_x);
+            kx_, true);
       }
       totalCost *= -1; // minimize this maximizes probability
       return totalCost;
@@ -173,11 +186,14 @@ class PreimageCost:Cost
   public:
     PreimageCost(const TrainingData& train, const TestingData& test, const Settings& settings)
       : Cost(train, test), 
-      regressor_(train.x.rows(), train.u.rows(), settings),
+      kx_(train.x, settings.sigma_x),
+      ky_(train.y, settings.sigma_y),
       weights_(test.ys.rows(), train.x.rows()),
       preimageWeights_(test.ys.rows(), train.x.rows()),
-      kx_(train.x, settings.sigma_x), ky_(train.y, settings.sigma_y)
+      regressor_(train.x.rows(), train.u.rows(), settings),
+      settings_(settings)
       {
+        //compute the values
         regressor_(trainingData_, kx_, ky_, testingData_.ys, weights_);
       }; 
 
@@ -185,7 +201,7 @@ class PreimageCost:Cost
     {
       double sigma_x = kx_.width();
       uint n = trainingData_.x.rows();
-      double preimage_reg = exp(x[0]);
+      double preimage_reg = x[0];
       uint dim = trainingData_.x.cols();
       Eigen::VectorXd coeff_i(n);
       uint testPoints = testingData_.xs.rows();
@@ -197,37 +213,49 @@ class PreimageCost:Cost
       }
       
       double totalCost = 0.0;
+      double tau = settings_.quantile;
       for (int i=0;i<testPoints;i++)
       {
-        totalCost += logGaussianMixture(testingData_.xs.row(i),
-            trainingData_.x,
-            preimageWeights_.row(i),
-            sigma_x);
+        if (settings_.cost_function == "pinball")
+        {
+          Quantile<Kernel<K> > q(preimageWeights_.row(i), trainingData_.x,
+              kx_, true);
+          double z = q(tau);
+          double y = testingData_.xs(i,0);
+          totalCost += pinballLoss(z,y,tau);
+        }
+        else
+        {
+          //note the minus to minimise negative probability
+          totalCost -= logKernelMixture(testingData_.xs.row(i),
+              trainingData_.x,
+              preimageWeights_.row(i),
+              kx_, false);
+        }
       }
-      totalCost *= -1; // minimize this maximizes probability
       return totalCost;
     };
 
   private: 
-    Regressor<K> regressor_;
-    Eigen::MatrixXd weights_;
-    Eigen::MatrixXd preimageWeights_;
     Kernel<K> kx_;
     Kernel<K> ky_;
+    Eigen::MatrixXd weights_;
+    Eigen::MatrixXd preimageWeights_;
+    Regressor<K> regressor_;
+    const Settings& settings_;
 };
 
 template <class T, class K>
 class PinballCost:Cost
 {
   public:
-    PinballCost(const TrainingData& train, const TestingData& test, const Settings& settings)
+    PinballCost(const TrainingData& train, const TestingData& test,
+                const Settings& settings)
       : Cost(train, test), 
-      algo_(train.x.rows(), train.u.rows(), settings),
-      weights_(test.ys.rows(), train.x.rows()),
-      kx_(train.x, 1.0), ky_(train.y, 1.0),
-      settings_(settings)
-  {
-  }; 
+        kx_(train.x, 1.0), ky_(train.y, 1.0),
+        algo_(train.x.rows(), train.u.rows(), settings),
+        weights_(test.ys.rows(), train.x.rows()),
+        settings_(settings){};
 
     double operator()(const std::vector<double>&x, std::vector<double>&grad)
     {
@@ -241,17 +269,11 @@ class PinballCost:Cost
       double totalCost = 0.0;
       for (int i=0;i<testPoints;i++)
       {
-        Quantile<Kernel<K> > q(weights_.row(i), trainingData_.x, kx_, settings_);
+        Quantile<Kernel<K> > q(weights_.row(i), trainingData_.x,
+                               kx_, settings_.normed_weights);
         double z = q(tau);
         double y = testingData_.xs(i,0);
-        if (y >= z)
-        {
-          totalCost += (y-z)*tau;
-        }
-        else
-        {
-          totalCost += (z-y)*(1.0 - tau);
-        }
+        totalCost += pinballLoss(z,y,tau);
       }
       return totalCost;
     };
@@ -268,13 +290,14 @@ template <class T, class K>
 class JointPinballCost:Cost
 {
   public:
-    JointPinballCost(const TrainingData& train, const TestingData& test, const Settings& settings)
+    JointPinballCost(const TrainingData& train, const TestingData& test,
+                     const Settings& settings)
       : Cost(train, test), 
-      algo_(train.x.rows(), train.u.rows(), settings),
-      weights_(test.ys.rows(), train.x.rows()),
-      posWeights_(train.x.rows()),
-      kx_(train.x, 1.0), ky_(train.y, 1.0),
-      settings_(settings)
+        algo_(train.x.rows(), train.u.rows(), settings),
+        weights_(test.ys.rows(), train.x.rows()),
+        posWeights_(train.x.rows()),
+        kx_(train.x, 1.0), ky_(train.y, 1.0),
+        settings_(settings)
   {
   }; 
 
@@ -284,7 +307,7 @@ class JointPinballCost:Cost
       double sigma_y = x[1];
       kx_.setWidth(sigma_x);
       ky_.setWidth(sigma_y);
-      double preimage_reg = exp(x[2]);
+      double preimage_reg = x[2];
       uint dim = trainingData_.x.cols();
       algo_(trainingData_, kx_, ky_, testingData_.ys, weights_);
       uint testPoints = testingData_.xs.rows();
@@ -292,21 +315,22 @@ class JointPinballCost:Cost
       double totalCost = 0.0;
       for (int i=0;i<testPoints;i++)
       {
-        positiveNormedCoeffs(weights_.row(i), kx_, dim, preimage_reg, posWeights_);
-        Quantile<Kernel<K> > q(posWeights_, trainingData_.x, kx_, settings_);
-        double z = q(tau);
-        double y = testingData_.xs(i,0);
-        if (y >= z)
+        if (settings_.normed_weights)
         {
-          totalCost += (y-z)*tau;
+          std::cout << "WARNING--  NORMED WEIGHTS WITH JOINT PINBALL IS EQUIVALENT TO PINBALL" << std::endl;
+          posWeights_ = weights_;
         }
         else
         {
-          totalCost += (z-y)*(1.0 - tau);
+          positiveNormedCoeffs(weights_.row(i), kx_, 
+                              dim, preimage_reg, posWeights_);
         }
+        Quantile<Kernel<K> > q(posWeights_, trainingData_.x, kx_, true);
+        double z = q(tau);
+        double y = testingData_.xs(i,0);
+        totalCost += pinballLoss(z,y,tau);
       }
       return totalCost;
-
     };
 
   private: 
@@ -316,4 +340,5 @@ class JointPinballCost:Cost
     Kernel<K> kx_;
     Kernel<K> ky_;
     const Settings& settings_;
+    bool normedWeights_;
 };

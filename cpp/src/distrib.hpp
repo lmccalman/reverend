@@ -19,26 +19,22 @@
 #include <cmath>
 #include <Eigen/Core>
 
-double logGaussianMixture(const Eigen::VectorXd& point,
+template <class K>
+double logKernelMixture(const Eigen::VectorXd& point,
     const Eigen::MatrixXd& means,
     const Eigen::VectorXd& coeffs,
-    double sigma)
+    const K& kx,
+    bool soft)
 {
   assert(point.size() == means.cols());
   assert(means.rows() == coeffs.size());
   uint numberOfMeans = means.rows();
-  double sigma2 = sigma * sigma;
-  uint k = means.cols();
-  double logScaleFactor = -0.5*k*log(sigma*sigma*2.0*M_PI);
-
+  double logScaleFactor = -log(kx.volume());
   //find the min exp coeff
-  double maxPower = -1e200; // ie infinity;
+  double maxPower = -1e200; //ie infinity
   for (uint i=0; i<numberOfMeans; i++)
   {
-    
-    Eigen::VectorXd delta = point - means.row(i).transpose();
-    double deltaNormSquared = delta.squaredNorm();
-    double expCoeff = -0.5 * deltaNormSquared / sigma2;
+    double expCoeff = kx.logk(point, means.row(i).transpose());
     maxPower = std::max(maxPower, expCoeff);
   }
   //now compute everything
@@ -46,15 +42,23 @@ double logGaussianMixture(const Eigen::VectorXd& point,
   for (uint i=0; i<numberOfMeans; i++)
   {
     double alpha = coeffs[i];
-    Eigen::VectorXd delta = point - means.row(i).transpose();
-    double deltaNormSquared = delta.squaredNorm();
-    double expCoeff = -0.5 * deltaNormSquared / sigma2;
+    double expCoeff = kx.logk(point, means.row(i).transpose());
     double adjExpCoeff = expCoeff - maxPower;
     double adjProbs = alpha*exp(adjExpCoeff);
     sumAdjProb += adjProbs;
   }
-  // this means that if my sumAdjProb is zero or negative, things don't
-  // actually break I just get a very low result
-  double result =  log(std::max(sumAdjProb,1e-200)) + maxPower + logScaleFactor;
+  double result;
+  if (soft)
+  {
+    result = log(std::max(sumAdjProb, 1e-200)) + maxPower + logScaleFactor;
+  }
+  else
+  {
+    result =  log(sumAdjProb) + maxPower + logScaleFactor;
+    if (!(result == result))
+    {
+      result = -1*std::numeric_limits<double>::infinity();
+    }
+  }
   return result;
 }

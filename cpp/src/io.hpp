@@ -62,7 +62,7 @@ Settings getSettings(const std::string& filename)
   s.observation_period = pt.get<uint>("Algorithm.observation_period");
   s.cumulative_estimate = pt.get<bool>("Algorithm.cumulative_estimate");
   s.quantile_estimate = pt.get<bool>("Algorithm.quantile_estimate");
-  s.preimage_estimate = pt.get<bool>("Algorithm.preimage_estimate");
+  s.use_preimage = pt.get<bool>("Algorithm.use_preimage");
   s.quantile = pt.get<double>("Algorithm.quantile");
   return s;
 }

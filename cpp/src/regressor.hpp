@@ -61,15 +61,15 @@ class Regressor
 
 template <class K>
 Regressor<K>::Regressor(uint trainLength, uint testLength, const Settings& settings)
-  : beta_g_yy_(trainLength,trainLength),
-    beta_(trainLength),
+  : settings_(settings),
     mu_pi_(trainLength),
+    beta_(trainLength),
+    beta_g_yy_(trainLength,trainLength),
     beta_diag_(trainLength, trainLength),
     r_xy_(trainLength,trainLength),
     chol_g_xx_(trainLength,trainLength,1),
     chol_beta_g_yy_(trainLength,trainLength,trainLength),
-    w_(trainLength),
-    settings_(settings){}
+    w_(trainLength){}
 
 template <class K>
 void Regressor<K>::operator()(const TrainingData& data, 
@@ -78,9 +78,6 @@ void Regressor<K>::operator()(const TrainingData& data,
                           const Eigen::MatrixXd& ys,
                           Eigen::MatrixXd& weights)
 {
-  const Eigen::MatrixXd& x = data.x;
-  const Eigen::MatrixXd& y = data.y;
-
   //compute prior embedding
   kx.embed(data.u, data.lambda, mu_pi_);
   //get jitchol of gram matrix

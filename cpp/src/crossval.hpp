@@ -92,14 +92,13 @@ void kFoldData(uint k, const TrainingData& allData, std::vector<TrainingData>& f
     std::vector<TestingData>& foldTesting)
 {
   uint n = allData.x.rows();
-  uint m = allData.u.rows();
-  assert(n == m);
+  assert(n == allData.u.rows());
   assert(n == allData.y.rows());
   uint dx = allData.x.cols();
   uint dy = allData.y.cols();
   uint du = allData.u.cols();
   assert(dx == du);
-  for (int i=0; i<k; i++)
+  for (uint i=0; i<k; i++)
   {
     uint trainSize;
     uint testSize;
