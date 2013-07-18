@@ -73,6 +73,47 @@ std::vector<double> globalOptimum(NloptCost& costFunction, const std::vector<dou
   return x;
 }
 
+// std::vector<double> globalOptimum(NloptCost& costFunction, const std::vector<double>& thetaMin,
+    // const std::vector<double>& thetaMax, const std::vector<double>& theta0, double wallTime)
+// {
+  // uint n = theta0.size();
+  // uint xevals = 50; 
+  // uint yevals = 50;
+  // double bestx = 0.0;
+  // double besty = 0.0;
+  // double bestCost = -1e200;
+  // double dx = (thetaMax[0] - thetaMin[0])/double(xevals);
+  // double dy = (thetaMax[1] - thetaMin[1])/double(yevals);
+  // std::vector<double> x = theta0;
+  // std::vector<double> grad(n);
+  // Eigen::MatrixXd results(xevals*yevals,3);
+  // uint counter = 0;
+  // for (uint i=0; i<xevals; i++) 
+  // {
+    // for (uint j=0; j<yevals; j++)
+    // {
+      // x[0] = thetaMin[0] + i*dx;
+      // x[1] = thetaMin[1] + j*dy;
+      // results(counter, 0) = x[0];
+      // results(counter, 1) = x[1];
+      // double cost = costFunction(x, grad);
+      // results(counter, 2) = cost;
+      // counter++;
+      // if (cost < bestCost)
+      // {
+        // bestCost = cost;
+        // bestx = x[0];
+        // besty = x[1];
+      // }
+    // }
+    // std::cout << counter/double(xevals*yevals)*100 << "% complete" << std::endl; 
+  // }
+  // x[0] = bestx;
+  // x[1] = besty;
+  // writeCSV(results, "costLandscape.csv");
+  // return x;
+// }
+
 //Epic training function
 template <class A, class K>
 void trainSettings(const TrainingData& data, Settings& settings)
@@ -174,3 +215,5 @@ void trainSettings(const TrainingData& data, Settings& settings)
     settings.preimage_reg = thetaPBest[0];
   }
 }
+
+
