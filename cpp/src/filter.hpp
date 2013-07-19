@@ -95,7 +95,7 @@ void Filter<K>::operator()(const TrainingData& data,
   {
     for (int j=0; j<n; j++)
     {
-      g_xxtp1_(i,j) = kx(data.xtp1.row(i), data.x.row(j));
+      g_xxtp1_(i,j) = kx(data.x.row(i), data.xtp1.row(j));
     }
   }
   

@@ -235,8 +235,12 @@ TestingData readTestingData(const SparseSettings& settings)
 
 void writeNPY(const Eigen::MatrixXd& matrix, const std::string& filename)
 {
-  const uint shape[] = {(uint)matrix.rows(),(uint)matrix.cols()};
-  const double* data = matrix.data();
+  uint rows = matrix.rows(); 
+  uint cols = matrix.cols();
+  Eigen::Matrix<double,Eigen::Dynamic,Eigen::Dynamic,Eigen::RowMajor> rowMat(rows, cols);
+  rowMat = matrix;
+  const uint shape[] = {rows,cols};
+  const double* data = rowMat.data();
   cnpy::npy_save(filename, data, shape, 2, "w");
 }
 
