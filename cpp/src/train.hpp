@@ -42,8 +42,11 @@ std::vector<double> globalOptimum(NloptCost& costFunction, const std::vector<dou
   opt.set_upper_bounds(thetaMax);
   opt.set_maxtime(wallTime);
   double minf = 0.0;
-  std::vector<double> x = theta0;
+  std::vector<double> x(theta0.size());
+  x = theta0;
+  std::vector<double> grad(x.size());
   // nlopt::result result = opt.optimize(x, minf);
+  double firstcost = costFunction(x, grad);
   opt.optimize(x, minf);
   
   std::cout << "Approximate Solution Found." << std::endl;

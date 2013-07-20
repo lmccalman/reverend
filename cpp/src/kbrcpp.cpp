@@ -126,8 +126,6 @@ int main(int argc, char** argv)
   computeLogPosterior(trainData,testData,preimageWeights,kx, posterior);
   writeNPY(embedding, settings.filename_embedding);
   writeNPY(posterior, settings.filename_posterior);
-  double meanLogProb = posterior.sum() / double(posterior.rows());
-  std::cout << "Mean Log-Probability: "<< meanLogProb << std::endl;
   std::cout << "kbrcpp task complete." << std::endl;
 
   return 0;

@@ -52,7 +52,7 @@ void VerifiedCholeskySolver<T>::solve(const Eigen::MatrixXd& A, const Eigen::Mat
 {
   uint n = A.rows();
   double maxJitter = 1.0e10;
-  double minJitter = 1.0e-10;
+  double minJitter = 1.0e-8;
   double precision = 1e-8;
   aJit_ = A;
   // start with the jitter from last time
@@ -140,7 +140,7 @@ void SparseCholeskySolver<T>::solve(const SparseMatrix& A, const T& b, T& x)
   uint n = A.rows();
   SparseMatrix aJit_(n,n);
   double maxJitter = 1.0e20;
-  double minJitter = 1.0e-10;
+  double minJitter = 1.0e-8;
   double precision = 1e-8;
   // start with the jitter from last time
   setJitter(A, jitter_, n, aJit_);
@@ -230,7 +230,7 @@ void LowRankCholeskySolver::solve(const Eigen::VectorXd& diag,
 {
   uint n = C.rows();
   double maxJitter = 1.0e20;
-  double minJitter = 1.0e-10;
+  double minJitter = 1.0e-8;
   double precision = 1e-4;
   // start with the jitter from last time
   woodburySolve(diag, C, W, jitter_, b, x);
