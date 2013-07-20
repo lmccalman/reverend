@@ -122,10 +122,12 @@ int main(int argc, char** argv)
   Eigen::MatrixXd posterior(testData.ys.rows(), testData.xs.rows());
   std::cout << "Evaluating Embedding..." << std::endl;
   computeEmbedding(trainData,testData,weights,kx, embedding);
-  std::cout << "Evaluating Posterior..." << std::endl;
-  computeEmbedding(trainData,testData,preimageWeights,kx, posterior);
+  std::cout << "Evaluating Log Posterior..." << std::endl;
+  computeLogPosterior(trainData,testData,preimageWeights,kx, posterior);
   writeNPY(embedding, settings.filename_embedding);
   writeNPY(posterior, settings.filename_posterior);
+  double meanLogProb = posterior.sum() / double(posterior.rows());
+  std::cout << "Mean Log-Probability: "<< meanLogProb << std::endl;
   std::cout << "kbrcpp task complete." << std::endl;
 
   return 0;

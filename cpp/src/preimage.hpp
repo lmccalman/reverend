@@ -71,6 +71,23 @@ void computeEmbedding(const TrainingData& trainingData, const TestingData& testi
     }
   }
 }
-
-
-
+  
+template <class K>
+void computeLogPosterior(const TrainingData& trainingData, const TestingData& testingData,
+    const Eigen::MatrixXd& weights, const K& kx, Eigen::MatrixXd& embedding)
+{
+  uint s = weights.rows(); 
+  uint p = testingData.xs.rows();
+  uint n = trainingData.x.rows();
+  #pragma omp parallel for
+  for (int i=0;i<s;i++)  
+  {
+    for (int j=0;j<p;j++)
+    {
+      embedding(i,j) = logKernelMixture(testingData.xs.row(j),
+                                        trainingData.x,
+                                        weights.row(i),
+                                        kx, false);
+    }
+  }
+}
