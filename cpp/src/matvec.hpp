@@ -31,13 +31,16 @@ template <class T>
 class VerifiedCholeskySolver
 {
   public:
-    VerifiedCholeskySolver(uint A_n, uint bRows, uint bCols)
+    VerifiedCholeskySolver(uint A_n, uint bRows, uint bCols, double minJitter)
       : cholSolver_(A_n), bDash_(bRows, bCols), xDashDown_(bRows, bCols), aJit_(A_n, A_n)
     { 
-      jitter_ = 1e-7;
+      jitter_ = minJitter;
+      minJitter_ = minJitter;
     };
 
     void solve(const Eigen::MatrixXd& A, const Eigen::MatrixXd& b, T& x);
+    double jitter(){return jitter_;};
+
   
   private:
     Eigen::LLT<Eigen::MatrixXd> cholSolver_;
@@ -45,6 +48,7 @@ class VerifiedCholeskySolver
     Eigen::MatrixXd xDashDown_;
     Eigen::MatrixXd aJit_;
     double jitter_;
+    double minJitter_;
 };
 
 template <class T>
@@ -52,7 +56,6 @@ void VerifiedCholeskySolver<T>::solve(const Eigen::MatrixXd& A, const Eigen::Mat
 {
   uint n = A.rows();
   double maxJitter = 1.0e10;
-  double minJitter = 1.0e-8;
   double precision = 1e-8;
   aJit_ = A;
   // start with the jitter from last time
@@ -65,7 +68,7 @@ void VerifiedCholeskySolver<T>::solve(const Eigen::MatrixXd& A, const Eigen::Mat
   bool smallestFound = false;
   if (solved)
   {
-    while (!smallestFound && (jitter_ > minJitter))
+    while (!smallestFound && (jitter_ > minJitter_))
     {
       //decrease the jitter
       aJit_ -= Eigen::MatrixXd::Identity(n,n)*jitter_;
@@ -101,13 +104,17 @@ void VerifiedCholeskySolver<T>::solve(const Eigen::MatrixXd& A, const Eigen::Mat
       jitter_ /=2.0;
     }
   }
+  if (jitter_ <= minJitter_)
+  {
+    // std::cout << "WARNING: min jitter reached" << std::endl;
+  }
 }
 
 template <class T>
 class SparseCholeskySolver
 {
   public:
-    SparseCholeskySolver(){};
+    SparseCholeskySolver(double minJitter):minJitter_(minJitter){};
     void solve(const SparseMatrix& A, const T& b, T& x);
     double jitter(){return jitter_;}
 
@@ -116,6 +123,7 @@ class SparseCholeskySolver
     T bDash_;
     T xDashDown_;
     double jitter_ = 1e-1;
+    double minJitter_;
 };
 
 void setJitter(const SparseMatrix& A, double jitter, int n, SparseMatrix& aJit)
@@ -140,7 +148,6 @@ void SparseCholeskySolver<T>::solve(const SparseMatrix& A, const T& b, T& x)
   uint n = A.rows();
   SparseMatrix aJit_(n,n);
   double maxJitter = 1.0e20;
-  double minJitter = 1.0e-8;
   double precision = 1e-8;
   // start with the jitter from last time
   setJitter(A, jitter_, n, aJit_);
@@ -152,7 +159,7 @@ void SparseCholeskySolver<T>::solve(const SparseMatrix& A, const T& b, T& x)
   bool smallestFound = false;
   if (solved)
   {
-    while (!smallestFound && (jitter_ > minJitter))
+    while (!smallestFound && (jitter_ > minJitter_))
     {
       //decrease the jitter
       setJitter(A, jitter_/2.0, n, aJit_);
@@ -188,12 +195,17 @@ void SparseCholeskySolver<T>::solve(const SparseMatrix& A, const T& b, T& x)
       jitter_ /=2.0;
     }
   }
+  
+  if (jitter_ <= minJitter_)
+  {
+    // std::cout << "WARNING: min jitter reached" << std::endl;
+  }
 }
 
 class LowRankCholeskySolver
 {
   public:
-    LowRankCholeskySolver(){};
+    LowRankCholeskySolver(double minJitter):minJitter_(minJitter){};
     void solve(const Eigen::VectorXd& diag,
                const Eigen::MatrixXd& C, 
                const Eigen::MatrixXd& W, 
@@ -206,6 +218,7 @@ class LowRankCholeskySolver
     Eigen::VectorXd bDash_;
     Eigen::VectorXd xDashDown_;
     double jitter_ = 1e-1;
+    double minJitter_;
 };
 
 void woodburySolve(const Eigen::VectorXd& diag,
@@ -230,7 +243,6 @@ void LowRankCholeskySolver::solve(const Eigen::VectorXd& diag,
 {
   uint n = C.rows();
   double maxJitter = 1.0e20;
-  double minJitter = 1.0e-8;
   double precision = 1e-4;
   // start with the jitter from last time
   woodburySolve(diag, C, W, jitter_, b, x);
@@ -240,7 +252,7 @@ void LowRankCholeskySolver::solve(const Eigen::VectorXd& diag,
   bool smallestFound = false;
   if (solved)
   {
-    while (!smallestFound && (jitter_ > minJitter))
+    while (!smallestFound && (jitter_ > minJitter_))
     {
       //decrease the jitter
       woodburySolve(diag, C, W, jitter_/2.0, b, xDashDown_);
@@ -268,8 +280,13 @@ void LowRankCholeskySolver::solve(const Eigen::VectorXd& diag,
     }
     if (!solved)
     {
-      // std::cout << "WARNING: max jitter reached" << std::endl;
+      std::cout << "WARNING: max jitter reached" << std::endl;
       jitter_ /=2.0;
     }
+  }
+  
+  if (jitter_ <= minJitter_)
+  {
+    // std::cout << "WARNING: min jitter reached" << std::endl;
   }
 }

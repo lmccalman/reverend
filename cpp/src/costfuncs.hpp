@@ -120,20 +120,20 @@ class JointLogPCost:Cost
     {
       double sigma_x = x[0];
       double sigma_y = x[1];
+      double preimage_reg = x[2];
       kx_.setWidth(sigma_x);
       ky_.setWidth(sigma_y);
-      double preimage_reg = x[2];
       algo_(trainingData_, kx_, ky_, testingData_.ys, weights_);
       uint testPoints = testingData_.xs.rows();
+      Eigen::MatrixXd A = AMatrix(trainingData_.x, kx_, sigma_x);
+      Eigen::MatrixXd B = BMatrix(trainingData_.x, kx_, sigma_x);
       double totalCost = 0.0;
       double dim = trainingData_.x.cols();
       for (int i=0;i<testPoints;i++)
       {
-        positiveNormedCoeffs(weights_.row(i), kx_, dim, preimage_reg, posWeights_);
+        positiveNormedCoeffsNLOPT(weights_.row(i),A,B, preimage_reg, posWeights_);
         totalCost += logKernelMixture(testingData_.xs.row(i),
-            trainingData_.x,
-            weights_.row(i),
-            kx_, true);
+            trainingData_.x, posWeights_, kx_, true);
       }
       totalCost *= -1; // minimize this maximizes probability
       return totalCost;
@@ -199,7 +199,7 @@ class PreimageCost:Cost
       kx_(train.x, settings.sigma_x),
       ky_(train.y, settings.sigma_y),
       weights_(test.ys.rows(), train.x.rows()),
-      preimageWeights_(test.ys.rows(), train.x.rows()),
+      posWeights_(train.x.rows()),
       regressor_(train.x.rows(), train.u.rows(), settings),
       settings_(settings)
       {
@@ -215,21 +215,14 @@ class PreimageCost:Cost
       uint dim = trainingData_.x.cols();
       Eigen::VectorXd coeff_i(n);
       uint testPoints = testingData_.xs.rows();
+      double totalCost = 0.0;
+      Eigen::MatrixXd A = AMatrix(trainingData_.x, kx_, sigma_x);
+      Eigen::MatrixXd B = BMatrix(trainingData_.x, kx_, sigma_x);
       for (int i=0; i<testPoints; i++)
       {
-        coeff_i = Eigen::VectorXd::Ones(n) * (1.0/double(n));
-        positiveNormedCoeffs(weights_.row(i), kx_, dim, preimage_reg, coeff_i);
-        preimageWeights_.row(i) = coeff_i;
-      }
-      
-      double totalCost = 0.0;
-      double tau = settings_.quantile;
-      for (int i=0;i<testPoints;i++)
-      {
+        positiveNormedCoeffs(weights_.row(i),A, B, preimage_reg, posWeights_);
         totalCost += logKernelMixture(testingData_.xs.row(i),
-            trainingData_.x,
-            preimageWeights_.row(i),
-            kx_, false);
+            trainingData_.x, posWeights_, kx_, true);
       }
       return -1*totalCost;
     };
@@ -238,7 +231,7 @@ class PreimageCost:Cost
     Kernel<K> kx_;
     Kernel<K> ky_;
     Eigen::MatrixXd weights_;
-    Eigen::MatrixXd preimageWeights_;
+    Eigen::VectorXd posWeights_;
     Regressor<K> regressor_;
     const Settings& settings_;
 };
@@ -314,18 +307,19 @@ class JointPinballCost:Cost
     {
       double sigma_x = x[0];
       double sigma_y = x[1];
+      double preimage_reg = x[2];
       kx_.setWidth(sigma_x);
       ky_.setWidth(sigma_y);
-      double preimage_reg = x[2];
       uint dim = trainingData_.x.cols();
       algo_(trainingData_, kx_, ky_, testingData_.ys, weights_);
       uint testPoints = testingData_.xs.rows();
+      Eigen::MatrixXd A = AMatrix(trainingData_.x, kx_, sigma_x);
+      Eigen::MatrixXd B = BMatrix(trainingData_.x, kx_, sigma_x);
       double tau = settings_.quantile;
       double totalCost = 0.0;
       for (int i=0;i<testPoints;i++)
       {
-        positiveNormedCoeffs(weights_.row(i), kx_, 
-                            dim, preimage_reg, posWeights_);
+        positiveNormedCoeffs(weights_.row(i), A, B, preimage_reg, posWeights_);
         Quantile<Kernel<K> > q(posWeights_, trainingData_.x, kx_, true);
         double z = q(tau);
         double y = testingData_.xs(i,0);

@@ -139,7 +139,7 @@ inline double solve_quadprog(MatrixXd & G,  VectorXd & g0,
   MatrixXd R(G.rows(),G.cols()), J(G.rows(),G.cols());
   
   LLT<MatrixXd,Lower> chol(G.cols());
- 
+  VerifiedCholeskySolver<Eigen::VectorXd> g0Chol(G.cols(), g0.rows(), g0.cols(),1e-8);
   VectorXd s(m+p), z(n), r(m + p), d(n),  np(n), u(m + p);
   VectorXd x_old(n), u_old(m + p);
   double f_value, psi, c1, c2, sum, ss, R_norm;
@@ -163,13 +163,16 @@ inline double solve_quadprog(MatrixXd & G,  VectorXd & g0,
   c1 = G.trace();
 	
 	/* decompose the matrix G in the form LL^T */
-  chol.compute(G);
  
   /* initialize the matrix R */
   d.setZero();
   R.setZero();
 	R_norm = 1.0; /* this variable will hold the norm of the matrix R */
   
+  g0Chol.solve(G, g0,x);
+  double jit = g0Chol.jitter();
+  G = G + jit*Eigen::MatrixXd::Identity(G.rows(), G.cols());
+  chol.compute(G);
 	/* compute the inverse of the factorized matrix G^-1, this is the initial value for H */
   // J = L^-T
   J.setIdentity();
@@ -186,7 +189,7 @@ inline double solve_quadprog(MatrixXd & G,  VectorXd & g0,
    * this is a feasible point in the dual space
 	 * x = G^-1 * g0
    */
-  x = chol.solve(g0);
+  // x = chol.solve(g0);
   x = -x;
 	/* and compute the current solution value */ 
 	f_value = 0.5 * g0.dot(x);

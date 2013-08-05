@@ -78,8 +78,7 @@ int main(int argc, char** argv)
   else
   {
     std::cout << "Normalizing Weights..." << std::endl;
-    computeNormedWeights(weights, kx, trainData.x.cols(),
-    settings, preimageWeights);
+    computeNormedWeights(trainData.x, weights, kx, settings, preimageWeights);
   }
 
   //---------Post Processing------//

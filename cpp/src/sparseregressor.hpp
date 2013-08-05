@@ -70,16 +70,21 @@ class SparseRegressor
 
 template <class K>
 SparseRegressor<K>::SparseRegressor(uint trainLength, uint testLength, const SparseSettings& settings)
-  : beta_(trainLength),
+  : n_(trainLength),
     mu_pi_(trainLength),
+    beta_(trainLength),
     embed_y_(trainLength),
-    w_(trainLength),
-    n_(trainLength),
-    chol_g_xx_lr_(int(trainLength*0.1), int(trainLength*0.1),1),
-    chol_ur_lr_(int(trainLength*0.1), int(trainLength*0.1),1),
-    chol_n_(int(trainLength*0.1), int(trainLength*0.1),1),
-    chol_nr_(int(trainLength*0.1), int(trainLength*0.1),1),
-    settings_(settings){}
+    chol_g_xx_(settings.epsilon_min),
+    chol_g_xx_lr_(int(trainLength*0.1), int(trainLength*0.1),1, settings.epsilon_min),
+    chol_ur_lr_(int(trainLength*0.1), int(trainLength*0.1),1, settings.delta_min ),
+    chol_u_(settings.epsilon_min),
+    chol_ur_(settings.delta_min),
+    chol_R_xy_(settings.delta_min),
+    chol_w_(settings.delta_min),
+    chol_n_(int(trainLength*0.1), int(trainLength*0.1),1, settings.epsilon_min),
+    chol_nr_(int(trainLength*0.1), int(trainLength*0.1),1, settings.delta_min),
+    settings_(settings),
+    w_(trainLength){}
 
 template <class K>
 void SparseRegressor<K>::operator()(const TrainingData& data, 
@@ -115,7 +120,7 @@ void SparseRegressor<K>::operator()(const TrainingData& data,
   else if (settings_.method == "lowrank")
   {
     simpleNystromApproximation(data.x, kx_lr, columns, C, W);
-    VerifiedCholeskySolver<Eigen::MatrixXd> quickchol(columns,columns,n_);
+    VerifiedCholeskySolver<Eigen::MatrixXd> quickchol(columns,columns,n_, settings_.epsilon_min);
     Eigen::MatrixXd T(columns, n_);
     quickchol.solve(W, C.transpose(), T);
     chol_g_xx_lr_.solve(C * T, mu_pi_, beta_);
@@ -160,7 +165,7 @@ void SparseRegressor<K>::operator()(const TrainingData& data,
     }
     else if (settings_.method == "lowrank")
     {
-      VerifiedCholeskySolver<Eigen::MatrixXd> quickchol(columns,columns,n_);
+      VerifiedCholeskySolver<Eigen::MatrixXd> quickchol(columns,columns,n_, settings_.delta_min);
       Eigen::MatrixXd T(columns, n_);
       quickchol.solve(W, C.transpose(), T);
       chol_g_xx_lr_.solve(beta_.asDiagonal()*C * T, embed_y_, w_);

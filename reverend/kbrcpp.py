@@ -72,6 +72,8 @@ def write_config_file(settings, filename):
     config.add_section('Training')
     config.set('Training', 'walltime', settings.walltime)
     config.set('Training', 'folds', settings.folds)
+    config.set('Algorithm', 'epsilon_min', settings.epsilon_min)
+    config.set('Algorithm', 'delta_min', settings.delta_min)
 
     if isinstance(settings, Settings):
         settings.filename_quantile = settings.prefix + 'Q_{}.npy'.format(

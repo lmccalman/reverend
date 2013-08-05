@@ -39,7 +39,7 @@ xssize = (200, 200)
 # how much data to use
 step_size = 5
 training_size = 500
-testing_size = 5
+testing_size = 50
 
 #construct settings and data files for kbrcpp
 filename_config = 'lorenz_filter.ini'
@@ -56,7 +56,7 @@ settings.cost_function = 'logp_norm'
 # 'pinball_joint'
 # 'hilbert'
 settings.sigma_x_min = 0.05
-settings.sigma_x = 0.494
+settings.sigma_x = 0.1
 settings.sigma_x_max = 0.8
 settings.sigma_y_min = 0.05
 settings.sigma_y = 0.197
@@ -64,12 +64,12 @@ settings.sigma_y_max = 0.8
 
 #for preimage
 settings.preimage_reg = 1e-6
-settings.preimage_reg_min = 1e-10
-settings.preimage_reg_max = 1e1
+settings.preimage_reg_min = 1e-7
+settings.preimage_reg_max = 1e-5
 
 #Some other settings
 settings.inference_type = 'filter'  # {'filter', 'regress'}
-settings.walltime = 12.0
+settings.walltime = 120.0
 settings.preimage_walltime = 12.0
 settings.folds = 2
 settings.observation_period = 1
@@ -118,13 +118,6 @@ def main():
 
     #read in the weights we've just calculated
     W = np.load(settings.filename_weights)
-    
-    WP = None
-    if settings.normed_weights is False:
-        WP = np.load(settings.filename_preimage)
-    
-    embedding = np.load(settings.filename_embedding)
-    embedding = embedding.reshape((testing_size,xssize[0],xssize[1]))
     pdf = np.load(settings.filename_posterior)
     pdf = pdf.reshape((testing_size,xssize[0],xssize[1]))
 

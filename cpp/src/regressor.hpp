@@ -66,8 +66,8 @@ Regressor<K>::Regressor(uint trainLength, uint testLength, const Settings& setti
     beta_g_yy_(trainLength,trainLength),
     beta_diag_(trainLength, trainLength),
     r_xy_(trainLength,trainLength),
-    chol_g_xx_(trainLength,trainLength,1),
-    chol_beta_g_yy_(trainLength,trainLength,trainLength),
+    chol_g_xx_(trainLength,trainLength,1, settings.epsilon_min),
+    chol_beta_g_yy_(trainLength,trainLength,trainLength, settings.delta_min),
     w_(trainLength){}
 
 template <class K>
@@ -112,6 +112,16 @@ void Regressor<K>::operator()(const TrainingData& data,
       w_ = w_.cwiseMax(0.0);
       w_ = w_ / w_.sum();
     }
+    // if (w_.norm() > 0.0)
+    // {
+      // w_ = w_ / w_.norm();
+    // }
+  // }
+  // if (!(w_.norm() > 0))
+  // {
+    // w_ = Eigen::VectorXd::Ones(w_.size()) / double(w_.size());
+    // std::cout << "WARNING: DIVERGED" << std::endl;
+  // }
     weights.row(i) = w_;
   }
 }

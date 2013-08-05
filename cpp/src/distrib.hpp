@@ -19,6 +19,19 @@
 #include <cmath>
 #include <Eigen/Core>
 
+
+double multivariateSymmetricGaussian(const Eigen::VectorXd& point,
+                                     const Eigen::VectorXd& mu,
+                                     double sigma)
+{
+  int d = point.rows();
+  double exponent = -0.5 * (point - mu).squaredNorm() / (sigma*sigma);
+  double val = exp(exponent);
+  double coeff = pow(2.0*M_PI*(sigma*sigma), -0.5*d);
+  double result = coeff*val;
+  return result;
+}
+
 template <class K>
 double logKernelMixture(const Eigen::VectorXd& point,
     const Eigen::MatrixXd& means,
@@ -42,6 +55,11 @@ double logKernelMixture(const Eigen::VectorXd& point,
   for (uint i=0; i<numberOfMeans; i++)
   {
     double alpha = coeffs[i];
+    if (alpha < 0)
+    {
+      // std::cout << alpha <<  "ALPHA < 0 in mixture coeff" << std::endl;
+      std::cout << ".";
+    }
     double expCoeff = kx.logk(point, means.row(i).transpose());
     double adjExpCoeff = expCoeff - maxPower;
     double adjProbs = alpha*exp(adjExpCoeff);
@@ -50,7 +68,12 @@ double logKernelMixture(const Eigen::VectorXd& point,
   double result;
   if (soft)
   {
-    result = log(std::max(sumAdjProb, 1e-200)) + maxPower + logScaleFactor;
+    result =  log(sumAdjProb) + maxPower + logScaleFactor;
+    if (!(result == result))
+    {
+      // std::cout << point(0) << " " << point(1) << ":";
+      result = -1e10;
+    }
   }
   else
   {

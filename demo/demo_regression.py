@@ -50,15 +50,17 @@ settings = kbrcpp.Settings(prefix)
 # 'hilbert'
 settings.cost_function = 'logp_joint'
 settings.sigma_x_min = 0.02
-settings.sigma_x = 0.3
-settings.sigma_x_max = 0.8
-settings.sigma_y_min = 0.1
-settings.sigma_y = 0.5
+settings.sigma_x = 0.389
+settings.sigma_x_max = 2.0
+settings.sigma_y_min = 0.01
+settings.sigma_y = 0.301
 settings.sigma_y_max = 2.0
+settings.epsilon_min = 1e-8
+settings.delta_min = 1e-4
 #for preimage
-settings.preimage_reg = 0.07
-settings.preimage_reg_min = 0.01
-settings.preimage_reg_max = 0.1
+settings.preimage_reg = 1e-1
+settings.preimage_reg_min = 1e-2
+settings.preimage_reg_max = 1e-0
 #Some other settings
 settings.inference_type = 'regress'
 settings.cumulative_estimate = True
@@ -115,14 +117,14 @@ def main():
     fig = pl.figure()
     axes = fig.add_subplot(121)
     axes.set_title('Posterior Embedding')
-    axes.imshow(E, origin='lower', 
+    axes.imshow(E.T, origin='lower', 
                 extent=(ysmin, ysmax, xsmin, xsmax),cmap=cm.hot, aspect='auto')
     axes.scatter(Y, X, c='y')
     axes.set_xlim(ysmin, ysmax)
     axes.set_ylim(xsmin, xsmax)
     axes = fig.add_subplot(122)
     axes.set_title('PDF estimate')
-    axes.imshow(pdf, origin='lower', 
+    axes.imshow(np.exp(pdf).T, origin='lower', 
             extent=(ysmin, ysmax, xsmin, xsmax), cmap=cm.hot, aspect='auto')
     axes.scatter(Y, X, c='y')
     axes.set_xlim(ysmin, ysmax)
@@ -132,14 +134,14 @@ def main():
         fig = pl.figure()
         axes = fig.add_subplot(121)
         axes.set_title('CDF Estimate')
-        axes.imshow(cdf, origin='lower', 
+        axes.imshow(cdf.T, origin='lower', 
                 extent=(ysmin, ysmax, xsmin, xsmax),cmap=cm.hot, aspect='auto')
         axes.scatter(Y, X, c='y')
         axes.set_xlim(ysmin, ysmax)
         axes.set_ylim(xsmin, xsmax)
         axes = fig.add_subplot(122)
         axes.set_title('Quantile Estimate')
-        axes.imshow(pdf, origin='lower', 
+        axes.imshow(np.exp(pdf).T, origin='lower', 
                 extent=(ysmin, ysmax, xsmin, xsmax),cmap=cm.hot, aspect='auto')
         axes.scatter(Y, X, c='y')
         axes.set_xlim(ysmin, ysmax)
