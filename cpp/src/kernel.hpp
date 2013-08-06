@@ -128,7 +128,7 @@ class Kernel
     const Eigen::MatrixXd& X_;
     mutable M g_xx_;
     double width_ = 1.0;
-    double volume_ = 1.0;
+    double volume_ = 0.0;
 };
 
 template <class K>

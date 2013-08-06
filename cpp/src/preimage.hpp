@@ -44,47 +44,47 @@ Eigen::MatrixXd BMatrix(const Eigen::MatrixXd& means,
   return B;
 }
 
-void positiveNormedCoeffs(const Eigen::VectorXd& embedding,
-                          const Eigen::MatrixXd& A,
-                          const Eigen::MatrixXd& B,  
-                          double regulariser, Eigen::VectorXd& mixtureCoeffs)
-{
-  uint n = A.rows();
-  uint p = 1;
-  uint m = n;
+// void positiveNormedCoeffs(const Eigen::VectorXd& embedding,
+                          // const Eigen::MatrixXd& A,
+                          // const Eigen::MatrixXd& B,  
+                          // double regulariser, Eigen::VectorXd& mixtureCoeffs)
+// {
+  // uint n = A.rows();
+  // uint p = 1;
+  // uint m = n;
 
-  Eigen::MatrixXd G(n,n);
-  Eigen::VectorXd g0(n);
-  G = A + regulariser*Eigen::MatrixXd::Identity(n, n); 
-  // G = A;
-  g0 = -1.0 * embedding.transpose() * B;
-  Eigen::MatrixXd CE(n,p);
-  CE = Eigen::MatrixXd::Ones(n,p);
-  Eigen::VectorXd ce0(p);
-  ce0 = -1.0 * Eigen::VectorXd::Ones(p);
-  Eigen::MatrixXd CI(n, n);
-  CI = Eigen::MatrixXd::Identity(n, n);
-  Eigen::VectorXd ci0(m);
-  ci0 = Eigen::VectorXd::Zero(m);
-  Eigen::VectorXd x(n);
-  mixtureCoeffs = embedding.cwiseMax(0.0);
-  mixtureCoeffs = mixtureCoeffs / mixtureCoeffs.sum();
-  solve_quadprog(G, g0,  CE, ce0,  CI, ci0, mixtureCoeffs);
-  bool resultOK = true;
-  for (int i=0;i<n; i++)
-  {
-    if (mixtureCoeffs(i) < 0.0)
-    {
-      resultOK = false;
-      break;
-    }
-  }
-  if (!resultOK)
-  {
-    mixtureCoeffs = mixtureCoeffs.cwiseMax(0.0);
-    mixtureCoeffs = mixtureCoeffs / mixtureCoeffs.sum();
-  }
-}
+  // Eigen::MatrixXd G(n,n);
+  // Eigen::VectorXd g0(n);
+  // G = A + regulariser*Eigen::MatrixXd::Identity(n, n); 
+  // // G = A;
+  // g0 = -1.0 * embedding.transpose() * B;
+  // Eigen::MatrixXd CE(n,p);
+  // CE = Eigen::MatrixXd::Ones(n,p);
+  // Eigen::VectorXd ce0(p);
+  // ce0 = -1.0 * Eigen::VectorXd::Ones(p);
+  // Eigen::MatrixXd CI(n, n);
+  // CI = Eigen::MatrixXd::Identity(n, n);
+  // Eigen::VectorXd ci0(m);
+  // ci0 = Eigen::VectorXd::Zero(m);
+  // Eigen::VectorXd x(n);
+  // mixtureCoeffs = embedding.cwiseMax(0.0);
+  // mixtureCoeffs = mixtureCoeffs / mixtureCoeffs.sum();
+  // solve_quadprog(G, g0,  CE, ce0,  CI, ci0, mixtureCoeffs);
+  // bool resultOK = true;
+  // for (int i=0;i<n; i++)
+  // {
+    // if (mixtureCoeffs(i) < 0.0)
+    // {
+      // resultOK = false;
+      // break;
+    // }
+  // }
+  // if (!resultOK)
+  // {
+    // mixtureCoeffs = mixtureCoeffs.cwiseMax(0.0);
+    // mixtureCoeffs = mixtureCoeffs / mixtureCoeffs.sum();
+  // }
+// }
 
 struct PreimageData
 {
@@ -135,7 +135,7 @@ double preimageConstraint(const std::vector<double> &x, std::vector<double>&grad
   return result;
 }
 
-void positiveNormedCoeffsNLOPT(const Eigen::VectorXd& embedding,
+void positiveNormedCoeffs(const Eigen::VectorXd& embedding,
                                 const Eigen::MatrixXd& A,
                                 const Eigen::MatrixXd& B,  
     double regulariser, Eigen::VectorXd& mixtureCoeffs)
@@ -169,12 +169,10 @@ void positiveNormedCoeffsNLOPT(const Eigen::VectorXd& embedding,
   double total = 0.0;
   for (int i=0;i<n; i++)
   {
-    total += x[i];
+    mixtureCoeffs(i) = x[i];
   }
-  for (int i=0;i<n; i++)
-  {
-    mixtureCoeffs(i) = x[i] / total;
-  }
+  mixtureCoeffs = mixtureCoeffs.cwiseMax(0.0);
+  mixtureCoeffs = mixtureCoeffs / mixtureCoeffs.sum();
 }
 
 
@@ -193,7 +191,7 @@ void computeNormedWeights( const Eigen::MatrixXd& X,
   for (int i=0; i<s; i++)
   {
     coeff_i = Eigen::VectorXd::Ones(n) * (1.0/double(n));
-    positiveNormedCoeffsNLOPT(weights.row(i),A, B, settings.preimage_reg, coeff_i);
+    positiveNormedCoeffs(weights.row(i),A, B, settings.preimage_reg, coeff_i);
     preimageWeights.row(i) = coeff_i;
   }
 }

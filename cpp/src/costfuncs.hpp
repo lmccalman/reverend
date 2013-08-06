@@ -131,7 +131,7 @@ class JointLogPCost:Cost
       double dim = trainingData_.x.cols();
       for (int i=0;i<testPoints;i++)
       {
-        positiveNormedCoeffsNLOPT(weights_.row(i),A,B, preimage_reg, posWeights_);
+        positiveNormedCoeffs(weights_.row(i),A,B, preimage_reg, posWeights_);
         totalCost += logKernelMixture(testingData_.xs.row(i),
             trainingData_.x, posWeights_, kx_, true);
       }
