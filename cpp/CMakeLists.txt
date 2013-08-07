@@ -25,7 +25,7 @@ set(REVEREND_SPARSE_EXECUTABLE skbrcpp)
 set(CNPY_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/../cnpy)
 set(CNPY_LIB_DIR ${PROJECT_SOURCE_DIR}/../cnpy)
 
-set(QUADPROG_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/../quadprog)
+# set(QUADPROG_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/../quadprog)
 
 find_library(CNPY_LIBRARY NAMES "cnpy" PATHS ${CNPY_LIB_DIR})
 find_library(NLOPT_LIBRARY NAMES "nlopt") 
@@ -43,8 +43,8 @@ find_package(LAPACK)
 
 include_directories( ${EIGEN3_INCLUDE_DIR}
                      ${Boost_INCLUDE_DIR}
-                     ${CNPY_INCLUDE_DIR}
-                     ${QUADPROG_INCLUDE_DIR})
+                     ${CNPY_INCLUDE_DIR})
+                     # ${QUADPROG_INCLUDE_DIR})
 
 add_executable(${REVEREND_EXECUTABLE} ${REVEREND_SRC_DIRECTORY}/${REVEREND_EXECUTABLE}.cpp)
 add_executable(${REVEREND_SPARSE_EXECUTABLE} ${REVEREND_SRC_DIRECTORY}/${REVEREND_SPARSE_EXECUTABLE}.cpp)

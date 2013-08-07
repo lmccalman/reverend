@@ -1,7 +1,6 @@
 #pragma once
 #include <iostream>
 #include <Eigen/Dense>
-#include "eiquadprog.hpp"
 #include "data.hpp"
 #include "kernel.hpp"
 #include "distrib.hpp"
