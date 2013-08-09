@@ -271,7 +271,7 @@ class PinballCost:Cost
       for (int i=0;i<testPoints;i++)
       {
         Quantile<Kernel<K> > q(weights_.row(i), trainingData_.x,
-                               kx_, settings_.normed_weights);
+                               kx_, settings_.cumulative_mean_map);
         double z = q(tau);
         double y = testingData_.xs(i,0);
         totalCost += pinballLoss(z,y,tau);
@@ -320,7 +320,7 @@ class JointPinballCost:Cost
       for (int i=0;i<testPoints;i++)
       {
         positiveNormedCoeffs(weights_.row(i), A, B, preimage_reg, posWeights_);
-        Quantile<Kernel<K> > q(posWeights_, trainingData_.x, kx_, true);
+        Quantile<Kernel<K> > q(posWeights_, trainingData_.x, kx_, settings_.cumulative_mean_map);
         double z = q(tau);
         double y = testingData_.xs(i,0);
         totalCost += pinballLoss(z,y,tau);
@@ -335,5 +335,4 @@ class JointPinballCost:Cost
     Kernel<K> kx_;
     Kernel<K> ky_;
     const Settings& settings_;
-    bool normedWeights_;
 };

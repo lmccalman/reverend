@@ -49,6 +49,7 @@ struct Settings
   uint folds;
   uint observation_period;
   bool cumulative_estimate;
+  bool cumulative_mean_map;
   bool quantile_estimate;
   bool normed_weights;
 };

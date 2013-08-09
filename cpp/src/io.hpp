@@ -62,6 +62,7 @@ Settings getSettings(const std::string& filename)
   s.inference_type = pt.get<std::string>("Algorithm.inference_type"); 
   s.observation_period = pt.get<uint>("Algorithm.observation_period");
   s.cumulative_estimate = pt.get<bool>("Algorithm.cumulative_estimate");
+  s.cumulative_mean_map = pt.get<bool>("Algorithm.cumulative_mean_map");
   s.quantile_estimate = pt.get<bool>("Algorithm.quantile_estimate");
   s.quantile = pt.get<double>("Algorithm.quantile");
   return s;

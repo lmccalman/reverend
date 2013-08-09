@@ -84,17 +84,18 @@ int main(int argc, char** argv)
   //---------Post Processing------//
 
   //Cumulative Estimates
+  bool meanMap = settings.cumulative_mean_map;
   if (settings.cumulative_estimate)
   {
     std::cout << "Estimating Cumulative..." << std::endl;
     Eigen::MatrixXd cumulates(testData.ys.rows(), testData.xs.rows());
     if (settings.cost_function == "pinball_direct")
     {
-      computeCumulates(trainData,testData, weights, kx, false, cumulates);
+      computeCumulates(trainData,testData, weights, kx, meanMap, cumulates);
     }
     else
     {
-      computeCumulates(trainData,testData, preimageWeights, kx, true, cumulates);
+      computeCumulates(trainData,testData, preimageWeights, kx, meanMap, cumulates);
     }
     writeNPY(cumulates, settings.filename_cumulative);
   }
@@ -107,11 +108,11 @@ int main(int argc, char** argv)
     double tau = settings.quantile;
     if (settings.cost_function == "pinball_direct")
     {
-      computeQuantiles(trainData,testData,weights,kx,tau,false,quantiles);
+      computeQuantiles(trainData,testData,weights,kx,tau,meanMap,quantiles);
     }
     else
     {
-      computeQuantiles(trainData,testData,preimageWeights,kx,tau,true,quantiles);
+      computeQuantiles(trainData,testData,preimageWeights,kx,tau,meanMap,quantiles);
     }
     writeNPY(quantiles, settings.filename_quantile);
   }

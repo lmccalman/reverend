@@ -83,6 +83,8 @@ def write_config_file(settings, filename):
         config.set('Algorithm', 'inference_type', settings.inference_type)
         config.set('Algorithm', 'cumulative_estimate',
                    int(settings.cumulative_estimate))
+        config.set('Algorithm', 'cumulative_mean_map',
+                int(settings.cumulative_mean_map))
         config.set('Algorithm', 'quantile_estimate',
                    int(settings.quantile_estimate))
         config.set('Algorithm', 'quantile', settings.quantile)
