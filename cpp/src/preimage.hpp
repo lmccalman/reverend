@@ -161,6 +161,7 @@ void positiveNormedCoeffs(const Eigen::VectorXd& embedding,
   nlopt::opt opt(nlopt::LD_MMA, n);
   opt.set_lower_bounds(thetaMin);
   opt.set_min_objective(preimageCostFn, &data);
+  opt.set_maxtime(10.0); // if it's longer than this we're prolly stuffed anyway
   // opt.add_equality_constraint(preimageConstraint, NULL, 1e-6);
   opt.set_xtol_rel(1e-4);
   double minf;
