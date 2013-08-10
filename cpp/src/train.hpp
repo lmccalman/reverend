@@ -133,13 +133,13 @@ void trainSettings(const TrainingData& data, Settings& settings)
     std::vector<double> theta0(3);
     theta0[0] = settings.sigma_x;
     theta0[1] = settings.sigma_y;
-    theta0[2] = settings.preimage_reg;
+    theta0[2] = log(settings.preimage_reg);
     thetaMin[0] = settings.sigma_x_min;
     thetaMin[1] = settings.sigma_y_min;
-    thetaMin[2] = settings.preimage_reg_min;
+    thetaMin[2] = log(settings.preimage_reg_min);
     thetaMax[0] = settings.sigma_x_max;
     thetaMax[1] = settings.sigma_y_max;
-    thetaMax[2] = settings.preimage_reg_max;
+    thetaMax[2] = log(settings.preimage_reg_max);
     std::vector<double> thetaBest(3);
     if (cf == "logp_joint")
     {
@@ -155,7 +155,7 @@ void trainSettings(const TrainingData& data, Settings& settings)
     }
     settings.sigma_x = thetaBest[0];
     settings.sigma_y = thetaBest[1];
-    settings.preimage_reg = thetaBest[2];
+    settings.preimage_reg = exp(thetaBest[2]);
   }
   else // not a joint method
   {
@@ -173,9 +173,9 @@ void trainSettings(const TrainingData& data, Settings& settings)
     thetaMin[1] = settings.sigma_y_min;
     thetaMax[0] = settings.sigma_x_max;
     thetaMax[1] = settings.sigma_y_max;
-    thetaP0[0] = settings.preimage_reg;
-    thetaPMin[0] = settings.preimage_reg_min;
-    thetaPMax[0] = settings.preimage_reg_max;
+    thetaP0[0] = log(settings.preimage_reg);
+    thetaPMin[0] = log(settings.preimage_reg_min);
+    thetaPMax[0] = log(settings.preimage_reg_max);
     if (cf == "logp_norm")
     {
       settings.normed_weights = true;
@@ -215,7 +215,7 @@ void trainSettings(const TrainingData& data, Settings& settings)
     }
     settings.sigma_x = thetaBest[0];
     settings.sigma_y = thetaBest[1];
-    settings.preimage_reg = thetaPBest[0];
+    settings.preimage_reg = exp(thetaPBest[0]);
   }
 }
 

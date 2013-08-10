@@ -120,7 +120,7 @@ class JointLogPCost:Cost
     {
       double sigma_x = x[0];
       double sigma_y = x[1];
-      double preimage_reg = x[2];
+      double preimage_reg = exp(x[2]);
       kx_.setWidth(sigma_x);
       ky_.setWidth(sigma_y);
       algo_(trainingData_, kx_, ky_, testingData_.ys, weights_);
@@ -211,7 +211,7 @@ class PreimageCost:Cost
     {
       double sigma_x = kx_.width();
       uint n = trainingData_.x.rows();
-      double preimage_reg = x[0];
+      double preimage_reg = exp(x[0]);
       uint dim = trainingData_.x.cols();
       Eigen::VectorXd coeff_i(n);
       uint testPoints = testingData_.xs.rows();
@@ -307,7 +307,7 @@ class JointPinballCost:Cost
     {
       double sigma_x = x[0];
       double sigma_y = x[1];
-      double preimage_reg = x[2];
+      double preimage_reg = exp(x[2]);
       kx_.setWidth(sigma_x);
       ky_.setWidth(sigma_y);
       uint dim = trainingData_.x.cols();
