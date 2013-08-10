@@ -101,7 +101,7 @@ double Cumulative<K>::fromWeights(const Eigen::VectorXd& x) const
     bool smaller = true;
     for (uint j=0; j<dim;j++)
     {
-      smaller = smaller && (x(j) < mu(j));
+      smaller = smaller && (mu(j) < x(j));
     }
     if (smaller)
     {

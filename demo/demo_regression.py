@@ -50,19 +50,19 @@ settings = kbrcpp.Settings(prefix)
 # 'hilbert'
 settings.cost_function = 'logp_joint'
 
-settings.sigma_x_min = 0.02
-settings.sigma_x = 0.389
-settings.sigma_x_max = 2.0
+settings.sigma_x_min = 0.1
+settings.sigma_x = 0.2
+settings.sigma_x_max = 0.5
 
-settings.sigma_y_min = 0.01
-settings.sigma_y = 0.301
-settings.sigma_y_max = 2.0
+settings.sigma_y_min = 0.1
+settings.sigma_y = 0.17
+settings.sigma_y_max = 0.5
 
-settings.epsilon_min_min = 1e-5
-settings.epsilon_min = 1e-4
-settings.epsilon_min_max = 1e1
+settings.epsilon_min_min = 1e-8
+settings.epsilon_min = 1e-5
+settings.epsilon_min_max = 1e-4
 
-settings.delta_min_min = 1e-5
+settings.delta_min_min = 1e-3
 settings.delta_min = 1e-1
 settings.delta_min_max = 1e1
 
@@ -76,7 +76,7 @@ settings.cumulative_estimate = True
 settings.cumulative_mean_map = False
 settings.quantile_estimate = True
 settings.quantile = 0.5
-settings.walltime = 120.0
+settings.walltime = 12.0
 settings.preimage_walltime = 12.0
 settings.folds = 20
 settings.observation_period = 1
