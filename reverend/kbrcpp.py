@@ -74,6 +74,10 @@ def write_config_file(settings, filename):
     config.set('Training', 'folds', settings.folds)
     config.set('Algorithm', 'epsilon_min', settings.epsilon_min)
     config.set('Algorithm', 'delta_min', settings.delta_min)
+    config.set('Algorithm', 'epsilon_min_min', settings.epsilon_min_min)
+    config.set('Algorithm', 'delta_min_min', settings.delta_min_min)
+    config.set('Algorithm', 'epsilon_min_max', settings.epsilon_min_max)
+    config.set('Algorithm', 'delta_min_max', settings.delta_min_max)
 
     if isinstance(settings, Settings):
         settings.filename_quantile = settings.prefix + 'Q_{}.npy'.format(

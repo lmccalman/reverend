@@ -38,6 +38,8 @@ class SparseRegressor
                const Eigen::MatrixXd& ys,
                double lowRankScale,
                double lowRankWeight,
+               double epsilonMin,
+               double deltaMin,
                Eigen::MatrixXd& weights); 
 
   private:
@@ -74,15 +76,10 @@ SparseRegressor<K>::SparseRegressor(uint trainLength, uint testLength, const Spa
     mu_pi_(trainLength),
     beta_(trainLength),
     embed_y_(trainLength),
-    chol_g_xx_(settings.epsilon_min),
-    chol_g_xx_lr_(int(trainLength*0.1), int(trainLength*0.1),1, settings.epsilon_min),
-    chol_ur_lr_(int(trainLength*0.1), int(trainLength*0.1),1, settings.delta_min ),
-    chol_u_(settings.epsilon_min),
-    chol_ur_(settings.delta_min),
-    chol_R_xy_(settings.delta_min),
-    chol_w_(settings.delta_min),
-    chol_n_(int(trainLength*0.1), int(trainLength*0.1),1, settings.epsilon_min),
-    chol_nr_(int(trainLength*0.1), int(trainLength*0.1),1, settings.delta_min),
+    chol_g_xx_lr_(int(trainLength*0.1), int(trainLength*0.1),1),
+    chol_ur_lr_(int(trainLength*0.1), int(trainLength*0.1),1),
+    chol_n_(int(trainLength*0.1), int(trainLength*0.1),1),
+    chol_nr_(int(trainLength*0.1), int(trainLength*0.1),1),
     settings_(settings),
     w_(trainLength){}
 
@@ -93,6 +90,8 @@ void SparseRegressor<K>::operator()(const TrainingData& data,
                           const Eigen::MatrixXd& ys,
                           double lowRankScale,
                           double lowRankWeight,
+                          double epsilonMin,
+                          double deltaMin,
                           Eigen::MatrixXd& weights)
 {
   const Eigen::MatrixXd& x = data.x;
@@ -115,28 +114,28 @@ void SparseRegressor<K>::operator()(const TrainingData& data,
   
   if (settings_.method == "sparse")
   {
-    chol_g_xx_.solve(kx.gramMatrix(), mu_pi_, beta_);
+    chol_g_xx_.solve(kx.gramMatrix(), mu_pi_, epsilonMin, beta_);
   }
   else if (settings_.method == "lowrank")
   {
     simpleNystromApproximation(data.x, kx_lr, columns, C, W);
-    VerifiedCholeskySolver<Eigen::MatrixXd> quickchol(columns,columns,n_, settings_.epsilon_min);
+    VerifiedCholeskySolver<Eigen::MatrixXd> quickchol(columns,columns,n_);
     Eigen::MatrixXd T(columns, n_);
-    quickchol.solve(W, C.transpose(), T);
-    chol_g_xx_lr_.solve(C * T, mu_pi_, beta_);
+    quickchol.solve(W, C.transpose(), epsilonMin, T);
+    chol_g_xx_lr_.solve(C * T, mu_pi_, epsilonMin, beta_);
   }
   else
   {
     Eigen::VectorXd L(n_);
-    chol_g_xx_.solve( kx.gramMatrix(), mu_pi_, L);
+    chol_g_xx_.solve( kx.gramMatrix(), mu_pi_, epsilonMin, L);
     L *= 1.0 / (1.0 - lowRankWeight);
     // add low rank update with bigger kernel.
     Eigen::MatrixXd M(n_, columns);  
     simpleNystromApproximation(data.x, kx_lr, columns, C, W);
-    chol_u_.solve(kx.gramMatrix(), C , M);
+    chol_u_.solve(kx.gramMatrix(), C, epsilonMin, M);
     M *= lowRankWeight / (1.0 - lowRankWeight);
     Eigen::VectorXd N(n_);
-    chol_n_.solve(W + C.transpose() * M, C.transpose()*L, N);
+    chol_n_.solve(W + C.transpose() * M, C.transpose()*L, epsilonMin, N);
     beta_ = L - M*N;
   }
   
@@ -161,27 +160,27 @@ void SparseRegressor<K>::operator()(const TrainingData& data,
     //sparse section
     if (settings_.method == "sparse")
     {
-      chol_w_.solve(beta_diag_ * ky.gramMatrix(), embed_y_, w_);
+      chol_w_.solve(beta_diag_ * ky.gramMatrix(), embed_y_, deltaMin, w_);
     }
     else if (settings_.method == "lowrank")
     {
-      VerifiedCholeskySolver<Eigen::MatrixXd> quickchol(columns,columns,n_, settings_.delta_min);
+      VerifiedCholeskySolver<Eigen::MatrixXd> quickchol(columns,columns,n_);
       Eigen::MatrixXd T(columns, n_);
-      quickchol.solve(W, C.transpose(), T);
-      chol_g_xx_lr_.solve(beta_.asDiagonal()*C * T, embed_y_, w_);
+      quickchol.solve(W, C.transpose(), deltaMin, T);
+      chol_g_xx_lr_.solve(beta_.asDiagonal()*C * T, embed_y_, epsilonMin, w_);
     } 
     else
     {
       Eigen::VectorXd L(n_);
       Eigen::MatrixXd M(n_, columns);  
       Eigen::VectorXd N(n_);
-      chol_w_.solve(beta_diag_ * ky.gramMatrix(), embed_y_, L);
+      chol_w_.solve(beta_diag_ * ky.gramMatrix(), embed_y_, deltaMin, L);
       L *= 1.0 / (1.0 - lowRankWeight);
       //low rank section 
       simpleNystromApproximation(data.x, kx_lr, columns, C, W);
-      chol_ur_.solve(beta_diag_ * ky.gramMatrix(), beta_.asDiagonal() * C , M);
+      chol_ur_.solve(beta_diag_ * ky.gramMatrix(), beta_.asDiagonal() * C , deltaMin,  M);
       M *= lowRankWeight / (1.0 - lowRankWeight);
-      chol_nr_.solve(W + C.transpose() * M, C.transpose()*L, N);
+      chol_nr_.solve(W + C.transpose() * M, C.transpose()*L, deltaMin, N);
       w_ = L - M*N;
     }
     

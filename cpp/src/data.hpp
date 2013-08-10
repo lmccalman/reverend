@@ -40,6 +40,10 @@ struct Settings
   double sigma_y_max;
   double epsilon_min;
   double delta_min;
+  double epsilon_min_min;
+  double delta_min_min;
+  double epsilon_min_max;
+  double delta_min_max;
   double walltime;
   double preimage_reg;
   double preimage_reg_min;
@@ -72,6 +76,10 @@ struct SparseSettings
   double sigma_y_max;
   double epsilon_min;
   double delta_min;
+  double epsilon_min_min;
+  double delta_min_min;
+  double epsilon_min_max;
+  double delta_min_max;
   double walltime;
   double low_rank_scale;
   double low_rank_scale_min;

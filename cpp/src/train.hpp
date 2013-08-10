@@ -19,6 +19,7 @@
 #include <nlopt.hpp>
 #include "crossval.hpp"
 #include "costfuncs.hpp"
+#include <cmath>
 
 double costWrapper(const std::vector<double>&x, std::vector<double>&grad, void* costClass)
 { 
@@ -46,7 +47,8 @@ std::vector<double> globalOptimum(NloptCost& costFunction, const std::vector<dou
   x = theta0;
   std::vector<double> grad(x.size());
   // nlopt::result result = opt.optimize(x, minf);
-  double firstcost = costFunction(x, grad);
+  // double firstcost = costFunction(x, grad);
+  
   opt.optimize(x, minf);
   
   std::cout << "Approximate Solution Found." << std::endl;
@@ -128,19 +130,29 @@ void trainSettings(const TrainingData& data, Settings& settings)
   bool jointMethod = ((cf == "logp_joint") || (cf == "pinball_joint"));
   if (jointMethod)
   {
-    std::vector<double> thetaMin(3);
-    std::vector<double> thetaMax(3);
-    std::vector<double> theta0(3);
+    std::vector<double> thetaMin(5);
+    std::vector<double> thetaMax(5);
+    std::vector<double> theta0(5);
+    
     theta0[0] = settings.sigma_x;
     theta0[1] = settings.sigma_y;
-    theta0[2] = log(settings.preimage_reg);
+    theta0[2] = log(settings.epsilon_min);
+    theta0[3] = log(settings.delta_min);
+    theta0[4] = log(settings.preimage_reg);
+
     thetaMin[0] = settings.sigma_x_min;
     thetaMin[1] = settings.sigma_y_min;
-    thetaMin[2] = log(settings.preimage_reg_min);
+    thetaMin[2] = log(settings.epsilon_min_min);
+    thetaMin[3] = log(settings.delta_min_min);
+    thetaMin[4] = log(settings.preimage_reg_min);
+
     thetaMax[0] = settings.sigma_x_max;
     thetaMax[1] = settings.sigma_y_max;
-    thetaMax[2] = log(settings.preimage_reg_max);
-    std::vector<double> thetaBest(3);
+    thetaMax[2] = log(settings.epsilon_min_max);
+    thetaMax[3] = log(settings.delta_min_max);
+    thetaMax[4] = log(settings.preimage_reg_max);
+    std::vector<double> thetaBest = theta0;
+    
     if (cf == "logp_joint")
     {
       settings.normed_weights = false;
@@ -155,13 +167,15 @@ void trainSettings(const TrainingData& data, Settings& settings)
     }
     settings.sigma_x = thetaBest[0];
     settings.sigma_y = thetaBest[1];
-    settings.preimage_reg = exp(thetaBest[2]);
+    settings.epsilon_min = exp(thetaBest[2]);
+    settings.delta_min = exp(thetaBest[3]);
+    settings.preimage_reg = exp(thetaBest[4]);
   }
   else // not a joint method
   {
-    std::vector<double> thetaMin(2);
-    std::vector<double> thetaMax(2);
-    std::vector<double> theta0(2);
+    std::vector<double> thetaMin(4);
+    std::vector<double> thetaMax(4);
+    std::vector<double> theta0(4);
     std::vector<double> thetaBest = theta0;
     std::vector<double> thetaPMin(1);
     std::vector<double> thetaPMax(1);
@@ -169,10 +183,16 @@ void trainSettings(const TrainingData& data, Settings& settings)
     std::vector<double> thetaPBest = thetaP0;
     theta0[0] = settings.sigma_x;
     theta0[1] = settings.sigma_y;
+    theta0[2] = log(settings.epsilon_min);
+    theta0[3] = log(settings.delta_min);
     thetaMin[0] = settings.sigma_x_min;
     thetaMin[1] = settings.sigma_y_min;
+    thetaMin[2] = log(settings.epsilon_min_min);
+    thetaMin[3] = log(settings.delta_min_min);
     thetaMax[0] = settings.sigma_x_max;
     thetaMax[1] = settings.sigma_y_max;
+    thetaMax[2] = log(settings.epsilon_min_max);
+    thetaMax[3] = log(settings.delta_min_max);
     thetaP0[0] = log(settings.preimage_reg);
     thetaPMin[0] = log(settings.preimage_reg_min);
     thetaPMax[0] = log(settings.preimage_reg_max);
@@ -215,6 +235,8 @@ void trainSettings(const TrainingData& data, Settings& settings)
     }
     settings.sigma_x = thetaBest[0];
     settings.sigma_y = thetaBest[1];
+    settings.epsilon_min = exp(thetaBest[2]);
+    settings.delta_min = exp(thetaBest[3]);
     settings.preimage_reg = exp(thetaPBest[0]);
   }
 }

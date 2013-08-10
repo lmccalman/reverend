@@ -48,7 +48,7 @@ int main(int argc, char** argv)
   Kernel<Q1CompactKernel, SparseMatrix> ky(trainData.y, settings.sigma_y);
   SparseRegressor<Q1CompactKernel> r(n, m, settings);
   r(trainData, kx, ky, testData.ys, settings.low_rank_scale,
-     settings.low_rank_weight, weights);
+     settings.low_rank_weight, settings.epsilon_min, settings.delta_min, weights);
   //write out the results 
   writeNPY(weights, settings.filename_weights);
   

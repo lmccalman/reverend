@@ -33,12 +33,14 @@ class SparseLogPCost:Cost
     {
       double sigma_x = x[0];
       double sigma_y = x[1];
-      double lowRankScale = x[2];
-      double lowRankWeight = x[3];
+      double epsilon_min = exp(x[2]);
+      double delta_min = exp(x[3]);
+      double lowRankScale = x[4];
+      double lowRankWeight = x[5];
       kx_.setWidth(sigma_x);
       ky_.setWidth(sigma_y);
       algo_(trainingData_, kx_, ky_, testingData_.ys, lowRankScale,
-          lowRankWeight, weights_);
+          lowRankWeight, epsilon_min, delta_min, weights_);
       uint testPoints = testingData_.xs.rows();
       double totalCost = 0.0;
       for (int i=0;i<testPoints;i++)

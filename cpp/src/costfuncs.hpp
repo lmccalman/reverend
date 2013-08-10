@@ -76,9 +76,11 @@ class LogPCost:Cost
     {
       double sigma_x = x[0];
       double sigma_y = x[1];
+      double epsilon_min = exp(x[2]);
+      double delta_min = exp(x[3]);
       kx_.setWidth(sigma_x);
       ky_.setWidth(sigma_y);
-      algo_(trainingData_, kx_, ky_, testingData_.ys, weights_);
+      algo_(trainingData_, kx_, ky_, testingData_.ys, epsilon_min, delta_min, weights_);
       uint testPoints = testingData_.xs.rows();
       double totalCost = 0.0;
       for (int i=0;i<testPoints;i++)
@@ -120,10 +122,12 @@ class JointLogPCost:Cost
     {
       double sigma_x = x[0];
       double sigma_y = x[1];
-      double preimage_reg = exp(x[2]);
+      double epsilon_min = exp(x[2]);
+      double delta_min = exp(x[3]);
+      double preimage_reg = exp(x[4]);
       kx_.setWidth(sigma_x);
       ky_.setWidth(sigma_y);
-      algo_(trainingData_, kx_, ky_, testingData_.ys, weights_);
+      algo_(trainingData_, kx_, ky_, testingData_.ys, epsilon_min, delta_min, weights_);
       uint testPoints = testingData_.xs.rows();
       Eigen::MatrixXd A = AMatrix(trainingData_.x, kx_, sigma_x);
       Eigen::MatrixXd B = BMatrix(trainingData_.x, kx_, sigma_x);
@@ -166,9 +170,11 @@ struct HilbertCost:Cost
     {
       double sigma_x = x[0];
       double sigma_y = x[1];
+      double epsilon_min = exp(x[2]);
+      double delta_min = exp(x[3]);
       kx_.setWidth(sigma_x);
       ky_.setWidth(sigma_y);
-      algo_(trainingData_, kx_, ky_, testingData_.ys, weights_);
+      algo_(trainingData_, kx_, ky_, testingData_.ys, epsilon_min, delta_min, weights_);
       uint testPoints = testingData_.xs.rows();
       uint n = trainingData_.x.rows();
       Eigen::VectorXd pointEmbedding(n);
@@ -204,7 +210,8 @@ class PreimageCost:Cost
       settings_(settings)
       {
         std::cout << "Initializing Preimage cost..." << std::endl;
-        regressor_(trainingData_, kx_, ky_, testingData_.ys, weights_);
+        regressor_(trainingData_, kx_, ky_, testingData_.ys, settings.epsilon_min,
+           settings.delta_min, weights_);
       }; 
 
     double operator()(const std::vector<double>&x, std::vector<double>&grad)
@@ -262,9 +269,11 @@ class PinballCost:Cost
     {
       double sigma_x = x[0];
       double sigma_y = x[1];
+      double epsilon_min = exp(x[2]);
+      double delta_min = exp(x[3]);
       kx_.setWidth(sigma_x);
       ky_.setWidth(sigma_y);
-      algo_(trainingData_, kx_, ky_, testingData_.ys, weights_);
+      algo_(trainingData_, kx_, ky_, testingData_.ys, epsilon_min, delta_min, weights_);
       uint testPoints = testingData_.xs.rows();
       double tau = settings_.quantile;
       double totalCost = 0.0;
@@ -307,11 +316,13 @@ class JointPinballCost:Cost
     {
       double sigma_x = x[0];
       double sigma_y = x[1];
-      double preimage_reg = exp(x[2]);
+      double epsilon_min = exp(x[2]);
+      double delta_min = exp(x[3]);
+      double preimage_reg = exp(x[4]);
       kx_.setWidth(sigma_x);
       ky_.setWidth(sigma_y);
       uint dim = trainingData_.x.cols();
-      algo_(trainingData_, kx_, ky_, testingData_.ys, weights_);
+      algo_(trainingData_, kx_, ky_, testingData_.ys, epsilon_min, delta_min, weights_);
       uint testPoints = testingData_.xs.rows();
       Eigen::MatrixXd A = AMatrix(trainingData_.x, kx_, sigma_x);
       Eigen::MatrixXd B = BMatrix(trainingData_.x, kx_, sigma_x);

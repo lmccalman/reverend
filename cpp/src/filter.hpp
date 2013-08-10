@@ -33,6 +33,8 @@ class Filter
                const Kernel<K>& kx,
                const Kernel<K>& ky, 
                const Eigen::MatrixXd& ys,
+               double epsilonMin,
+               double deltaMin,
                Eigen::MatrixXd& weights); 
 
   private:
@@ -73,10 +75,10 @@ Filter<K>::Filter(uint trainLength, uint testLength, const Settings& settings)
     beta_g_yy_(trainLength,trainLength),
     beta_diag_(trainLength, trainLength),
     r_xy_(trainLength,trainLength),
-    chol_g_yy_(trainLength,trainLength,1, settings.delta_min),
-    chol_beta_0_(trainLength,trainLength,1, settings.epsilon_min),
-    chol_beta_(trainLength,trainLength,1,settings.epsilon_min),
-    chol_beta_g_yy_(trainLength,trainLength,trainLength, settings.delta_min),
+    chol_g_yy_(trainLength,trainLength,1),
+    chol_beta_0_(trainLength,trainLength,1),
+    chol_beta_(trainLength,trainLength,1),
+    chol_beta_g_yy_(trainLength,trainLength,trainLength),
     w_(trainLength){}
 
 template <class K>
@@ -84,6 +86,8 @@ void Filter<K>::operator()(const TrainingData& data,
                           const Kernel<K>& kx,
                           const Kernel<K>& ky, 
                           const Eigen::MatrixXd& ys,
+                          double epsilonMin,
+                          double deltaMin,
                           Eigen::MatrixXd& weights)
 {
   uint n = data.x.rows();
@@ -104,7 +108,7 @@ void Filter<K>::operator()(const TrainingData& data,
   y0 = data.y.block(0,0,1,dim_y_).transpose();
   Eigen::VectorXd mu_dash(n);
   ky.embed(y0, mu_dash);
-  chol_g_yy_.solve(ky.gramMatrix(), mu_dash, mu_pi_);
+  chol_g_yy_.solve(ky.gramMatrix(), mu_dash, deltaMin, mu_pi_);
   weights.row(0) = mu_pi_;
 
   auto s = weights.rows();
@@ -113,9 +117,9 @@ void Filter<K>::operator()(const TrainingData& data,
     mu_pi_ = mu_pi_.cwiseMax(0.0);
     mu_pi_ = mu_pi_ / mu_pi_.sum();
     mu_pi_ = kx.gramMatrix() * mu_pi_; 
-    chol_beta_0_.solve(kx.gramMatrix(), mu_pi_, beta_0_);
+    chol_beta_0_.solve(kx.gramMatrix(), mu_pi_, epsilonMin, beta_0_);
     beta_0_ = g_xxtp1_ * beta_0_;
-    chol_beta_.solve(kx.gramMatrix(), beta_0_, beta_);
+    chol_beta_.solve(kx.gramMatrix(), beta_0_, epsilonMin, beta_);
     if (settings_.normed_weights)
     {
       beta_ = beta_.cwiseMax(0.0);
@@ -128,7 +132,7 @@ void Filter<K>::operator()(const TrainingData& data,
       {
         beta_diag_ = beta_.asDiagonal();
         beta_g_yy_ = beta_diag_ * ky.gramMatrix();
-        chol_beta_g_yy_.solve(beta_g_yy_, beta_diag_, r_xy_);
+        chol_beta_g_yy_.solve(beta_g_yy_, beta_diag_, deltaMin, r_xy_);
       }
       else
       {
@@ -138,7 +142,7 @@ void Filter<K>::operator()(const TrainingData& data,
         beta_diag_ = beta_.asDiagonal();
         Eigen::MatrixXd b = ky.gramMatrix() * beta_diag_;
         Eigen::MatrixXd A = b * ky.gramMatrix();
-        chol_beta_g_yy_.solve(A, b, r_xy_);
+        chol_beta_g_yy_.solve(A, b, deltaMin, r_xy_);
       }
       //actual inference part 
       auto yi = ys.row(i);

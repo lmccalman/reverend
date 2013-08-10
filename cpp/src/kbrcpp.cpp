@@ -59,12 +59,12 @@ int main(int argc, char** argv)
   if (settings.inference_type == std::string("filter"))
   {
     Filter<RBFKernel> f(n, m, settings);
-    f(trainData, kx, ky, testData.ys, weights);
+    f(trainData, kx, ky, testData.ys, settings.epsilon_min, settings.delta_min, weights);
   }
   else
   {
     Regressor<RBFKernel> r(n, m, settings);
-    r(trainData, kx, ky, testData.ys, weights);
+    r(trainData, kx, ky, testData.ys, settings.epsilon_min, settings.delta_min, weights);
   }
   //write out the results 
   writeNPY(weights, settings.filename_weights);

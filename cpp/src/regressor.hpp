@@ -33,6 +33,8 @@ class Regressor
                const Kernel<K>& kx,
                const Kernel<K>& ky, 
                const Eigen::MatrixXd& ys,
+               double epsilonMin,
+               double deltaMin,
                Eigen::MatrixXd& weights); 
 
   private:
@@ -66,8 +68,8 @@ Regressor<K>::Regressor(uint trainLength, uint testLength, const Settings& setti
     beta_g_yy_(trainLength,trainLength),
     beta_diag_(trainLength, trainLength),
     r_xy_(trainLength,trainLength),
-    chol_g_xx_(trainLength,trainLength,1, settings.epsilon_min),
-    chol_beta_g_yy_(trainLength,trainLength,trainLength, settings.delta_min),
+    chol_g_xx_(trainLength,trainLength,1),
+    chol_beta_g_yy_(trainLength,trainLength,trainLength),
     w_(trainLength){}
 
 template <class K>
@@ -75,12 +77,14 @@ void Regressor<K>::operator()(const TrainingData& data,
                           const Kernel<K>& kx,
                           const Kernel<K>& ky, 
                           const Eigen::MatrixXd& ys,
+                          double epsilonMin,
+                          double deltaMin,
                           Eigen::MatrixXd& weights)
 {
   //compute prior embedding
   kx.embed(data.u, data.lambda, mu_pi_);
   //get jitchol of gram matrix
-  chol_g_xx_.solve(kx.gramMatrix(), mu_pi_, beta_);
+  chol_g_xx_.solve(kx.gramMatrix(), mu_pi_, epsilonMin, beta_);
   
   if (settings_.normed_weights)
   {
@@ -88,7 +92,7 @@ void Regressor<K>::operator()(const TrainingData& data,
     beta_ = beta_ / beta_.sum();
     beta_diag_ = beta_.asDiagonal();
     beta_g_yy_ = beta_diag_ * ky.gramMatrix();
-    chol_beta_g_yy_.solve(beta_g_yy_, beta_diag_, r_xy_);
+    chol_beta_g_yy_.solve(beta_g_yy_, beta_diag_, deltaMin, r_xy_);
   }
   else
   {
@@ -98,7 +102,7 @@ void Regressor<K>::operator()(const TrainingData& data,
     beta_diag_ = beta_.asDiagonal();
     Eigen::MatrixXd b = ky.gramMatrix() * beta_diag_;
     Eigen::MatrixXd A = b * ky.gramMatrix();
-    chol_beta_g_yy_.solve(A, b, r_xy_);
+    chol_beta_g_yy_.solve(A, b, deltaMin, r_xy_);
   }
   //now infer
   auto s = weights.rows();
