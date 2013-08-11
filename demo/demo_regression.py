@@ -58,7 +58,7 @@ settings.sigma_y_min = 0.1
 settings.sigma_y = 0.17
 settings.sigma_y_max = 0.5
 
-settings.epsilon_min_min = 1e-8
+settings.epsilon_min_min = 1e-10
 settings.epsilon_min = 1e-5
 settings.epsilon_min_max = 1e-4
 
@@ -73,10 +73,10 @@ settings.preimage_reg_max = 1e2
 #Some other settings
 settings.inference_type = 'regress'
 settings.cumulative_estimate = True
-settings.cumulative_mean_map = False
+settings.cumulative_mean_map = True
 settings.quantile_estimate = True
 settings.quantile = 0.5
-settings.walltime = 12.0
+settings.walltime = 120.0
 settings.preimage_walltime = 12.0
 settings.folds = 20
 settings.observation_period = 1
