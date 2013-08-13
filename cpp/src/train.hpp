@@ -36,6 +36,7 @@ std::vector<double> globalOptimum(NloptCost& costFunction, const std::vector<dou
   nlopt::opt localopt(nlopt::LN_COBYLA, n);
   localopt.set_ftol_rel(1e-5);
   localopt.set_ftol_abs(1e-4);
+  localopt.set_xtol_rel(1e-8);
 
   opt.set_local_optimizer(localopt);
   opt.set_min_objective(costWrapper, &costFunction);
@@ -61,13 +62,15 @@ std::vector<double> globalOptimum(NloptCost& costFunction, const std::vector<dou
   std::cout << "Refining..." << std::endl;
   minf = 0.0;
   nlopt::opt refopt(nlopt::LN_COBYLA, n);
-  refopt.set_ftol_rel(1e-15);
+  refopt.set_ftol_rel(1e-8);
   refopt.set_ftol_abs(1e-7);
   refopt.set_min_objective(costWrapper, &costFunction);
   refopt.set_lower_bounds(thetaMin);
   refopt.set_upper_bounds(thetaMax);
   refopt.set_maxtime(wallTime/2.0);
-  refopt.optimize(x, minf);
+  try {refopt.optimize(x, minf);}
+  catch(nlopt::roundoff_limited a)
+  {}
   std::cout << "Final Estimate" << std::endl;
   std::cout << "[ "; 
   for (uint i=0;i<x.size();i++)

@@ -164,8 +164,11 @@ void positiveNormedCoeffs(const Eigen::VectorXd& embedding,
   opt.set_maxtime(10.0); // if it's longer than this we're prolly stuffed anyway
   // opt.add_equality_constraint(preimageConstraint, NULL, 1e-6);
   opt.set_xtol_rel(1e-4);
+  opt.set_ftol_rel(1e-5);
   double minf;
-  nlopt::result result = opt.optimize(x, minf);
+  try {opt.optimize(x, minf);}
+  catch(nlopt::roundoff_limited a)
+  {}
   double total = 0.0;
   for (int i=0;i<n; i++)
   {
