@@ -164,7 +164,7 @@ class Quantile
     {
       QuantileWrapper<K> F(c_,tau);
       boost::math::tools::eps_tolerance<double> tol(11); 
-      long unsigned int maxIterations = 1000;
+      long long unsigned int maxIterations = 1000;
       double result;
       double fmin = F(xmin_);
       double fmax = F(xmax_);
