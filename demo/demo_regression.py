@@ -48,15 +48,15 @@ settings = kbrcpp.Settings(prefix)
 # 'pinball_direct'
 # 'pinball_joint'
 # 'hilbert'
-settings.cost_function = 'logp_joint'
+settings.cost_function = 'pinball_joint'
 
-settings.sigma_x_min = 0.1
+settings.sigma_x_min = 0.05
 settings.sigma_x = 0.2
-settings.sigma_x_max = 0.5
+settings.sigma_x_max = 1.0
 
-settings.sigma_y_min = 0.1
+settings.sigma_y_min = 0.05
 settings.sigma_y = 0.17
-settings.sigma_y_max = 0.5
+settings.sigma_y_max = 1.0
 
 settings.epsilon_min_min = 1e-10
 settings.epsilon_min = 1e-5
@@ -75,10 +75,10 @@ settings.inference_type = 'regress'
 settings.cumulative_estimate = True
 settings.cumulative_mean_map = True
 settings.quantile_estimate = True
-settings.quantile = 0.5
-settings.walltime = 1200.0
+settings.quantile = 0.9
+settings.walltime = 30.0
 settings.preimage_walltime = 12.0
-settings.folds = 20
+settings.folds = 5
 settings.observation_period = 1
 
 

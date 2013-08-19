@@ -92,11 +92,12 @@ void kFoldData(uint k, const TrainingData& allData, std::vector<TrainingData>& f
     std::vector<TestingData>& foldTesting)
 {
   uint n = allData.x.rows();
-  assert(n == allData.u.rows());
+  // assert(n == allData.u.rows());
   assert(n == allData.y.rows());
   uint dx = allData.x.cols();
   uint dy = allData.y.cols();
   uint du = allData.u.cols();
+  uint priorSize = allData.u.rows();
   assert(dx == du);
   for (uint i=0; i<k; i++)
   {
@@ -107,13 +108,11 @@ void kFoldData(uint k, const TrainingData& allData, std::vector<TrainingData>& f
     Eigen::MatrixXd xs(testSize, dx);
     Eigen::MatrixXd y(trainSize, dy);
     Eigen::MatrixXd ys(testSize, dy);
-    Eigen::MatrixXd u(trainSize, du);
-    Eigen::MatrixXd us(testSize, du);
+    Eigen::MatrixXd u = allData.u;
     fillSubset(k, i, allData.x, x, xs);
     fillSubset(k, i, allData.y, y, ys);
-    fillSubset(k, i, allData.u, u, us);
-    Eigen::VectorXd lambda = Eigen::VectorXd::Ones(trainSize);
-    lambda = lambda / double(trainSize);
+    Eigen::VectorXd lambda = Eigen::VectorXd::Ones(priorSize);
+    lambda = lambda / double(priorSize);
     if (allData.xtp1.rows() > 0)
     {
       Eigen::MatrixXd xtp1(trainSize, dx);

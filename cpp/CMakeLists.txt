@@ -26,7 +26,6 @@ set(CNPY_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/../cnpy)
 set(CNPY_LIB_DIR ${PROJECT_SOURCE_DIR}/../cnpy)
 
 # set(QUADPROG_INCLUDE_DIR ${PROJECT_SOURCE_DIR}/../quadprog)
-
 find_library(CNPY_LIBRARY NAMES "cnpy" PATHS ${CNPY_LIB_DIR})
 find_library(NLOPT_LIBRARY NAMES "nlopt") 
 
