@@ -42,9 +42,9 @@ filename_config = 'motorcycle_regressor.ini'
 prefix = 'mc'  # will automatically construct all filenames
 settings = kbrcpp.Settings(prefix)
 
-settings.normed_weights = False
-settings.sigma_x_min = 0.05
-settings.sigma_x = 0.5
+settings.normed_weights = True
+settings.sigma_x_min = 0.005
+settings.sigma_x = 0.05
 settings.sigma_x_max = 1.0
 
 settings.sigma_y_min = 0.005
@@ -68,10 +68,10 @@ settings.inference_type = 'regress'
 settings.cumulative_estimate = True
 settings.cumulative_mean_map = True
 settings.quantile_estimate = True
-settings.quantile = 0.9
-settings.walltime = 10.0
+settings.quantiles = 0.5
+settings.walltime = 20.0
 settings.preimage_walltime = 12.0
-settings.folds = 5
+settings.folds = 20
 settings.observation_period = 1
 
 
@@ -121,14 +121,14 @@ def main():
     axes = fig.add_subplot(121)
     axes.set_title('Posterior Embedding')
     axes.imshow(E.T, origin='lower', 
-                extent=(ysmin, ysmax, xsmin, xsmax),cmap=cm.jet, aspect='auto')
+                extent=(ysmin, ysmax, xsmin, xsmax),cmap=cm.hot, aspect='auto')
     axes.scatter(Y, X, c='y')
     axes.set_xlim(ysmin, ysmax)
     axes.set_ylim(xsmin, xsmax)
     axes = fig.add_subplot(122)
     axes.set_title('PDF estimate')
     axes.imshow(np.exp(pdf).T, origin='lower', 
-            extent=(ysmin, ysmax, xsmin, xsmax), cmap=cm.jet, aspect='auto')
+            extent=(ysmin, ysmax, xsmin, xsmax), cmap=cm.hot, aspect='auto')
     axes.scatter(Y, X, c='y')
     axes.set_xlim(ysmin, ysmax)
     axes.set_ylim(xsmin, xsmax)
