@@ -23,20 +23,16 @@
   
 template <class K>
 void computeGramMatrix(const K& k, 
-                       double width,
+                       const Eigen::VectorXd& width,
                        const Eigen::MatrixXd& X,
                        Eigen::MatrixXd& g);
-template <class K>
-void computeGramMatrix(const K& k,
-                       double width, 
-                       const Eigen::MatrixXd& X, 
-                       Eigen::SparseMatrix<double>& g);
+
 
 template <class T, class M = Eigen::MatrixXd>
 class Kernel
 {
   public:
-    Kernel(const Eigen::MatrixXd& X, double width):
+    Kernel(const Eigen::MatrixXd& X, Eigen::VectorXd& width):
       isGramUpdated_(false), X_(X), g_xx_(X.rows(), X.rows()), width_(width)
     {
       volume_ = k_.volume(width_, X_.cols());
@@ -52,11 +48,11 @@ class Kernel
       return g_xx_;
     }
     
-    double width() const {return width_;}
+    Eigen::VectorXd width() const {return width_;}
     
     double volume() const {return volume_;}
     
-    void setWidth(double w)
+    void setWidth(const Eigen::VectorXd& w)
     {
       isGramUpdated_ = false;
       width_ = w;
@@ -92,7 +88,6 @@ class Kernel
 
     double innerProduct(const Eigen::VectorXd& x1, const Eigen::VectorXd& x2) const
     {
-      // computeGramMatrix(k_, width_, X_, g_xx_);
       double result = x1.transpose() * this->gramMatrix() * x2;
       return result;
     }
@@ -127,12 +122,12 @@ class Kernel
     T k_;
     const Eigen::MatrixXd& X_;
     mutable M g_xx_;
-    double width_ = 1.0;
+    Eigen::VectorXd width_;
     double volume_ = 0.0;
 };
 
 template <class K>
-void computeGramMatrix(const K& k, double width, const Eigen::MatrixXd& X, Eigen::MatrixXd& g)
+void computeGramMatrix(const K& k, const Eigen::VectorXd& width, const Eigen::MatrixXd& X, Eigen::MatrixXd& g)
 {
   uint n = X.rows();
   for(uint i=0; i<n;i++)
@@ -144,68 +139,49 @@ void computeGramMatrix(const K& k, double width, const Eigen::MatrixXd& X, Eigen
   }
 }
 
-template <class K>
-void computeGramMatrix(const K& k, double width, const Eigen::MatrixXd& X, Eigen::SparseMatrix<double>& g)
-{
-  std::vector< Eigen::Triplet<double> > coeffs;
-  uint n = X.rows();
-  for(uint i=0; i<n;i++)
-  {
-    for(uint j=0;j<n;j++)
-    {
-      double r = (X.row(i) - X.row(j)).norm();
-      if (r < width)
-      {
-        double val = k(X.row(i),X.row(j), width);
-        coeffs.push_back(Eigen::Triplet<double>(i,j,val));
-      }
-    }
-  }
-  g.setFromTriplets(coeffs.begin(), coeffs.end()); 
-}
-
-
 class RBFKernel
 {
   public:
     RBFKernel(){}
     double operator()(const Eigen::VectorXd& x,
           const Eigen::VectorXd& x_dash,
-          double sigma) const
+          const Eigen::VectorXd& sigma) const
     {
-      return exp(-0.5 * (x - x_dash).squaredNorm() / (sigma*sigma));
+      Eigen::VectorXd invsig = sigma.array().inverse();
+      return exp(-0.5*(invsig.asDiagonal() * (x - x_dash)).squaredNorm());
     }
     
     double logk(const Eigen::VectorXd& x,
         const Eigen::VectorXd& x_dash,
         double sigma) const
     {
-      return -0.5 * (x - x_dash).squaredNorm() / (sigma*sigma);
+      Eigen::VectorXd invsig = sigma.array().inverse();
+      return -0.5*(invsig.asDiagonal() * (x - x_dash)).squaredNorm();
     }
     
     
-    double halfSupport(double width) const
+    double halfSupport(const Eigen::VectorXd& width) const
     {
-      return 5.0*width; 
+      return 5.0*width.maxCoeff(); 
     }
 
-    double volume(double sigma, uint dimension) const
+    double volume(const Eigen::VectorXd& sigma, uint dimension) const
     {
-      return pow(2*M_PI, dimension/double(2.0)) * pow(sigma, dimension);
+      return pow(2*M_PI, dimension/double(2.0)) * sigma.prod();
     }
 
     void embedIndicator(const Eigen::VectorXd& cutoff,
-        const Eigen::MatrixXd& X, double sigma_x, Eigen::VectorXd& weights) const
+        const Eigen::MatrixXd& X, const Eigen::VectorXd& sigma_x, Eigen::VectorXd& weights) const
     {
       uint n = X.rows();
       uint dx = X.cols();
       double a = std::sqrt(2.0 * M_PI) * sigma_x;
-      double denom = 1.0 / (sigma_x*std::sqrt(2.0));
       for (uint i=0; i<n; i++)
       {
         double dim_result = 1.0;
         for (uint d=0; d<dx; d++)
         {
+          double denom = 1.0 / (sigma_x(d)*std::sqrt(2.0));
           double p = cutoff(d);
           double m = X(i,d);
           dim_result *= a * 0.5 * (1.0 + std::erf((p - m)*denom));
@@ -215,13 +191,13 @@ class RBFKernel
     }
     double cumulative(const Eigen::VectorXd& cutoff,
                       const Eigen::VectorXd& centre,
-                      double sigma_x) const
+                      const Eigen::VectorXd& sigma_x) const
     {
-      double denom = 1.0 / (sigma_x*std::sqrt(2.0));
       uint dx = cutoff.size(); 
       double dim_result = 1.0;
       for (uint d=0;d<dx; d++)
       {
+        double denom = 1.0 / (sigma_x(d)*std::sqrt(2.0));
         double p = cutoff(d);
         double m = centre(d);
         dim_result *= 0.5 * (1.0 + std::erf( (p - m)*denom ));
@@ -229,56 +205,3 @@ class RBFKernel
       return dim_result;
     }
 };
-
-class Q1CompactKernel
-{
-  public:
-    Q1CompactKernel(){}
-    double operator()(const Eigen::VectorXd& x,
-        const Eigen::VectorXd& x_dash,
-        double sigma) const
-    {
-      int D = x.size();
-      double j = D/2.0 + 2;
-      double r = (x-x_dash).norm() / sigma;
-      double result = 0;
-      if (r < 1.0)
-      {
-        result = pow((1-r),(j+1)) * ((j+1)*r + 1);
-      }
-      return result;
-    }
-    
-    double logk(const Eigen::VectorXd& x,
-        const Eigen::VectorXd& x_dash,
-        double sigma) const
-    {
-      return log( (*this)(x, x_dash, sigma) ); 
-    }
-    
-    double halfSupport(double width) const
-    {
-      return width; 
-    }
-    
-    double volume(double sigma, uint dimension) const
-    {
-      return 2 * pow(M_PI, dimension/2.0) 
-             * 4 * sigma  / tgamma(dimension/2.0) / (dimension + 10);
-    }
-
-    void embedIndicator(const Eigen::VectorXd& cutoff,
-        const Eigen::MatrixXd& X, double sigma_x, Eigen::VectorXd& weights) const
-    {
-      std::cout << "Q1 KERNEL SUPPORT FOR CUMULATIVE NOT IMPLEMENTED" << std::endl;
-    }
-
-    double cumulative(const Eigen::VectorXd& cutoff,
-        const Eigen::VectorXd& centre,
-        double sigma_x) const
-    {
-      std::cout << "Q1 KERNEL SUPPORT FOR CUMULATIVE NOT IMPLEMENTED" << std::endl;
-      return 0.0;
-    }
-};
-
