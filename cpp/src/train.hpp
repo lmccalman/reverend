@@ -16,6 +16,8 @@
 // along with Reverend.  If not, see <http://www.gnu.org/licenses/>.
 #pragma once
 #include <iostream>
+#include <iterator>
+#include <algorithm>
 #include <nlopt.hpp>
 #include "crossval.hpp"
 #include "costfuncs.hpp"
@@ -31,6 +33,18 @@ double costWrapper(const std::vector<double>&x, std::vector<double>&grad, void* 
 std::vector<double> globalOptimum(NloptCost& costFunction, const std::vector<double>& thetaMin,
     const std::vector<double>& thetaMax, const std::vector<double>& theta0, double wallTime)
 {
+  std::cout << "Optimizer Initialized..." << std::endl; 
+  std::cout << "thetaMin:" << std::endl;
+  for (double e : thetaMin)
+    std::cout << e << " ";
+  std::cout << std::endl << "theta0:" << std::endl;
+  for (double e : theta0)
+    std::cout << e << " ";
+  std::cout << std::endl << "thetaMax:" << std::endl;
+  for (double e : thetaMax)
+    std::cout << e << " ";
+  std::cout << std::endl;
+  
   uint n = theta0.size();
   nlopt::opt opt(nlopt::G_MLSL_LDS, n);
   nlopt::opt localopt(nlopt::LN_COBYLA, n);
@@ -81,47 +95,6 @@ std::vector<double> globalOptimum(NloptCost& costFunction, const std::vector<dou
   return x;
 }
 
-// std::vector<double> globalOptimum(NloptCost& costFunction, const std::vector<double>& thetaMin,
-    // const std::vector<double>& thetaMax, const std::vector<double>& theta0, double wallTime)
-// {
-  // uint n = theta0.size();
-  // uint xevals = 50; 
-  // uint yevals = 50;
-  // double bestx = 0.0;
-  // double besty = 0.0;
-  // double bestCost = -1e200;
-  // double dx = (thetaMax[0] - thetaMin[0])/double(xevals);
-  // double dy = (thetaMax[1] - thetaMin[1])/double(yevals);
-  // std::vector<double> x = theta0;
-  // std::vector<double> grad(n);
-  // Eigen::MatrixXd results(xevals*yevals,3);
-  // uint counter = 0;
-  // for (uint i=0; i<xevals; i++) 
-  // {
-    // for (uint j=0; j<yevals; j++)
-    // {
-      // x[0] = thetaMin[0] + i*dx;
-      // x[1] = thetaMin[1] + j*dy;
-      // results(counter, 0) = x[0];
-      // results(counter, 1) = x[1];
-      // double cost = costFunction(x, grad);
-      // results(counter, 2) = cost;
-      // counter++;
-      // if (cost < bestCost)
-      // {
-        // bestCost = cost;
-        // bestx = x[0];
-        // besty = x[1];
-      // }
-    // }
-    // std::cout << counter/double(xevals*yevals)*100 << "% complete" << std::endl; 
-  // }
-  // x[0] = bestx;
-  // x[1] = besty;
-  // writeCSV(results, "costLandscape.csv");
-  // return x;
-// }
-
 //Epic training function
 template <class A, class K>
 void trainSettings(const TrainingData& data, Settings& settings)
@@ -129,118 +102,62 @@ void trainSettings(const TrainingData& data, Settings& settings)
   uint folds = settings.folds;
   double wallTime = settings.walltime;
   double preimageWalltime = settings.preimage_walltime;
-  std::string cf = settings.cost_function;
-  bool jointMethod = ((cf == "logp_joint") || (cf == "pinball_joint"));
-  if (jointMethod)
+  bool normedWeights = settings.normed_weights;
+  uint dx = data.x.cols();
+  uint dy = data.y.cols();
+  uint totalParams;
+  if (normedWeights)
   {
-    std::vector<double> thetaMin(5);
-    std::vector<double> thetaMax(5);
-    std::vector<double> theta0(5);
-    
-    theta0[0] = settings.sigma_x;
-    theta0[1] = settings.sigma_y;
-    theta0[2] = log(settings.epsilon_min);
-    theta0[3] = log(settings.delta_min);
-    theta0[4] = log(settings.preimage_reg);
-
-    thetaMin[0] = settings.sigma_x_min;
-    thetaMin[1] = settings.sigma_y_min;
-    thetaMin[2] = log(settings.epsilon_min_min);
-    thetaMin[3] = log(settings.delta_min_min);
-    thetaMin[4] = log(settings.preimage_reg_min);
-
-    thetaMax[0] = settings.sigma_x_max;
-    thetaMax[1] = settings.sigma_y_max;
-    thetaMax[2] = log(settings.epsilon_min_max);
-    thetaMax[3] = log(settings.delta_min_max);
-    thetaMax[4] = log(settings.preimage_reg_max);
-    std::vector<double> thetaBest = theta0;
-    
-    if (cf == "logp_joint")
-    {
-      settings.normed_weights = false;
-      KFoldCVCost< JointLogPCost<A,K> > costfunc(folds, data, settings);
-      thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
-    }
-    else // must be pinball joint
-    {
-      settings.normed_weights = false;
-      KFoldCVCost< JointPinballCost<A,K> > costfunc(folds, data, settings);
-      thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
-    }
-    settings.sigma_x = thetaBest[0];
-    settings.sigma_y = thetaBest[1];
-    settings.epsilon_min = exp(thetaBest[2]);
-    settings.delta_min = exp(thetaBest[3]);
-    settings.preimage_reg = exp(thetaBest[4]);
+    totalParams = dx + dy + 2;
   }
-  else // not a joint method
+  else
   {
-    std::vector<double> thetaMin(4);
-    std::vector<double> thetaMax(4);
-    std::vector<double> theta0(4);
-    std::vector<double> thetaBest = theta0;
-    std::vector<double> thetaPMin(1);
-    std::vector<double> thetaPMax(1);
-    std::vector<double> thetaP0(1);
-    std::vector<double> thetaPBest = thetaP0;
-    theta0[0] = settings.sigma_x;
-    theta0[1] = settings.sigma_y;
-    theta0[2] = log(settings.epsilon_min);
-    theta0[3] = log(settings.delta_min);
-    thetaMin[0] = settings.sigma_x_min;
-    thetaMin[1] = settings.sigma_y_min;
-    thetaMin[2] = log(settings.epsilon_min_min);
-    thetaMin[3] = log(settings.delta_min_min);
-    thetaMax[0] = settings.sigma_x_max;
-    thetaMax[1] = settings.sigma_y_max;
-    thetaMax[2] = log(settings.epsilon_min_max);
-    thetaMax[3] = log(settings.delta_min_max);
-    thetaP0[0] = log(settings.preimage_reg);
-    thetaPMin[0] = log(settings.preimage_reg_min);
-    thetaPMax[0] = log(settings.preimage_reg_max);
-    if (cf == "logp_norm")
-    {
-      settings.normed_weights = true;
-      KFoldCVCost< LogPCost<A,K> > costfunc(folds, data, settings);
-      thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
-    }
-    else if (cf == "logp_preimage")
-    {
-      settings.normed_weights = false;
-      KFoldCVCost< LogPCost<A,K> > costfunc(folds, data, settings);
-      thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
-      KFoldCVCost< PreimageCost<K> > pmcostfunc(folds, data, settings);
-      thetaPBest = globalOptimum(pmcostfunc, thetaPMin, thetaPMax, thetaP0,
-                                 preimageWalltime);
-    }
-    else if (cf == "pinball_norm")
-    {
-      settings.normed_weights = true;
-      KFoldCVCost< PinballCost<A,K> > costfunc(folds, data, settings);
-      thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
-    }
-    else if (cf == "pinball_direct")
-    {
-      settings.normed_weights = false;
-      KFoldCVCost< PinballCost<A,K> > costfunc(folds, data, settings);
-      thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
-    }
-    else if (cf == "hilbert")
-    {
-      settings.normed_weights = false;
-      KFoldCVCost< HilbertCost<A,K> > costfunc(folds, data, settings);
-      thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
-    }
-    else
-    {
-      std::cout << "ERROR -- invalid cost function" << std::endl;
-    }
-    settings.sigma_x = thetaBest[0];
-    settings.sigma_y = thetaBest[1];
-    settings.epsilon_min = exp(thetaBest[2]);
-    settings.delta_min = exp(thetaBest[3]);
-    settings.preimage_reg = exp(thetaPBest[0]);
+    totalParams = dx + dy + 3;
+  }
+  std::vector<double> thetaMin(totalParams);
+  std::vector<double> thetaMax(totalParams);
+  std::vector<double> theta0(totalParams);
+  for (uint i=0; i<dx; i++)
+  { 
+    theta0[i] = settings.sigma_x(i);
+    thetaMin[i] = settings.sigma_x_min(i);
+    thetaMax[i] = settings.sigma_x_max(i);
+  }
+  for (uint i=0; i<dy; i++)
+  { 
+    theta0[i+dx] = settings.sigma_y(i);
+    thetaMin[i+dx] = settings.sigma_y_min(i);
+    thetaMax[i+dx] = settings.sigma_y_max(i);
+  }
+  theta0[dx+dy] = log(settings.epsilon_min);
+  theta0[dx+dy+1] = log(settings.delta_min);
+  thetaMin[dx+dy] = log(settings.epsilon_min_min);
+  thetaMin[dx+dy+1] = log(settings.delta_min_min);
+  thetaMax[dx+dy] = log(settings.epsilon_min_max);
+  thetaMax[dx+dy+1] = log(settings.delta_min_max);
+ 
+  if (!normedWeights) 
+  {
+    theta0[dx+dy+2] = log(settings.preimage_reg);
+    thetaMin[dx+dy+2] = log(settings.preimage_reg_min);
+    thetaMax[dx+dy+2] = log(settings.preimage_reg_max);
+  }
+  std::vector<double> thetaBest = theta0;
+  KFoldCVCost< LogPCost<A,K> > costfunc(folds, data, settings);
+  thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
+  for (uint i=0; i<dx; i++)
+  { 
+    settings.sigma_x(i) = thetaBest[i];
+  }
+  for (uint i=0; i<dy; i++)
+  { 
+    settings.sigma_y(i) = thetaBest[i+dx];
+  }
+  settings.epsilon_min = exp(thetaBest[dx+dy]);
+  settings.delta_min = exp(thetaBest[dx+dy+1]);
+  if (!normedWeights)
+  {
+    settings.preimage_reg = exp(thetaBest[dx+dy+2]);
   }
 }
 

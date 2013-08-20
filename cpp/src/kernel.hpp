@@ -32,7 +32,7 @@ template <class T, class M = Eigen::MatrixXd>
 class Kernel
 {
   public:
-    Kernel(const Eigen::MatrixXd& X, Eigen::VectorXd& width):
+    Kernel(const Eigen::MatrixXd& X, const Eigen::VectorXd& width):
       isGramUpdated_(false), X_(X), g_xx_(X.rows(), X.rows()), width_(width)
     {
       volume_ = k_.volume(width_, X_.cols());
@@ -147,16 +147,14 @@ class RBFKernel
           const Eigen::VectorXd& x_dash,
           const Eigen::VectorXd& sigma) const
     {
-      Eigen::VectorXd invsig = sigma.array().inverse();
-      return exp(-0.5*(invsig.asDiagonal() * (x - x_dash)).squaredNorm());
+      return exp(-0.5*(x - x_dash).cwiseQuotient(sigma).squaredNorm());
     }
     
     double logk(const Eigen::VectorXd& x,
         const Eigen::VectorXd& x_dash,
-        double sigma) const
+        const Eigen::VectorXd& sigma) const
     {
-      Eigen::VectorXd invsig = sigma.array().inverse();
-      return -0.5*(invsig.asDiagonal() * (x - x_dash)).squaredNorm();
+      return -0.5*(x - x_dash).cwiseQuotient(sigma).squaredNorm();
     }
     
     
@@ -167,7 +165,7 @@ class RBFKernel
 
     double volume(const Eigen::VectorXd& sigma, uint dimension) const
     {
-      return pow(2*M_PI, dimension/double(2.0)) * sigma.prod();
+      return pow(2.0*M_PI, dimension*0.5) * pow(sigma.prod(), 0.5);
     }
 
     void embedIndicator(const Eigen::VectorXd& cutoff,
@@ -175,7 +173,7 @@ class RBFKernel
     {
       uint n = X.rows();
       uint dx = X.cols();
-      double a = std::sqrt(2.0 * M_PI) * sigma_x;
+      double a = volume(sigma_x,dx);
       for (uint i=0; i<n; i++)
       {
         double dim_result = 1.0;

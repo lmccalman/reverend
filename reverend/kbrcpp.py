@@ -36,20 +36,6 @@ class Settings(object):
             self.filename_posterior = prefix + 'P.npy'
             self.filename_cumulative = prefix + 'C.npy'
 
-
-class SparseSettings(object):
-    def __init__(self, prefix=None):
-        self.prefix = prefix
-        if prefix is not None:
-            self.filename_X = prefix + 'X.npy'
-            self.filename_Y = prefix + 'Y.npy'
-            self.filename_X_s = prefix + 'X_s.npy'
-            self.filename_Y_s = prefix + 'Y_s.npy'
-            self.filename_U = prefix + 'U.npy'
-            self.filename_weights = prefix + 'W.npy'
-            self.filename_embedding = prefix + 'E.npy'
-
-
 def write_config_file(settings, filename):
     config = ConfigParser.RawConfigParser()
     config.add_section('Algorithm')
@@ -78,39 +64,30 @@ def write_config_file(settings, filename):
     config.set('Algorithm', 'delta_min_min', settings.delta_min_min)
     config.set('Algorithm', 'epsilon_min_max', settings.epsilon_min_max)
     config.set('Algorithm', 'delta_min_max', settings.delta_min_max)
+    config.set('Algorithm', 'normed_weights', int(settings.normed_weights))
 
-    if isinstance(settings, Settings):
-        settings.filename_quantile = settings.prefix + 'Q_{}.npy'.format(
-            settings.quantile)
-        config.set('Algorithm', 'observation_period',
-                   settings.observation_period)
-        config.set('Algorithm', 'inference_type', settings.inference_type)
-        config.set('Algorithm', 'cumulative_estimate',
-                   int(settings.cumulative_estimate))
-        config.set('Algorithm', 'cumulative_mean_map',
-                int(settings.cumulative_mean_map))
-        config.set('Algorithm', 'quantile_estimate',
-                   int(settings.quantile_estimate))
-        config.set('Algorithm', 'quantile', settings.quantile)
-        config.set('Output', 'filename_preimage', settings.filename_preimage)
-        config.set('Output', 'filename_posterior', settings.filename_posterior)
-        config.set('Output', 'filename_cumulative',
-                   settings.filename_cumulative)
-        config.set('Output', 'filename_quantile', settings.filename_quantile)
-        config.set('Training', 'preimage_walltime', settings.preimage_walltime)
-        config.set('Training', 'cost_function', settings.cost_function)
-        config.add_section('Preimage')
-        config.set('Preimage', 'preimage_reg', settings.preimage_reg)
-        config.set('Preimage', 'preimage_reg_min', settings.preimage_reg_min)
-        config.set('Preimage', 'preimage_reg_max', settings.preimage_reg_max)
-    else:
-        config.set('Kernel', 'low_rank_scale', settings.low_rank_scale)
-        config.set('Kernel', 'low_rank_weight', settings.low_rank_weight)
-        config.set('Kernel', 'low_rank_scale_min', settings.low_rank_scale_min)
-        config.set('Kernel', 'low_rank_weight_min', settings.low_rank_weight_min)
-        config.set('Kernel', 'low_rank_scale_max', settings.low_rank_scale_max)
-        config.set('Kernel', 'low_rank_weight_max', settings.low_rank_weight_max)
-        config.set('Algorithm', 'method', settings.method)
+    settings.filename_quantile = settings.prefix + 'Q_{}.npy'.format(
+        settings.quantile)
+    config.set('Algorithm', 'observation_period',
+               settings.observation_period)
+    config.set('Algorithm', 'inference_type', settings.inference_type)
+    config.set('Algorithm', 'cumulative_estimate',
+               int(settings.cumulative_estimate))
+    config.set('Algorithm', 'cumulative_mean_map',
+            int(settings.cumulative_mean_map))
+    config.set('Algorithm', 'quantile_estimate',
+               int(settings.quantile_estimate))
+    config.set('Algorithm', 'quantile', settings.quantile)
+    config.set('Output', 'filename_preimage', settings.filename_preimage)
+    config.set('Output', 'filename_posterior', settings.filename_posterior)
+    config.set('Output', 'filename_cumulative',
+               settings.filename_cumulative)
+    config.set('Output', 'filename_quantile', settings.filename_quantile)
+    config.set('Training', 'preimage_walltime', settings.preimage_walltime)
+    config.add_section('Preimage')
+    config.set('Preimage', 'preimage_reg', settings.preimage_reg)
+    config.set('Preimage', 'preimage_reg_min', settings.preimage_reg_min)
+    config.set('Preimage', 'preimage_reg_max', settings.preimage_reg_max)
     with open(filename, 'w') as configfile:
         config.write(configfile)
 
@@ -131,10 +108,3 @@ def run(filename_config, directory):
     for line in iter(proc.stdout.readline, ""):
         print line,
 
-def run_sparse(filename_config, directory):
-    path = os.path.join(os.path.abspath(directory), 'skbrcpp')
-    proc = subprocess.Popen([path, filename_config],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT)
-    for line in iter(proc.stdout.readline, ""):
-        print line,

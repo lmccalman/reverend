@@ -41,21 +41,14 @@ yssize = 100
 filename_config = 'motorcycle_regressor.ini'
 prefix = 'mc'  # will automatically construct all filenames
 settings = kbrcpp.Settings(prefix)
-# 'logp_norm'
-# 'logp_preimage'
-# 'logp_joint'
-# 'pinball_norm'
-# 'pinball_direct'
-# 'pinball_joint'
-# 'hilbert'
-settings.cost_function = 'logp_norm'
 
+settings.normed_weights = False
 settings.sigma_x_min = 0.05
-settings.sigma_x = 0.2
+settings.sigma_x = 0.5
 settings.sigma_x_max = 1.0
 
-settings.sigma_y_min = 0.05
-settings.sigma_y = 0.17
+settings.sigma_y_min = 0.005
+settings.sigma_y = 0.05
 settings.sigma_y_max = 1.0
 
 settings.epsilon_min_min = 1e-10
@@ -76,7 +69,7 @@ settings.cumulative_estimate = True
 settings.cumulative_mean_map = True
 settings.quantile_estimate = True
 settings.quantile = 0.9
-settings.walltime = 30.0
+settings.walltime = 10.0
 settings.preimage_walltime = 12.0
 settings.folds = 5
 settings.observation_period = 1

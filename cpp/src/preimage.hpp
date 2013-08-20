@@ -7,18 +7,17 @@
 
 template <class K>
 Eigen::MatrixXd AMatrix(const Eigen::MatrixXd& means,
-                        const Kernel<K>& kx, double preimageSigma)
+                        const Kernel<K>& kx)
 {
   uint n = means.rows();
   double inva =  kx.volume();
-  double sigma = kx.width();
-  double sigmaDash = sqrt(2*sigma*sigma + preimageSigma*preimageSigma);
+  Eigen::VectorXd sigmaDash = sqrt(3.0) * kx.width();
   Eigen::MatrixXd A(n,n);
   for (uint i=0; i<n;i++)
   {
     for (uint j=0; j<n;j++)
     {
-      A(i,j) = inva * multivariateSymmetricGaussian(means.row(i), means.row(j),sigmaDash);
+      A(i,j) = inva * multivariateDiagonalGaussian(means.row(i), means.row(j),sigmaDash);
     }
   }
   return A;
@@ -26,18 +25,17 @@ Eigen::MatrixXd AMatrix(const Eigen::MatrixXd& means,
 
 template <class K>
 Eigen::MatrixXd BMatrix(const Eigen::MatrixXd& means,
-    const Kernel<K>& kx, double preimageSigma)
+    const Kernel<K>& kx)
 {
   uint n = means.rows();
   double inva =  kx.volume();
-  double sigma = kx.width();
-  double sigmaDash = sqrt(sigma*sigma + preimageSigma*preimageSigma);
+  Eigen::VectorXd sigmaDash = sqrt(2.0) * kx.width();
   Eigen::MatrixXd B(n,n);
   for (uint i=0; i<n;i++)
   {
     for (uint j=0; j<n;j++)
     {
-      B(i,j) = inva * multivariateSymmetricGaussian(means.row(i), means.row(j),sigmaDash);
+      B(i,j) = inva * multivariateDiagonalGaussian(means.row(i), means.row(j),sigmaDash);
     }
   }
   return B;
@@ -189,8 +187,8 @@ void computeNormedWeights( const Eigen::MatrixXd& X,
   uint s = preimageWeights.rows();
   Eigen::VectorXd coeff_i(n);
   Eigen::MatrixXd regularisedGxx(n,n);
-  Eigen::MatrixXd A = AMatrix(X, kx, kx.width());
-  Eigen::MatrixXd B = BMatrix(X, kx, kx.width());
+  Eigen::MatrixXd A = AMatrix(X, kx);
+  Eigen::MatrixXd B = BMatrix(X, kx);
   for (int i=0; i<s; i++)
   {
     coeff_i = Eigen::VectorXd::Ones(n) * (1.0/double(n));

@@ -18,6 +18,7 @@
 #pragma once
 
 #include <fstream>
+#include <string>
 #include <Eigen/Core>
 #include <boost/bind.hpp>
 #include <boost/tokenizer.hpp>
@@ -27,6 +28,28 @@
 
 #include "cnpy.h"
 #include "data.hpp"
+std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems)
+{
+    std::stringstream ss(s);
+    std::string item;
+    while (std::getline(ss, item, delim)) {
+        elems.push_back(item);
+    }
+    return elems;
+}
+
+Eigen::VectorXd stringToVector(const std::string& s)
+{
+  std::vector<std::string> elems;
+  split(s, ',', elems);
+  uint n = elems.size();
+  Eigen::VectorXd result(elems.size());
+  for (uint i=0; i<n; i++)
+  {
+    result(i) = atof(elems[i].c_str());
+  }
+  return result;
+}
 
 Settings getSettings(const std::string& filename)
 {
@@ -44,12 +67,12 @@ Settings getSettings(const std::string& filename)
   s.filename_embedding = pt.get<std::string>("Output.filename_embedding"); 
   s.filename_cumulative = pt.get<std::string>("Output.filename_cumulative"); 
   s.filename_quantile = pt.get<std::string>("Output.filename_quantile"); 
-  s.sigma_x = pt.get<double>("Kernel.sigma_x"); 
-  s.sigma_x_min = pt.get<double>("Kernel.sigma_x_min"); 
-  s.sigma_x_max = pt.get<double>("Kernel.sigma_x_max"); 
-  s.sigma_y = pt.get<double>("Kernel.sigma_y");
-  s.sigma_y_min = pt.get<double>("Kernel.sigma_y_min");
-  s.sigma_y_max = pt.get<double>("Kernel.sigma_y_max");
+  s.sigma_x = stringToVector(pt.get<std::string>("Kernel.sigma_x")); 
+  s.sigma_x_min =stringToVector( pt.get<std::string>("Kernel.sigma_x_min")); 
+  s.sigma_x_max =stringToVector( pt.get<std::string>("Kernel.sigma_x_max")); 
+  s.sigma_y = stringToVector( pt.get<std::string>("Kernel.sigma_y"));
+  s.sigma_y_min =stringToVector( pt.get<std::string>("Kernel.sigma_y_min"));
+  s.sigma_y_max =stringToVector( pt.get<std::string>("Kernel.sigma_y_max"));
   s.epsilon_min = pt.get<double>("Algorithm.epsilon_min");
   s.delta_min = pt.get<double>("Algorithm.delta_min");
   s.epsilon_min_min = pt.get<double>("Algorithm.epsilon_min_min");
@@ -59,7 +82,6 @@ Settings getSettings(const std::string& filename)
   s.walltime = pt.get<double>("Training.walltime");
   s.preimage_walltime = pt.get<double>("Training.preimage_walltime");
   s.folds = pt.get<uint>("Training.folds");
-  s.cost_function = pt.get<std::string>("Training.cost_function"); 
   s.preimage_reg = pt.get<double>("Preimage.preimage_reg");
   s.preimage_reg_min = pt.get<double>("Preimage.preimage_reg_min");
   s.preimage_reg_max = pt.get<double>("Preimage.preimage_reg_max");
@@ -68,43 +90,8 @@ Settings getSettings(const std::string& filename)
   s.cumulative_estimate = pt.get<bool>("Algorithm.cumulative_estimate");
   s.cumulative_mean_map = pt.get<bool>("Algorithm.cumulative_mean_map");
   s.quantile_estimate = pt.get<bool>("Algorithm.quantile_estimate");
+  s.normed_weights = pt.get<bool>("Algorithm.normed_weights");
   s.quantile = pt.get<double>("Algorithm.quantile");
-  return s;
-}
-
-SparseSettings getSparseSettings(const std::string& filename)
-{
-  SparseSettings s;
-  boost::property_tree::ptree pt;
-  boost::property_tree::ini_parser::read_ini(filename, pt);
-  s.filename_u = pt.get<std::string>("Input.filename_u"); 
-  s.filename_x = pt.get<std::string>("Input.filename_x"); 
-  s.filename_y = pt.get<std::string>("Input.filename_y"); 
-  s.filename_xs = pt.get<std::string>("Input.filename_xs"); 
-  s.filename_ys = pt.get<std::string>("Input.filename_ys"); 
-  s.filename_weights = pt.get<std::string>("Output.filename_weights"); 
-  s.filename_embedding = pt.get<std::string>("Output.filename_embedding"); 
-  s.sigma_x = pt.get<double>("Kernel.sigma_x"); 
-  s.sigma_x_min = pt.get<double>("Kernel.sigma_x_min"); 
-  s.sigma_x_max = pt.get<double>("Kernel.sigma_x_max"); 
-  s.sigma_y = pt.get<double>("Kernel.sigma_y");
-  s.sigma_y_min = pt.get<double>("Kernel.sigma_y_min");
-  s.sigma_y_max = pt.get<double>("Kernel.sigma_y_max");
-  s.epsilon_min = pt.get<double>("Algorithm.epsilon_min");
-  s.delta_min = pt.get<double>("Algorithm.delta_min");
-  s.epsilon_min_min = pt.get<double>("Algorithm.epsilon_min_min");
-  s.delta_min_min = pt.get<double>("Algorithm.delta_min_min");
-  s.epsilon_min_max = pt.get<double>("Algorithm.epsilon_min_max");
-  s.delta_min_max = pt.get<double>("Algorithm.delta_min_max");
-  s.low_rank_scale = pt.get<double>("Kernel.low_rank_scale");
-  s.low_rank_weight = pt.get<double>("Kernel.low_rank_weight");
-  s.low_rank_scale_min = pt.get<double>("Kernel.low_rank_scale_min");
-  s.low_rank_weight_min = pt.get<double>("Kernel.low_rank_weight_min");
-  s.low_rank_scale_max = pt.get<double>("Kernel.low_rank_scale_max");
-  s.low_rank_weight_max = pt.get<double>("Kernel.low_rank_weight_max");
-  s.walltime = pt.get<double>("Training.walltime");
-  s.folds = pt.get<uint>("Training.folds");
-  s.method = pt.get<std::string>("Algorithm.method"); 
   return s;
 }
 
@@ -212,34 +199,8 @@ TrainingData readTrainingData(const Settings& settings)
   }
 }
 
-TrainingData readTrainingData(const SparseSettings& settings)
-{
-  auto x = readNPY(settings.filename_x);
-  auto y = readNPY(settings.filename_y);
-  uint dim_x = x.cols();
-  uint dim_y = y.cols();
-  uint n = x.rows();
-  Eigen::MatrixXd u = x;
-  uint m = x.rows();
-  if (settings.filename_u != "")
-  {
-    u = readNPY(settings.filename_u);
-    m = u.rows();
-  }
-  //for the moment keep the weights constant
-  Eigen::VectorXd lambda = Eigen::VectorXd::Ones(m);
-  lambda = lambda / double(m);
-  return TrainingData(u, lambda, x, y);
-}
 
 TestingData readTestingData(const Settings& settings)
-{
-  auto xs = readNPY(settings.filename_xs);
-  auto ys = readNPY(settings.filename_ys);
-  return TestingData(xs,ys);
-}
-
-TestingData readTestingData(const SparseSettings& settings)
 {
   auto xs = readNPY(settings.filename_xs);
   auto ys = readNPY(settings.filename_ys);
