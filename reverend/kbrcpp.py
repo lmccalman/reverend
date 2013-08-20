@@ -77,6 +77,8 @@ def write_config_file(settings, filename):
             int(settings.cumulative_mean_map))
     config.set('Algorithm', 'quantile_estimate',
                int(settings.quantile_estimate))
+    config.set('Algorithm', 'pinball_loss',
+            int(settings.pinball_loss))
     config.set('Algorithm', 'quantile', settings.quantile)
     config.set('Output', 'filename_preimage', settings.filename_preimage)
     config.set('Output', 'filename_posterior', settings.filename_posterior)

@@ -55,6 +55,7 @@ struct Settings
   bool cumulative_mean_map;
   bool quantile_estimate;
   bool normed_weights;
+  bool pinball_loss;
 };
 
 struct TrainingData

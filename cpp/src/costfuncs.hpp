@@ -103,3 +103,70 @@ class LogPCost:Cost
     Kernel<K> ky_;
     const Settings& settings_;
 };
+
+template <class T, class K>
+class PinballCost:Cost
+{
+  public:
+    PinballCost(const TrainingData& train, const TestingData& test, const Settings& settings)
+      : Cost(train, test), 
+      algo_(train.x.rows(), train.u.rows(), settings),
+      weights_(test.ys.rows(), train.x.rows()),
+      posWeights_(train.x.rows()),
+      kx_(train.x, settings.sigma_x), ky_(train.y, settings.sigma_y),
+      settings_(settings)
+  {
+    std::cout << "Initializing Pinball cost..." << std::endl;
+  }; 
+
+    double operator()(const std::vector<double>&x, std::vector<double>&grad)
+    {
+      uint dx = trainingData_.x.cols();
+      uint dy = trainingData_.y.cols();
+      Eigen::VectorXd sigma_x(dx);
+      for (int i=0; i<dx;i++)
+      {
+        sigma_x(i) = x[i];
+      }
+      Eigen::VectorXd sigma_y(dy);
+      for (int i=0; i<dy;i++)
+      {
+        sigma_y(i) = x[dx+i];
+      }
+      double epsilon_min = exp(x[dx+dy]);
+      double delta_min = exp(x[dx+dy+1]);
+      kx_.setWidth(sigma_x);
+      ky_.setWidth(sigma_y);
+      algo_(trainingData_, kx_, ky_, testingData_.ys, epsilon_min, delta_min, weights_);
+      uint testPoints = testingData_.xs.rows();
+      double totalCost = 0.0;
+      for (int i=0;i<testPoints;i++)
+      {
+        if (settings_.normed_weights)
+        {
+          posWeights_ = weights_.row(i);
+        }
+        else
+        {
+          Eigen::MatrixXd A = AMatrix(trainingData_.x, kx_);
+          Eigen::MatrixXd B = BMatrix(trainingData_.x, kx_);
+          double preimage_reg = exp(x[dx+dy+2]);
+          positiveNormedCoeffs(weights_.row(i),A,B, preimage_reg, posWeights_);
+        }
+
+        totalCost += logKernelMixture(testingData_.xs.row(i),
+            trainingData_.x, posWeights_, kx_, true);
+      }
+      totalCost *= -1; // minimize this maximizes probability
+      return totalCost;
+
+    };
+
+  private: 
+    T algo_;
+    Eigen::MatrixXd weights_;
+    Eigen::VectorXd posWeights_;
+    Kernel<K> kx_;
+    Kernel<K> ky_;
+    const Settings& settings_;
+};

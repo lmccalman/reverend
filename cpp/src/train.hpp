@@ -143,8 +143,18 @@ void trainSettings(const TrainingData& data, Settings& settings)
     thetaMax[dx+dy+2] = log(settings.preimage_reg_max);
   }
   std::vector<double> thetaBest = theta0;
-  KFoldCVCost< LogPCost<A,K> > costfunc(folds, data, settings);
-  thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
+  if (settings.pinball_loss)
+  {
+    KFoldCVCost< PinballCost<A,K> > costfunc(folds, data, settings);
+    thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
+  } 
+  else
+  {
+    KFoldCVCost< LogPCost<A,K> > costfunc(folds, data, settings);
+    thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
+  }
+  
+  
   for (uint i=0; i<dx; i++)
   { 
     settings.sigma_x(i) = thetaBest[i];

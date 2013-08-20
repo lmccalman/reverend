@@ -92,6 +92,7 @@ Settings getSettings(const std::string& filename)
   s.quantile_estimate = pt.get<bool>("Algorithm.quantile_estimate");
   s.normed_weights = pt.get<bool>("Algorithm.normed_weights");
   s.quantile = pt.get<double>("Algorithm.quantile");
+  s.pinball_loss = pt.get<bool>("Algorithm.pinball_loss");
   return s;
 }
 
