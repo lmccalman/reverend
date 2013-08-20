@@ -48,7 +48,7 @@ settings = kbrcpp.Settings(prefix)
 # 'pinball_direct'
 # 'pinball_joint'
 # 'hilbert'
-settings.cost_function = 'pinball_joint'
+settings.cost_function = 'logp_norm'
 
 settings.sigma_x_min = 0.05
 settings.sigma_x = 0.2

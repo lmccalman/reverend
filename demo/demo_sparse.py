@@ -39,21 +39,30 @@ prefix = 'smc'  # will automatically construct all filenames
 settings = kbrcpp.SparseSettings(prefix)
 #some training parameters for kernel width
 settings.method = 'both'  # {sparse, lowrank, both}
-settings.sigma_x_min = 1.0
-settings.sigma_x = 1.2
-settings.sigma_x_max = 2.0
-settings.sigma_y_min = 0.5
-settings.sigma_y = 3.86
-settings.sigma_y_max = 4.0
+settings.sigma_x_min = 0.1
+settings.sigma_x = 0.3
+settings.sigma_x_max = 0.3
+settings.sigma_y_min = 0.005
+settings.sigma_y = 0.4
+settings.sigma_y_max = 0.4
+
+settings.epsilon_min_min = 1e-10
+settings.epsilon_min = 1e-5
+settings.epsilon_min_max = 1e-4
+
+settings.delta_min_min = 1e-3
+settings.delta_min = 1e-1
+settings.delta_min_max = 1e1
+
 settings.low_rank_scale_min = 1.0
 settings.low_rank_scale = 1.0
-settings.low_rank_scale_max = 1.0
-settings.low_rank_weight_min = 0.0   # 100% sparse solution
-settings.low_rank_weight = 0.0       #this MUST be between 0 and 1
-settings.low_rank_weight_max = 0.0   # 100% low rank solution
+settings.low_rank_scale_max = 5.0
+settings.low_rank_weight_min = 0.01   # 100% sparse solution
+settings.low_rank_weight = 0.5   #this MUST be between 0 and 1
+settings.low_rank_weight_max = 0.99  # 100% low rank solution
 #Training settings
-settings.walltime = 300.0
-settings.folds = 20
+settings.walltime = 10.0
+settings.folds = 5
 
 
 def main():
@@ -90,11 +99,10 @@ def main():
     kbrcpp.run_sparse(filename_config, kbrcpp_directory)
 
     #read in the weights we've just calculated
-    W = np.load(settings.filename_weights)
     pdf = np.load(settings.filename_embedding)
     fig = pl.figure()
     axes = fig.add_subplot(111)
-    axes.imshow(pdf, origin='lower', 
+    axes.imshow(pdf.T, origin='lower', 
             extent=(ysmin, ysmax, xsmin, xsmax),cmap=cm.hot, aspect='auto')
     axes.scatter(Y, X, c='y')
     axes.set_xlim(ysmin, ysmax)
