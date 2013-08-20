@@ -38,21 +38,22 @@ xssize = 100
 yssize = 100
 
 #construct settings and data files for kbrcpp
-filename_config = 'motorcycle_regressor.ini'
-prefix = 'mc'  # will automatically construct all filenames
+filename_config = 'jura_regressor.ini'
+prefix = 'ju'  # will automatically construct all filenames
 settings = kbrcpp.Settings(prefix)
 
-settings.normed_weights = False
+settings.normed_weights = True
 settings.pinball_loss = False
 settings.direct_cumulative = False
 settings.cumulative_mean_map = True
-settings.sigma_x_min = 0.005
-settings.sigma_x = 0.05
-settings.sigma_x_max = 1.0
 
-settings.sigma_y_min = 0.005
-settings.sigma_y = 0.05
-settings.sigma_y_max = 1.0
+settings.sigma_x_min = "0.05,0.05,0.05,0.05,0.05,0.05,0.05"
+settings.sigma_x = "0.1,0.1,0.1,0.1,0.1,0.1,0.1"
+settings.sigma_x_max = "2.0,2.0,2.0,2.0,2.0,2.0,2.0"
+
+settings.sigma_y_min = "0.005, 0.005"
+settings.sigma_y = "0.05,0.05"
+settings.sigma_y_max = "1.0,1.0"
 
 settings.epsilon_min_min = 1e-10
 settings.epsilon_min = 1e-5
@@ -71,15 +72,15 @@ settings.inference_type = 'regress'
 settings.cumulative_estimate = True
 settings.quantile_estimate = True
 settings.quantile = 0.5
-settings.walltime = 20.0
+settings.walltime = 300.0
 settings.preimage_walltime = 12.0
-settings.folds = 20
+settings.folds = 5
 settings.observation_period = 1
 
 
 def main():
-    X = np.load('motorcycle_X.npy')
-    Y = np.load('motorcycle_Y.npy')
+    X = np.load('jura_X.npy')
+    Y = np.load('jura_Y.npy')
     # Make sure we shuffle for the benefit of cross-validation
     random_indices = np.random.permutation(X.shape[0])
     X = X[random_indices]
@@ -89,6 +90,10 @@ def main():
     Y_mean, Y_sd = distrib.scale_factors(Y)
     X = distrib.scale(X, X_mean, X_sd)
     Y = distrib.scale(Y, Y_mean, Y_sd)
+    eigX = distrib.whitening_matrix(X)
+    eigY = distrib.whitening_matrix(Y)
+    X = np.dot(X, eigX)
+    Y = np.dot(Y, eigY)
     # simple prior
     U = X
     # We just want to plot the result, not evaluate it
@@ -111,48 +116,6 @@ def main():
     #PW = np.load(settings.filename_preimage)
     E = np.load(settings.filename_embedding)
     pdf = np.load(settings.filename_posterior)
-    cdf = None
-    if settings.cumulative_estimate:
-        cdf = np.load(settings.filename_cumulative)
-    quantile = None
-    if settings.quantile_estimate:
-        quantile = np.load(settings.filename_quantile)
-
-    #And plot...
-    fig = pl.figure()
-    axes = fig.add_subplot(121)
-    axes.set_title('Posterior Embedding')
-    axes.imshow(E.T, origin='lower', 
-                extent=(ysmin, ysmax, xsmin, xsmax),cmap=cm.hot, aspect='auto')
-    axes.scatter(Y, X, c='y')
-    axes.set_xlim(ysmin, ysmax)
-    axes.set_ylim(xsmin, xsmax)
-    axes = fig.add_subplot(122)
-    axes.set_title('PDF estimate')
-    axes.imshow(np.exp(pdf).T, origin='lower', 
-            extent=(ysmin, ysmax, xsmin, xsmax), cmap=cm.hot, aspect='auto')
-    axes.scatter(Y, X, c='y')
-    axes.set_xlim(ysmin, ysmax)
-    axes.set_ylim(xsmin, xsmax)
-    
-    if settings.cumulative_estimate:
-        fig = pl.figure()
-        axes = fig.add_subplot(121)
-        axes.set_title('CDF Estimate')
-        axes.imshow(cdf.T, origin='lower', 
-                extent=(ysmin, ysmax, xsmin, xsmax),cmap=cm.jet, aspect='auto')
-        axes.scatter(Y, X, c='y')
-        axes.set_xlim(ysmin, ysmax)
-        axes.set_ylim(xsmin, xsmax)
-        axes = fig.add_subplot(122)
-        axes.set_title('Quantile Estimate')
-        axes.imshow(np.exp(pdf).T, origin='lower', 
-                extent=(ysmin, ysmax, xsmin, xsmax),cmap=cm.jet, aspect='auto')
-        axes.scatter(Y, X, c='y')
-        axes.set_xlim(ysmin, ysmax)
-        axes.set_ylim(xsmin, xsmax)
-        axes.plot(Y_s[:,0], quantile[:,0], 'b-',linewidth=2.0)
-    pl.show()
 
 if __name__ == "__main__":
     main()

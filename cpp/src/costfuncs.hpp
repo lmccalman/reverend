@@ -23,6 +23,20 @@
 #include "distrib.hpp"
 #include "cumulative.hpp"
 
+double pinballLoss(double z, double y, double tau)
+{
+  double result = 0.0;
+  if (y >= z)
+  {
+    result = (y-z)*tau;
+  }
+  else
+  {
+    result= (z-y)*(1.0 - tau);
+  }
+  return result;
+}
+
 //This is a 'Raw' cost function, which must be wrapped in some way to become an
 //NloptCost for use with the optimizer. Usually this would involve a k-fold or
 //LOO cross validator
@@ -139,6 +153,7 @@ class PinballCost:Cost
       ky_.setWidth(sigma_y);
       algo_(trainingData_, kx_, ky_, testingData_.ys, epsilon_min, delta_min, weights_);
       uint testPoints = testingData_.xs.rows();
+      double tau = settings_.quantile;
       double totalCost = 0.0;
       for (int i=0;i<testPoints;i++)
       {
@@ -153,11 +168,20 @@ class PinballCost:Cost
           double preimage_reg = exp(x[dx+dy+2]);
           positiveNormedCoeffs(weights_.row(i),A,B, preimage_reg, posWeights_);
         }
-
-        totalCost += logKernelMixture(testingData_.xs.row(i),
-            trainingData_.x, posWeights_, kx_, true);
+        double z;
+        if (settings_.direct_cumulative)
+        {
+          Quantile<Kernel<K> > q(weights_.row(i), trainingData_.x, kx_, settings_.cumulative_mean_map);
+          z = q(tau);
+        }
+        else
+        {
+          Quantile<Kernel<K> > q(posWeights_, trainingData_.x, kx_, settings_.cumulative_mean_map);
+          z = q(tau);
+        }
+        double y = testingData_.xs(i,0);
+        totalCost += pinballLoss(z,y,tau);
       }
-      totalCost *= -1; // minimize this maximizes probability
       return totalCost;
 
     };

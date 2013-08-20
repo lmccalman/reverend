@@ -92,7 +92,14 @@ int main(int argc, char** argv)
   {
     std::cout << "Estimating Cumulative..." << std::endl;
     Eigen::MatrixXd cumulates(testData.ys.rows(), testData.xs.rows());
-    computeCumulates(trainData,testData, preimageWeights, kx, meanMap, cumulates);
+    if (settings.direct_cumulative)
+    {
+      computeCumulates(trainData,testData, weights, kx, meanMap, cumulates);
+    }
+    else 
+    {
+      computeCumulates(trainData,testData, preimageWeights, kx, meanMap, cumulates);
+    }
     writeNPY(cumulates, settings.filename_cumulative);
   }
   
@@ -102,7 +109,14 @@ int main(int argc, char** argv)
     std::cout << "Estimating Quantile..." << std::endl;
     Eigen::VectorXd quantiles(testData.ys.rows());
     double tau = settings.quantile;
-    computeQuantiles(trainData,testData,preimageWeights,kx,tau,meanMap,quantiles);
+    if (settings.direct_cumulative)
+    {
+      computeQuantiles(trainData,testData,weights,kx,tau,meanMap,quantiles);
+    }
+    else
+    {
+      computeQuantiles(trainData,testData,preimageWeights,kx,tau,meanMap,quantiles);
+    }
     writeNPY(quantiles, settings.filename_quantile);
   }
   
