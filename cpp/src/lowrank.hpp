@@ -23,8 +23,6 @@
 #include <Eigen/SVD>
 #include "kernel.hpp"
 
-typedef Eigen::SparseMatrix<double> SparseMatrix;
-
 template <class K>
 void nystromApproximation(const Eigen::MatrixXd& X, const K& kx,
                           uint rank, uint columns,
@@ -75,7 +73,6 @@ void nystromApproximation(const Eigen::MatrixXd& X, const K& kx,
   W_k = svd.matrixU() * newDiags.asDiagonal() * svd.matrixV().transpose();
   W_plus = svd.matrixU() * invDiags.asDiagonal() * svd.matrixV().transpose();
 }
-  
   
 template <class K>
 void simpleNystromApproximation(const Eigen::MatrixXd& X, const K& kx,

@@ -25,6 +25,7 @@
 #include "train.hpp"
 #include "preimage.hpp"
 #include "cumulative.hpp"
+#include "lowrankregressor.hpp"
 
 int main(int argc, char** argv)
 {
@@ -52,7 +53,14 @@ int main(int argc, char** argv)
   }
   else
   {
-    trainSettings<Regressor<RBFKernel>, RBFKernel>(trainData, settings);
+    if (settings.rank_fraction < 1.0)
+    {
+      trainSettings<LowRankRegressor<RBFKernel>, RBFKernel>(trainData, settings);
+    }
+    else
+    {
+      trainSettings<Regressor<RBFKernel>, RBFKernel>(trainData, settings);
+    }
   }
 
   //Create kernels and algorithm 
@@ -66,8 +74,16 @@ int main(int argc, char** argv)
   }
   else
   {
-    Regressor<RBFKernel> r(n, m, settings);
-    r(trainData, kx, ky, testData.ys, settings.epsilon_min, settings.delta_min, weights);
+    if (settings.rank_fraction < 1.0)
+    {
+      LowRankRegressor<RBFKernel> r(n, m, settings);
+      r(trainData, kx, ky, testData.ys, settings.epsilon_min, settings.delta_min, weights);
+    }
+    else
+    {
+      Regressor<RBFKernel> r(n, m, settings);
+      r(trainData, kx, ky, testData.ys, settings.epsilon_min, settings.delta_min, weights);
+    }
   }
   //write out the results 
   writeNPY(weights, settings.filename_weights);

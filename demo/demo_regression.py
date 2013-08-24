@@ -43,18 +43,22 @@ prefix = 'mc'  # will automatically construct all filenames
 settings = kbrcpp.Settings(prefix)
 
 settings.normed_weights = True
+settings.rank_fraction = 0.1
 settings.pinball_loss = False
 settings.direct_cumulative = False
 settings.cumulative_mean_map = True
-settings.sigma_x_min = 0.005
-settings.sigma_x = 0.05
-settings.sigma_x_max = 1.0
 
-settings.sigma_y_min = 0.005
+settings.scaling_strategy = 'none'
+
+settings.sigma_x_min = 0.05
+settings.sigma_x = 0.5
+settings.sigma_x_max = 3.0
+
+settings.sigma_y_min = 0.01
 settings.sigma_y = 0.05
-settings.sigma_y_max = 1.0
+settings.sigma_y_max = 0.5
 
-settings.epsilon_min_min = 1e-10
+settings.epsilon_min_min = 1e-5
 settings.epsilon_min = 1e-5
 settings.epsilon_min_max = 1e-4
 
@@ -75,7 +79,6 @@ settings.walltime = 20.0
 settings.preimage_walltime = 12.0
 settings.folds = 20
 settings.observation_period = 1
-
 
 def main():
     X = np.load('motorcycle_X.npy')

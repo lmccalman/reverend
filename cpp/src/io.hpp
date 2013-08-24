@@ -94,6 +94,7 @@ Settings getSettings(const std::string& filename)
   s.quantile = pt.get<double>("Algorithm.quantile");
   s.pinball_loss = pt.get<bool>("Algorithm.pinball_loss");
   s.direct_cumulative = pt.get<bool>("Algorithm.direct_cumulative");
+  s.rank_fraction = pt.get<double>("Algorithm.rank_fraction");
   return s;
 }
 

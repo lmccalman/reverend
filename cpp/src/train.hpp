@@ -95,17 +95,18 @@ std::vector<double> globalOptimum(NloptCost& costFunction, const std::vector<dou
   return x;
 }
 
-//Epic training function
-template <class A, class K>
-void trainSettings(const TrainingData& data, Settings& settings)
+struct TrainingVectors
 {
-  uint folds = settings.folds;
-  double wallTime = settings.walltime;
-  double preimageWalltime = settings.preimage_walltime;
-  bool normedWeights = settings.normed_weights;
-  uint dx = data.x.cols();
-  uint dy = data.y.cols();
+  std::vector<double> thetaMin;
+  std::vector<double> thetaMax;
+  std::vector<double> theta0;
+};
+
+
+TrainingVectors trainingVectors(uint dx, uint dy, const Settings& settings)
+{
   uint totalParams;
+  bool normedWeights = settings.normed_weights;
   if (normedWeights)
   {
     totalParams = dx + dy + 2;
@@ -135,40 +136,65 @@ void trainSettings(const TrainingData& data, Settings& settings)
   thetaMin[dx+dy+1] = log(settings.delta_min_min);
   thetaMax[dx+dy] = log(settings.epsilon_min_max);
   thetaMax[dx+dy+1] = log(settings.delta_min_max);
- 
+
   if (!normedWeights) 
   {
     theta0[dx+dy+2] = log(settings.preimage_reg);
     thetaMin[dx+dy+2] = log(settings.preimage_reg_min);
     thetaMax[dx+dy+2] = log(settings.preimage_reg_max);
   }
-  std::vector<double> thetaBest = theta0;
+  TrainingVectors v;
+  v.thetaMin = thetaMin;
+  v.thetaMax = thetaMax;
+  v.theta0 = theta0;
+  return v;
+}
+
+Settings newSettings(std::vector<double> thetaBest, uint dx, uint dy, const Settings& oldsettings)
+{
+  uint normedWeights = oldsettings.normed_weights;
+  Settings news = oldsettings;
+  for (uint i=0; i<dx; i++)
+  { 
+    news.sigma_x(i) = thetaBest[i];
+  }
+  for (uint i=0; i<dy; i++)
+  { 
+    news.sigma_y(i) = thetaBest[i+dx];
+  }
+  news.epsilon_min = exp(thetaBest[dx+dy]);
+  news.delta_min = exp(thetaBest[dx+dy+1]);
+  if (!normedWeights)
+  {
+    news.preimage_reg = exp(thetaBest[dx+dy+2]);
+  }
+  return news;
+}
+
+
+template <class A, class K>
+void trainSettings(const TrainingData& data, Settings& settings)
+{
+  uint folds = settings.folds;
+  double wallTime = settings.walltime;
+  double preimageWalltime = settings.preimage_walltime;
+  bool normedWeights = settings.normed_weights;
+  uint dx = data.x.cols();
+  uint dy = data.y.cols();
+  TrainingVectors  v = trainingVectors(dx, dy, settings);
+  std::vector<double> thetaBest = v.theta0;
   if (settings.pinball_loss)
   {
     KFoldCVCost< PinballCost<A,K> > costfunc(folds, data, settings);
-    thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
+    thetaBest = globalOptimum(costfunc, v.thetaMin, v.thetaMax, v.theta0, wallTime);
   } 
   else
   {
     KFoldCVCost< LogPCost<A,K> > costfunc(folds, data, settings);
-    thetaBest = globalOptimum(costfunc, thetaMin, thetaMax, theta0, wallTime);
+    thetaBest = globalOptimum(costfunc, v.thetaMin, v.thetaMax, v.theta0, wallTime);
   }
-  
-  
-  for (uint i=0; i<dx; i++)
-  { 
-    settings.sigma_x(i) = thetaBest[i];
-  }
-  for (uint i=0; i<dy; i++)
-  { 
-    settings.sigma_y(i) = thetaBest[i+dx];
-  }
-  settings.epsilon_min = exp(thetaBest[dx+dy]);
-  settings.delta_min = exp(thetaBest[dx+dy+1]);
-  if (!normedWeights)
-  {
-    settings.preimage_reg = exp(thetaBest[dx+dy+2]);
-  }
+  Settings result = newSettings(thetaBest,dx,dy,settings);
+  settings = result; 
 }
 
 

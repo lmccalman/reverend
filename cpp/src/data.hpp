@@ -57,6 +57,7 @@ struct Settings
   bool normed_weights;
   bool pinball_loss;
   bool direct_cumulative;
+  double rank_fraction;
 };
 
 struct TrainingData

@@ -82,6 +82,8 @@ def write_config_file(settings, filename):
     config.set('Algorithm', 'direct_cumulative',
             int(settings.direct_cumulative))
     config.set('Algorithm', 'quantile', settings.quantile)
+    config.set('Algorithm', 'scaling_strategy', settings.scaling_strategy)
+    config.set('Algorithm', 'rank_fraction', settings.rank_fraction)
     config.set('Output', 'filename_preimage', settings.filename_preimage)
     config.set('Output', 'filename_posterior', settings.filename_posterior)
     config.set('Output', 'filename_cumulative',
