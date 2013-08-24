@@ -165,7 +165,7 @@ class RBFKernel
 
     double volume(const Eigen::VectorXd& sigma, uint dimension) const
     {
-      return pow(2.0*M_PI, dimension*0.5) * pow(sigma.prod(), 0.5);
+      return pow(2.0*M_PI, dimension*0.5) * sigma.prod();
     }
 
     void embedIndicator(const Eigen::VectorXd& cutoff,

@@ -42,7 +42,7 @@ filename_config = 'motorcycle_regressor.ini'
 prefix = 'mc'  # will automatically construct all filenames
 settings = kbrcpp.Settings(prefix)
 
-settings.normed_weights = False
+settings.normed_weights = True
 settings.pinball_loss = False
 settings.direct_cumulative = False
 settings.cumulative_mean_map = True
