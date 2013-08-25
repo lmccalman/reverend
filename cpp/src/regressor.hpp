@@ -37,6 +37,11 @@ class Regressor
                double deltaMin,
                Eigen::MatrixXd& weights); 
 
+    void likelihood(const TrainingData& data, 
+                    const Kernel<K>& kx,
+                    double epsilonMin,
+                    Eigen::VectorXd& lweights);
+
   private:
 
     //Settings
@@ -71,6 +76,17 @@ Regressor<K>::Regressor(uint trainLength, uint testLength, const Settings& setti
     chol_g_xx_(trainLength,trainLength,1),
     chol_beta_g_yy_(trainLength,trainLength,trainLength),
     w_(trainLength){}
+    
+    
+template <class K>
+void Regressor<K>::likelihood(const TrainingData& data, 
+                              const Kernel<K>& kx,
+                              double epsilonMin,
+                              Eigen::VectorXd& lweights)
+{
+  kx.embed(data.u, data.lambda, mu_pi_);
+  chol_g_xx_.solve(kx.gramMatrix(), mu_pi_, epsilonMin, lweights);
+}
 
 template <class K>
 void Regressor<K>::operator()(const TrainingData& data, 

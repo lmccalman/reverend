@@ -17,6 +17,13 @@
 #pragma once
 #include <Eigen/Core>
 
+//This must be inherited by anything that we want to optimize with NLOpt
+struct NloptCost
+{
+  public:
+    virtual double operator()(const std::vector<double>&x, std::vector<double>&grad) = 0;
+};
+
 struct Settings
 {
   std::string filename_x;
@@ -51,6 +58,7 @@ struct Settings
   double quantile;
   uint folds;
   uint observation_period;
+  uint reduced_set_size;
   bool cumulative_estimate;
   bool cumulative_mean_map;
   bool quantile_estimate;

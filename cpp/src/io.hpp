@@ -95,6 +95,7 @@ Settings getSettings(const std::string& filename)
   s.pinball_loss = pt.get<bool>("Algorithm.pinball_loss");
   s.direct_cumulative = pt.get<bool>("Algorithm.direct_cumulative");
   s.rank_fraction = pt.get<double>("Algorithm.rank_fraction");
+  s.reduced_set_size = pt.get<uint>("Algorithm.reduced_set_size");
   return s;
 }
 

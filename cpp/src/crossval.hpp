@@ -20,13 +20,6 @@
 #include <algorithm>
 #include <vector>
 
-//This must be inherited by anything that we want to optimize with NLOpt
-struct NloptCost
-{
-  public:
-    virtual double operator()(const std::vector<double>&x, std::vector<double>&grad) = 0;
-};
-
 void ithFoldTestIndices(uint k, uint i, uint n, uint& lowIndex, uint& highIndex)
 //Indices are INCLUSIVE
 {

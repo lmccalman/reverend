@@ -26,6 +26,7 @@
 #include "preimage.hpp"
 #include "cumulative.hpp"
 #include "lowrankregressor.hpp"
+#include "reducedset.hpp"
 
 int main(int argc, char** argv)
 {
@@ -39,6 +40,12 @@ int main(int argc, char** argv)
 
   TrainingData trainData = readTrainingData(settings); 
   TestingData testData = readTestingData(settings);
+  //compute reduced set
+  if (settings.reduced_set_size < trainData.x.rows())
+  {
+    trainData = findReducedSet<RBFKernel>(trainData, settings);
+  }
+  
   //useful sizes for preallocation
   uint n = trainData.x.rows();
   uint m = trainData.u.rows();

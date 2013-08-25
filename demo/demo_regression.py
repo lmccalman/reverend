@@ -43,28 +43,29 @@ prefix = 'mc'  # will automatically construct all filenames
 settings = kbrcpp.Settings(prefix)
 
 settings.normed_weights = True
-settings.rank_fraction = 0.1
+settings.rank_fraction = 1.0
+settings.reduced_set_size = 50
 settings.pinball_loss = False
 settings.direct_cumulative = False
 settings.cumulative_mean_map = True
 
 settings.scaling_strategy = 'none'
 
-settings.sigma_x_min = 0.05
-settings.sigma_x = 0.5
-settings.sigma_x_max = 3.0
+settings.sigma_x_min = 0.34
+settings.sigma_x = 0.34
+settings.sigma_x_max = 0.34
 
-settings.sigma_y_min = 0.01
-settings.sigma_y = 0.05
-settings.sigma_y_max = 0.5
+settings.sigma_y_min = 0.10
+settings.sigma_y = 0.10
+settings.sigma_y_max = 0.10
 
-settings.epsilon_min_min = 1e-5
-settings.epsilon_min = 1e-5
-settings.epsilon_min_max = 1e-4
+settings.epsilon_min_min = np.exp(-10.4)
+settings.epsilon_min = np.exp(-10.4)
+settings.epsilon_min_max = np.exp(-10.4)
 
-settings.delta_min_min = 1e-3
-settings.delta_min = 1e-1
-settings.delta_min_max = 1e1
+settings.delta_min_min = np.exp(-2.59)
+settings.delta_min = np.exp(-2.59)
+settings.delta_min_max = np.exp(-2.59)
 
 #for preimage
 settings.preimage_reg = 1e2
@@ -75,7 +76,7 @@ settings.inference_type = 'regress'
 settings.cumulative_estimate = True
 settings.quantile_estimate = True
 settings.quantile = 0.5
-settings.walltime = 20.0
+settings.walltime = 1.0
 settings.preimage_walltime = 12.0
 settings.folds = 20
 settings.observation_period = 1
@@ -87,6 +88,8 @@ def main():
     random_indices = np.random.permutation(X.shape[0])
     X = X[random_indices]
     Y = Y[random_indices]
+    # X = X[:50]
+    # Y = Y[:50]
     #whiten and rescale inputs
     X_mean, X_sd = distrib.scale_factors(X)
     Y_mean, Y_sd = distrib.scale_factors(Y)
