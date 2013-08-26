@@ -62,10 +62,10 @@ template <class K>
 LowRankRegressor<K>::LowRankRegressor(uint trainLength,
     uint testLength, const Settings& settings)
   : n_(trainLength),
-    chol_g_xx_(int(trainLength*settings.rank_fraction),
-               int(trainLength*settings.rank_fraction),1),
-    chol_beta_g_yy_(int(trainLength*settings.rank_fraction),
-                    int(trainLength*settings.rank_fraction),1),
+    chol_g_xx_(int(trainLength*settings.data_fraction),
+               int(trainLength*settings.data_fraction),1),
+    chol_beta_g_yy_(int(trainLength*settings.data_fraction),
+                    int(trainLength*settings.data_fraction),1),
     mu_pi_(trainLength),
     beta_(trainLength),
     embed_y_(trainLength),
@@ -84,7 +84,7 @@ void LowRankRegressor<K>::operator()(const TrainingData& data,
   const Eigen::MatrixXd& x = data.x;
   const Eigen::MatrixXd& y = data.y;
   //low rank stuff 
-  int columns = (n_*settings_.rank_fraction);
+  int columns = (n_*settings_.data_fraction);
   // int rank = int(columns*0.9);
   Eigen::MatrixXd C(n_, columns);
   Eigen::MatrixXd W(columns, columns);

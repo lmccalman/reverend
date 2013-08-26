@@ -27,6 +27,8 @@ class Settings(object):
         if prefix is not None:
             self.filename_X = prefix + 'X.npy'
             self.filename_Y = prefix + 'Y.npy'
+            self.filename_Xr = prefix + 'Xr.npy'
+            self.filename_Yr = prefix + 'Yr.npy'
             self.filename_X_s = prefix + 'X_s.npy'
             self.filename_Y_s = prefix + 'Y_s.npy'
             self.filename_U = prefix + 'U.npy'
@@ -42,6 +44,8 @@ def write_config_file(settings, filename):
     config.add_section('Input')
     config.set('Input', 'filename_x', settings.filename_X)
     config.set('Input', 'filename_y', settings.filename_Y)
+    config.set('Input', 'filename_xr', settings.filename_Xr)
+    config.set('Input', 'filename_yr', settings.filename_Yr)
     config.set('Input', 'filename_xs', settings.filename_X_s)
     config.set('Input', 'filename_ys', settings.filename_Y_s)
     config.set('Input', 'filename_u', settings.filename_U)
@@ -83,8 +87,7 @@ def write_config_file(settings, filename):
             int(settings.direct_cumulative))
     config.set('Algorithm', 'quantile', settings.quantile)
     config.set('Algorithm', 'scaling_strategy', settings.scaling_strategy)
-    config.set('Algorithm', 'rank_fraction', settings.rank_fraction)
-    config.set('Algorithm', 'reduced_set_size', settings.reduced_set_size)
+    config.set('Algorithm', 'data_fraction', settings.data_fraction)
     config.set('Output', 'filename_preimage', settings.filename_preimage)
     config.set('Output', 'filename_posterior', settings.filename_posterior)
     config.set('Output', 'filename_cumulative',

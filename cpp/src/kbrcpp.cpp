@@ -28,6 +28,47 @@
 #include "lowrankregressor.hpp"
 #include "reducedset.hpp"
 
+
+void trainReducedSet(const TrainingData& fullData, 
+    TrainingData& trainData, Settings& settings)
+{
+  TestingData testData;
+  double frac = settings.data_fraction;
+  if (settings.scaling_strategy == "random")
+    randomReducedSet(fullData, settings, trainData, testData);
+  else if (settings.scaling_strategy == "optimal")
+    findReducedSet<RBFKernel>(fullData, settings, trainData, testData);
+
+  if (frac <= 0.1)
+    passthroughTrainSettings<Regressor<RBFKernel>, RBFKernel>(
+        trainData, testData,settings);
+  else
+    trainSettings<Regressor<RBFKernel>, RBFKernel>(trainData, settings);
+  //write out reduced set
+  writeNPY(trainData.x, settings.filename_xr);
+  writeNPY(trainData.y, settings.filename_yr);
+}
+
+void trainAlgorithm(const TrainingData& fulldata,
+                    TrainingData& data,
+                    Settings& settings)
+{
+  if (settings.scaling_strategy == "random" ||
+      settings.scaling_strategy == "optimal")
+  {
+    trainReducedSet(fulldata, data, settings);
+  }
+  else
+  {
+    data = fulldata;
+    if (settings.scaling_strategy == "lowrank")
+      trainSettings<LowRankRegressor<RBFKernel>, RBFKernel>(data, settings);
+    else
+      trainSettings<Regressor<RBFKernel>, RBFKernel>(data, settings);
+  }
+}
+
+
 int main(int argc, char** argv)
 {
   
@@ -38,38 +79,17 @@ int main(int argc, char** argv)
   std::cout << "sigma_x" << settings.sigma_x << std::endl;
   std::cout << "sigma_y" << settings.sigma_y << std::endl;
 
-  TrainingData trainData = readTrainingData(settings); 
+  TrainingData fullData = readTrainingData(settings); 
   TestingData testData = readTestingData(settings);
-  //compute reduced set
-  if (settings.reduced_set_size < trainData.x.rows())
-  {
-    trainData = findReducedSet<RBFKernel>(trainData, settings);
-  }
-  
+  TrainingData trainData;
+  std::cout << "Training..." << std::endl;
+  trainAlgorithm(fullData, trainData, settings);
   //useful sizes for preallocation
   uint n = trainData.x.rows();
   uint m = trainData.u.rows();
   uint s = testData.ys.rows();
   Eigen::MatrixXd weights(s,n);
-
-  std::cout << "Training..." << std::endl;
-  //how about some training  
-  if (settings.inference_type == std::string("filter"))
-  {
-    trainSettings<Filter<RBFKernel>, RBFKernel>(trainData, settings);
-  }
-  else
-  {
-    if (settings.rank_fraction < 1.0)
-    {
-      trainSettings<LowRankRegressor<RBFKernel>, RBFKernel>(trainData, settings);
-    }
-    else
-    {
-      trainSettings<Regressor<RBFKernel>, RBFKernel>(trainData, settings);
-    }
-  }
-
+  
   //Create kernels and algorithm 
   std::cout << "Inferring..." << std::endl;
   Kernel<RBFKernel> kx(trainData.x, settings.sigma_x);
@@ -77,19 +97,22 @@ int main(int argc, char** argv)
   if (settings.inference_type == std::string("filter"))
   {
     Filter<RBFKernel> f(n, m, settings);
-    f(trainData, kx, ky, testData.ys, settings.epsilon_min, settings.delta_min, weights);
+    f(trainData, kx, ky, testData.ys, 
+      settings.epsilon_min, settings.delta_min, weights);
   }
   else
   {
-    if (settings.rank_fraction < 1.0)
+    if (settings.scaling_strategy == "lowrank")
     {
       LowRankRegressor<RBFKernel> r(n, m, settings);
-      r(trainData, kx, ky, testData.ys, settings.epsilon_min, settings.delta_min, weights);
+      r(trainData, kx, ky, testData.ys,
+        settings.epsilon_min, settings.delta_min, weights);
     }
     else
     {
       Regressor<RBFKernel> r(n, m, settings);
-      r(trainData, kx, ky, testData.ys, settings.epsilon_min, settings.delta_min, weights);
+      r(trainData, kx, ky, testData.ys,
+        settings.epsilon_min, settings.delta_min, weights);
     }
   }
   //write out the results 

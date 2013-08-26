@@ -28,6 +28,8 @@ struct Settings
 {
   std::string filename_x;
   std::string filename_y;
+  std::string filename_xr;
+  std::string filename_yr;
   std::string filename_ys;
   std::string filename_xs;
   std::string filename_u;
@@ -58,20 +60,20 @@ struct Settings
   double quantile;
   uint folds;
   uint observation_period;
-  uint reduced_set_size;
   bool cumulative_estimate;
   bool cumulative_mean_map;
   bool quantile_estimate;
   bool normed_weights;
   bool pinball_loss;
   bool direct_cumulative;
-  double rank_fraction;
+  double data_fraction;
+  std::string scaling_strategy;
 };
 
 struct TrainingData
 {
   public:
-    TrainingData();
+    TrainingData(){};
     TrainingData(const Eigen::MatrixXd& in_u,
                  const Eigen::VectorXd& in_lambda,
                  const Eigen::MatrixXd& in_x,
@@ -95,7 +97,7 @@ struct TrainingData
 struct TestingData
 {
   public:
-    TestingData();
+    TestingData(){};
     TestingData(const Eigen::MatrixXd& in_xs,
         const Eigen::MatrixXd& in_ys) : xs(in_xs), ys(in_ys) {};
     Eigen::MatrixXd xs;

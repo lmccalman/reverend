@@ -50,7 +50,7 @@ std::vector<double> localOptimum(NloptCost& costFunction, const std::vector<doub
   opt.set_ftol_rel(1e-5);
   opt.set_ftol_abs(1e-4);
   opt.set_xtol_rel(1e-8);
-  opt.set_maxtime(60);
+  opt.set_maxtime(600);
 
   opt.set_min_objective(costWrapper, &costFunction);
   opt.set_lower_bounds(thetaMin);
@@ -237,6 +237,21 @@ void trainSettings(const TrainingData& data, Settings& settings)
     KFoldCVCost< LogPCost<A,K> > costfunc(folds, data, settings);
     thetaBest = globalOptimum(costfunc, v.thetaMin, v.thetaMax, v.theta0, wallTime);
   }
+  Settings result = newSettings(thetaBest,dx,dy,settings);
+  settings = result; 
+}
+  
+template <class A, class K>
+void passthroughTrainSettings(const TrainingData& data, const TestingData& test, Settings& settings)
+{
+  double wallTime = settings.walltime;
+  bool normedWeights = true;
+  uint dx = data.x.cols();
+  uint dy = data.y.cols();
+  TrainingVectors  v = trainingVectors(dx, dy, settings);
+  std::vector<double> thetaBest = v.theta0;
+  PassthroughCost< LogPCost<A,K> > costfunc(data, test, settings);
+  thetaBest = globalOptimum(costfunc, v.thetaMin, v.thetaMax, v.theta0, wallTime);
   Settings result = newSettings(thetaBest,dx,dy,settings);
   settings = result; 
 }

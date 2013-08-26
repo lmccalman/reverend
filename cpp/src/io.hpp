@@ -59,6 +59,8 @@ Settings getSettings(const std::string& filename)
   s.filename_u = pt.get<std::string>("Input.filename_u"); 
   s.filename_x = pt.get<std::string>("Input.filename_x"); 
   s.filename_y = pt.get<std::string>("Input.filename_y"); 
+  s.filename_xr = pt.get<std::string>("Input.filename_xr"); 
+  s.filename_yr = pt.get<std::string>("Input.filename_yr"); 
   s.filename_xs = pt.get<std::string>("Input.filename_xs"); 
   s.filename_ys = pt.get<std::string>("Input.filename_ys"); 
   s.filename_weights = pt.get<std::string>("Output.filename_weights"); 
@@ -94,8 +96,8 @@ Settings getSettings(const std::string& filename)
   s.quantile = pt.get<double>("Algorithm.quantile");
   s.pinball_loss = pt.get<bool>("Algorithm.pinball_loss");
   s.direct_cumulative = pt.get<bool>("Algorithm.direct_cumulative");
-  s.rank_fraction = pt.get<double>("Algorithm.rank_fraction");
-  s.reduced_set_size = pt.get<uint>("Algorithm.reduced_set_size");
+  s.data_fraction = pt.get<double>("Algorithm.data_fraction");
+  s.scaling_strategy = pt.get<std::string>("Algorithm.scaling_strategy");
   return s;
 }
 

@@ -51,21 +51,21 @@ settings.cumulative_mean_map = True
 
 settings.scaling_strategy = 'none'
 
-settings.sigma_x_min = 0.34
-settings.sigma_x = 0.34
-settings.sigma_x_max = 0.34
+settings.sigma_x_min = 0.2
+settings.sigma_x = 1.34
+settings.sigma_x_max = 2.0
 
-settings.sigma_y_min = 0.10
-settings.sigma_y = 0.10
-settings.sigma_y_max = 0.10
+settings.sigma_y_min = 0.05
+settings.sigma_y = 1.10
+settings.sigma_y_max = 1.5
 
-settings.epsilon_min_min = np.exp(-10.4)
+settings.epsilon_min_min = np.exp(-15.4)
 settings.epsilon_min = np.exp(-10.4)
-settings.epsilon_min_max = np.exp(-10.4)
+settings.epsilon_min_max = np.exp(-5.4)
 
 settings.delta_min_min = np.exp(-2.59)
-settings.delta_min = np.exp(-2.59)
-settings.delta_min_max = np.exp(-2.59)
+settings.delta_min = np.exp(-1.59)
+settings.delta_min_max = np.exp(2)
 
 #for preimage
 settings.preimage_reg = 1e2
@@ -76,7 +76,7 @@ settings.inference_type = 'regress'
 settings.cumulative_estimate = True
 settings.quantile_estimate = True
 settings.quantile = 0.5
-settings.walltime = 1.0
+settings.walltime = 30.0
 settings.preimage_walltime = 12.0
 settings.folds = 20
 settings.observation_period = 1

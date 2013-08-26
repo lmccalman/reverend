@@ -163,3 +163,31 @@ struct KFoldCVCost : NloptCost
     uint n_;
     uint k_;
 };
+
+
+//A Passthrough cost function
+template <class T>
+struct PassthroughCost : NloptCost
+{
+  public:
+    PassthroughCost(const TrainingData& data, const TestingData& test, const Settings& settings)
+      : rawCostFunction_(data, test, settings),
+        testPoints_(test.xs.rows())
+    {};
+    
+    double operator()(const std::vector<double>&x, std::vector<double>&grad)
+    {
+      double totalCost = rawCostFunction_(x, grad);
+      std::cout << "[ "; 
+      for (uint i=0;i<x.size();i++)
+      {
+        std::cout << std::setw(10) << x[i] << " ";
+      }
+      totalCost = totalCost / double(testPoints_);
+      std::cout << " ] cost:" << totalCost << std::endl;
+      return totalCost;
+    };
+  protected:
+    T rawCostFunction_;
+    uint testPoints_;
+};
