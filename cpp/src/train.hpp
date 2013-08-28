@@ -47,8 +47,8 @@ std::vector<double> localOptimum(NloptCost& costFunction, const std::vector<doub
 
   uint n = theta0.size();
   nlopt::opt opt(nlopt::LN_COBYLA, n);
-  opt.set_ftol_rel(1e-5);
-  opt.set_ftol_abs(1e-4);
+  opt.set_ftol_rel(1e-7);
+  opt.set_ftol_abs(1e-7);
   opt.set_xtol_rel(1e-8);
   opt.set_maxtime(600);
 

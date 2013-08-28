@@ -53,18 +53,26 @@ void trainAlgorithm(const TrainingData& fulldata,
                     TrainingData& data,
                     Settings& settings)
 {
-  if (settings.scaling_strategy == "random" ||
-      settings.scaling_strategy == "optimal")
+  if (settings.data_fraction < 1.0)
   {
-    trainReducedSet(fulldata, data, settings);
+    if (settings.scaling_strategy == "random" ||
+        settings.scaling_strategy == "optimal")
+    {
+      trainReducedSet(fulldata, data, settings);
+    }
+    else
+    {
+      data = fulldata;
+      if (settings.scaling_strategy == "lowrank")
+        trainSettings<LowRankRegressor<RBFKernel>, RBFKernel>(data, settings);
+      else
+        trainSettings<Regressor<RBFKernel>, RBFKernel>(data, settings);
+    }
   }
   else
   {
     data = fulldata;
-    if (settings.scaling_strategy == "lowrank")
-      trainSettings<LowRankRegressor<RBFKernel>, RBFKernel>(data, settings);
-    else
-      trainSettings<Regressor<RBFKernel>, RBFKernel>(data, settings);
+    trainSettings<Regressor<RBFKernel>, RBFKernel>(data, settings);
   }
 }
 
