@@ -39,6 +39,7 @@ struct Settings
   std::string filename_embedding;
   std::string filename_cumulative;
   std::string filename_quantile;
+  std::string filename_sgd;
   std::string inference_type;
   Eigen::VectorXd sigma_x;
   Eigen::VectorXd sigma_x_min;
@@ -68,6 +69,9 @@ struct Settings
   bool direct_cumulative;
   double data_fraction;
   std::string scaling_strategy;
+  uint sgd_iterations;
+  uint sgd_batch_size;
+  double sgd_learn_rate;
 };
 
 struct TrainingData

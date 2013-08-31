@@ -37,6 +37,7 @@ class Settings(object):
             self.filename_embedding = prefix + 'E.npy'
             self.filename_posterior = prefix + 'P.npy'
             self.filename_cumulative = prefix + 'C.npy'
+            self.filename_sgd = prefix + 'SGD.npy'
 
 def write_config_file(settings, filename):
     config = ConfigParser.RawConfigParser()
@@ -59,6 +60,7 @@ def write_config_file(settings, filename):
     config.add_section('Output')
     config.set('Output', 'filename_weights', settings.filename_weights)
     config.set('Output', 'filename_embedding', settings.filename_embedding)
+    config.set('Output', 'filename_sgd', settings.filename_sgd)
     config.add_section('Training')
     config.set('Training', 'walltime', settings.walltime)
     config.set('Training', 'folds', settings.folds)
@@ -86,8 +88,6 @@ def write_config_file(settings, filename):
     config.set('Algorithm', 'direct_cumulative',
             int(settings.direct_cumulative))
     config.set('Algorithm', 'quantile', settings.quantile)
-    config.set('Algorithm', 'scaling_strategy', settings.scaling_strategy)
-    config.set('Algorithm', 'data_fraction', settings.data_fraction)
     config.set('Output', 'filename_preimage', settings.filename_preimage)
     config.set('Output', 'filename_posterior', settings.filename_posterior)
     config.set('Output', 'filename_cumulative',
@@ -98,6 +98,12 @@ def write_config_file(settings, filename):
     config.set('Preimage', 'preimage_reg', settings.preimage_reg)
     config.set('Preimage', 'preimage_reg_min', settings.preimage_reg_min)
     config.set('Preimage', 'preimage_reg_max', settings.preimage_reg_max)
+    config.add_section('Scaling')
+    config.set('Scaling', 'scaling_strategy', settings.scaling_strategy)
+    config.set('Scaling', 'data_fraction', settings.data_fraction)
+    config.set('Scaling', 'sgd_iterations', settings.sgd_iterations)
+    config.set('Scaling', 'sgd_learn_rate', settings.sgd_learn_rate)
+    config.set('Scaling', 'sgd_batch_size', settings.sgd_batch_size)
     with open(filename, 'w') as configfile:
         config.write(configfile)
 

@@ -69,6 +69,7 @@ Settings getSettings(const std::string& filename)
   s.filename_embedding = pt.get<std::string>("Output.filename_embedding"); 
   s.filename_cumulative = pt.get<std::string>("Output.filename_cumulative"); 
   s.filename_quantile = pt.get<std::string>("Output.filename_quantile"); 
+  s.filename_sgd = pt.get<std::string>("Output.filename_sgd"); 
   s.sigma_x = stringToVector(pt.get<std::string>("Kernel.sigma_x")); 
   s.sigma_x_min =stringToVector( pt.get<std::string>("Kernel.sigma_x_min")); 
   s.sigma_x_max =stringToVector( pt.get<std::string>("Kernel.sigma_x_max")); 
@@ -96,8 +97,12 @@ Settings getSettings(const std::string& filename)
   s.quantile = pt.get<double>("Algorithm.quantile");
   s.pinball_loss = pt.get<bool>("Algorithm.pinball_loss");
   s.direct_cumulative = pt.get<bool>("Algorithm.direct_cumulative");
-  s.data_fraction = pt.get<double>("Algorithm.data_fraction");
-  s.scaling_strategy = pt.get<std::string>("Algorithm.scaling_strategy");
+  s.sgd_iterations = pt.get<uint>("Scaling.sgd_iterations");
+  s.sgd_learn_rate = pt.get<double>("Scaling.sgd_learn_rate");
+  s.sgd_batch_size = pt.get<double>("Scaling.sgd_batch_size");
+  s.scaling_strategy = pt.get<std::string>("Scaling.scaling_strategy");
+  s.data_fraction = pt.get<double>("Scaling.data_fraction");
+  s.data_fraction = pt.get<double>("Scaling.data_fraction");
   return s;
 }
 

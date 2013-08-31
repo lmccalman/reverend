@@ -217,7 +217,7 @@ struct SGDReducedSetCost : NloptCost
   public:
     SGDReducedSetCost(const TrainingData& data, const Settings& settings)
       : setSize_( int(settings.data_fraction*data.x.rows()) ), 
-      data_(data), settings_(settings){};
+      data_(data), settings_(settings), batchSize_(settings.sgd_batch_size){};
 
     double operator()(const std::vector<double>&x, std::vector<double>&grad)
     {
@@ -225,13 +225,12 @@ struct SGDReducedSetCost : NloptCost
       uint n = x.size();
       uint fullsize = data_.x.rows();
       double eps = sqrt(std::numeric_limits<double>::epsilon());
-      uint batchSize = 100;
       bool stochastic = true;
       std::vector<uint> indices;
       //indiecs
       if (stochastic)
       {
-        indices = randomIndices(batchSize, setSize_, fullsize);
+        indices = randomIndices(batchSize_, setSize_, fullsize);
       }
       else
       {
@@ -267,6 +266,7 @@ struct SGDReducedSetCost : NloptCost
     const uint setSize_;
     const TrainingData& data_;
     const Settings& settings_;
+    const uint batchSize_;
 };
 
 template <class K>
@@ -292,7 +292,7 @@ void findReducedSet(const TrainingData& fulldata, Settings& settings,
   //optimize
   SGDReducedSetCost<K> costfunc(fulldata, settings); 
   // std::vector<double> thetaBest = localOptimum(costfunc, thetaMin, thetaMax, theta0);
-  std::vector<double> thetaBest = SGD(costfunc, thetaMin, thetaMax, theta0);
+  std::vector<double> thetaBest = SGD(costfunc, thetaMin, thetaMax, theta0, settings);
 
   Eigen::MatrixXd bestX(setSize, dx); 
   Eigen::MatrixXd bestY(setSize, dy); 

@@ -31,23 +31,26 @@ double costWrapper(const std::vector<double>&x, std::vector<double>&grad, void* 
 }
 
 std::vector<double> SGD(NloptCost& costFunction, const std::vector<double>& thetaMin,
-    const std::vector<double>& thetaMax, const std::vector<double>& theta0)
+    const std::vector<double>& thetaMax, const std::vector<double>& theta0,
+    const Settings& settings)
 {
+  uint iterations = settings.sgd_iterations; 
+  double learnRate = settings.sgd_learn_rate;
+  
   std::vector<double> grad(theta0.size());
   std::vector<double> x = theta0;
   std::vector<double> bestx = theta0;
-  double learnrate = 0.001;
   double bestcost = 1e100;
-  for (uint iter=0; iter < 1000; iter++) 
+  Eigen::VectorXd allCosts(iterations);
+  for (uint iter=0; iter < iterations; iter++) 
   {
-    if (iter > 500)
-      learnrate = 0.0005;
     double cost = costFunction(x, grad);
+    allCosts(iter) = cost; 
     double modgrad = 0.0;
     //update x 
     for (uint i=0; i< x.size(); i++)
     {
-      x[i] = x[i] - learnrate*grad[i];
+      x[i] = x[i] - learnRate*grad[i];
       if (x[i] < thetaMin[i])
         x[i] = thetaMin[i];
       if (x[i] > thetaMax[i])
@@ -55,13 +58,21 @@ std::vector<double> SGD(NloptCost& costFunction, const std::vector<double>& thet
       modgrad += grad[i]*grad[i];
     }
     modgrad = sqrt(modgrad);
-    std::cout << "cost: " << cost << "grad: " << modgrad << std::endl;
+    std::cout << "cost: " << cost << " grad: " << modgrad << std::endl;
     if (cost < bestcost)
     {
       bestcost = cost;
       bestx = x;
     }
   }
+  writeNPY(allCosts, settings.filename_sgd);
+  std::cout << "Final Estimate" << std::endl;
+  std::cout << "[ "; 
+  for (uint i=0;i<bestx.size();i++)
+  {
+    std::cout << bestx[i] << " ";
+  }
+  std::cout << " ] cost:" << bestcost << std::endl << std::endl;
   return bestx;
 }
 
