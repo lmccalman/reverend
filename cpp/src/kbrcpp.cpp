@@ -39,7 +39,7 @@ void trainReducedSet(const TrainingData& fullData,
   else if (settings.scaling_strategy == "optimal")
     findReducedSet<RBFKernel>(fullData, settings, trainData, testData);
 
-  if (frac <= 0.1)
+  if (frac <= 0.2)
     passthroughTrainSettings<Regressor<RBFKernel>, RBFKernel>(
         trainData, testData,settings);
   else

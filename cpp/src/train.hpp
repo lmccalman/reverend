@@ -30,6 +30,42 @@ double costWrapper(const std::vector<double>&x, std::vector<double>&grad, void* 
   return result;
 }
 
+std::vector<double> SGD(NloptCost& costFunction, const std::vector<double>& thetaMin,
+    const std::vector<double>& thetaMax, const std::vector<double>& theta0)
+{
+  std::vector<double> grad(theta0.size());
+  std::vector<double> x = theta0;
+  std::vector<double> bestx = theta0;
+  double learnrate = 0.001;
+  double bestcost = 1e100;
+  for (uint iter=0; iter < 1000; iter++) 
+  {
+    if (iter > 500)
+      learnrate = 0.0005;
+    double cost = costFunction(x, grad);
+    double modgrad = 0.0;
+    //update x 
+    for (uint i=0; i< x.size(); i++)
+    {
+      x[i] = x[i] - learnrate*grad[i];
+      if (x[i] < thetaMin[i])
+        x[i] = thetaMin[i];
+      if (x[i] > thetaMax[i])
+        x[i] = thetaMax[i];
+      modgrad += grad[i]*grad[i];
+    }
+    modgrad = sqrt(modgrad);
+    std::cout << "cost: " << cost << "grad: " << modgrad << std::endl;
+    if (cost < bestcost)
+    {
+      bestcost = cost;
+      bestx = x;
+    }
+  }
+  return bestx;
+}
+
+
 std::vector<double> localOptimum(NloptCost& costFunction, const std::vector<double>& thetaMin,
     const std::vector<double>& thetaMax, const std::vector<double>& theta0)
 {
@@ -166,12 +202,18 @@ TrainingVectors trainingVectors(uint dx, uint dy, const Settings& settings)
     thetaMin[i+dx] = settings.sigma_y_min(i);
     thetaMax[i+dx] = settings.sigma_y_max(i);
   }
-  theta0[dx+dy] = log(settings.epsilon_min);
-  theta0[dx+dy+1] = log(settings.delta_min);
-  thetaMin[dx+dy] = log(settings.epsilon_min_min);
-  thetaMin[dx+dy+1] = log(settings.delta_min_min);
-  thetaMax[dx+dy] = log(settings.epsilon_min_max);
-  thetaMax[dx+dy+1] = log(settings.delta_min_max);
+  // theta0[dx+dy] = log(settings.epsilon_min);
+  // theta0[dx+dy+1] = log(settings.delta_min);
+  // thetaMin[dx+dy] = log(settings.epsilon_min_min);
+  // thetaMin[dx+dy+1] = log(settings.delta_min_min);
+  // thetaMax[dx+dy] = log(settings.epsilon_min_max);
+  // thetaMax[dx+dy+1] = log(settings.delta_min_max);
+  theta0[dx+dy] = settings.epsilon_min;
+  theta0[dx+dy+1] = settings.delta_min;
+  thetaMin[dx+dy] = settings.epsilon_min_min;
+  thetaMin[dx+dy+1] =settings.delta_min_min;
+  thetaMax[dx+dy] = settings.epsilon_min_max;
+  thetaMax[dx+dy+1] = settings.delta_min_max;
 
   if (!normedWeights) 
   {

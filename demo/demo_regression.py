@@ -43,15 +43,14 @@ prefix = 'mc'  # will automatically construct all filenames
 settings = kbrcpp.Settings(prefix)
 
 settings.normed_weights = True
-settings.rank_fraction = 1.0
-settings.reduced_set_size = 50
+settings.data_fraction = 1.0
 settings.pinball_loss = False
 settings.direct_cumulative = False
 settings.cumulative_mean_map = True
 
 settings.scaling_strategy = 'none'
 
-settings.sigma_x_min = 0.2
+settings.sigma_x_min = 0.01
 settings.sigma_x = 1.34
 settings.sigma_x_max = 2.0
 
@@ -63,7 +62,7 @@ settings.epsilon_min_min = np.exp(-15.4)
 settings.epsilon_min = np.exp(-10.4)
 settings.epsilon_min_max = np.exp(-5.4)
 
-settings.delta_min_min = np.exp(-2.59)
+settings.delta_min_min = np.exp(-5.59)
 settings.delta_min = np.exp(-1.59)
 settings.delta_min_max = np.exp(2)
 
@@ -78,7 +77,7 @@ settings.quantile_estimate = True
 settings.quantile = 0.5
 settings.walltime = 30.0
 settings.preimage_walltime = 12.0
-settings.folds = 20
+settings.folds = 5
 settings.observation_period = 1
 
 def main():

@@ -50,16 +50,20 @@ class Filter
 
     //stuff I'm going to compute
     Eigen::MatrixXd g_xxtp1_;
+    Eigen::MatrixXd g_xx_epsilon_;
     Eigen::VectorXd mu_pi_;
     Eigen::VectorXd beta_;
     Eigen::VectorXd beta_0_;
     Eigen::MatrixXd beta_g_yy_;
     Eigen::MatrixXd beta_diag_;
     Eigen::MatrixXd r_xy_;
-    VerifiedCholeskySolver<Eigen::VectorXd> chol_g_yy_;
-    VerifiedCholeskySolver<Eigen::VectorXd> chol_beta_0_;
-    VerifiedCholeskySolver<Eigen::VectorXd> chol_beta_;
-    VerifiedCholeskySolver<Eigen::MatrixXd> chol_beta_g_yy_;
+    // VerifiedCholeskySolver<Eigen::VectorXd> chol_g_yy_;
+    // VerifiedCholeskySolver<Eigen::VectorXd> chol_beta_0_;
+    // VerifiedCholeskySolver<Eigen::VectorXd> chol_beta_;
+    // VerifiedCholeskySolver<Eigen::MatrixXd> chol_beta_g_yy_;
+    Eigen::LDLT<Eigen::MatrixXd> qchol_g_xx_;
+    Eigen::LDLT<Eigen::MatrixXd> qchol_g_yy_;
+    Eigen::LDLT<Eigen::MatrixXd> qchol_pre_g_yy_;
     Eigen::VectorXd w_;
 
 };
@@ -67,18 +71,19 @@ class Filter
 
 template <class K>
 Filter<K>::Filter(uint trainLength, uint testLength, const Settings& settings)
-  : settings_(settings),
+  : n_(trainLength),
+    settings_(settings),
     g_xxtp1_(trainLength,trainLength),
+    g_xx_epsilon_(trainLength, trainLength),
     mu_pi_(trainLength),
     beta_(trainLength),
     beta_0_(trainLength),
     beta_g_yy_(trainLength,trainLength),
     beta_diag_(trainLength, trainLength),
     r_xy_(trainLength,trainLength),
-    chol_g_yy_(trainLength,trainLength,1),
-    chol_beta_0_(trainLength,trainLength,1),
-    chol_beta_(trainLength,trainLength,1),
-    chol_beta_g_yy_(trainLength,trainLength,trainLength),
+    qchol_g_xx_(trainLength),
+    qchol_g_yy_(trainLength),
+    qchol_pre_g_yy_(trainLength),
     w_(trainLength){}
 
 template <class K>
@@ -93,7 +98,6 @@ void Filter<K>::operator()(const TrainingData& data,
   uint n = data.x.rows();
   dim_x_ = data.x.cols();
   dim_y_ = data.y.cols();
-
   //compute transition matrix
   for (int i=0; i<n;i++)
   {
@@ -102,13 +106,14 @@ void Filter<K>::operator()(const TrainingData& data,
       g_xxtp1_(i,j) = kx(data.x.row(i), data.xtp1.row(j));
     }
   }
-  
   //compute initial embedding from kbr
   Eigen::VectorXd y0(dim_y_); 
   y0 = data.y.block(0,0,1,dim_y_).transpose();
   Eigen::VectorXd mu_dash(n);
   ky.embed(y0, mu_dash);
-  chol_g_yy_.solve(ky.gramMatrix(), mu_dash, deltaMin, mu_pi_);
+  qchol_pre_g_yy_.compute(ky.gramMatrix() + 
+                          Eigen::MatrixXd::Identity(n_,n_)*deltaMin);
+  mu_pi_ = qchol_pre_g_yy_.solve(mu_dash);
   weights.row(0) = mu_pi_;
 
   auto s = weights.rows();
@@ -117,9 +122,11 @@ void Filter<K>::operator()(const TrainingData& data,
     mu_pi_ = mu_pi_.cwiseMax(0.0);
     mu_pi_ = mu_pi_ / mu_pi_.sum();
     mu_pi_ = kx.gramMatrix() * mu_pi_; 
-    chol_beta_0_.solve(kx.gramMatrix(), mu_pi_, epsilonMin, beta_0_);
+    g_xx_epsilon_ = kx.gramMatrix() + Eigen::MatrixXd::Identity(n_,n_)*epsilonMin;
+    qchol_g_xx_.compute(g_xx_epsilon_);
+    beta_0_ = qchol_g_xx_.solve(mu_pi_);
     beta_0_ = g_xxtp1_ * beta_0_;
-    chol_beta_.solve(kx.gramMatrix(), beta_0_, epsilonMin, beta_);
+    beta_ = qchol_g_xx_.solve(beta_0_);
     if (settings_.normed_weights)
     {
       beta_ = beta_.cwiseMax(0.0);
@@ -132,7 +139,9 @@ void Filter<K>::operator()(const TrainingData& data,
       {
         beta_diag_ = beta_.asDiagonal();
         beta_g_yy_ = beta_diag_ * ky.gramMatrix();
-        chol_beta_g_yy_.solve(beta_g_yy_, beta_diag_, deltaMin, r_xy_);
+        beta_g_yy_ += Eigen::MatrixXd::Identity(n_,n_)*deltaMin;
+        qchol_g_yy_.compute(beta_g_yy_);
+        r_xy_ = qchol_g_yy_.solve(beta_diag_);
       }
       else
       {
@@ -142,7 +151,9 @@ void Filter<K>::operator()(const TrainingData& data,
         beta_diag_ = beta_.asDiagonal();
         Eigen::MatrixXd b = ky.gramMatrix() * beta_diag_;
         Eigen::MatrixXd A = b * ky.gramMatrix();
-        chol_beta_g_yy_.solve(A, b, deltaMin, r_xy_);
+        beta_g_yy_ = A + Eigen::MatrixXd::Identity(n_,n_)*deltaMin;
+        qchol_g_yy_.compute(beta_g_yy_);
+        r_xy_ = qchol_g_yy_.solve(b);
       }
       //actual inference part 
       auto yi = ys.row(i);

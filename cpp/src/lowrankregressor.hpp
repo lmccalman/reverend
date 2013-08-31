@@ -48,9 +48,8 @@ class LowRankRegressor
     uint m_; // number of prior points
     uint dim_x_;
     uint dim_y_;
-
-    VerifiedCholeskySolver<Eigen::VectorXd> chol_g_xx_;
-    VerifiedCholeskySolver<Eigen::VectorXd> chol_beta_g_yy_;
+    Eigen::LDLT<Eigen::MatrixXd> qchol_g_xx_;
+    Eigen::LDLT<Eigen::MatrixXd> qchol_g_yy_;
     //stuff I'm going to compute
     Eigen::VectorXd mu_pi_;
     Eigen::VectorXd beta_;
@@ -62,10 +61,8 @@ template <class K>
 LowRankRegressor<K>::LowRankRegressor(uint trainLength,
     uint testLength, const Settings& settings)
   : n_(trainLength),
-    chol_g_xx_(int(trainLength*settings.data_fraction),
-               int(trainLength*settings.data_fraction),1),
-    chol_beta_g_yy_(int(trainLength*settings.data_fraction),
-                    int(trainLength*settings.data_fraction),1),
+    qchol_g_xx_(int(trainLength*settings.data_fraction)),
+    qchol_g_yy_(int(trainLength*settings.data_fraction)),
     mu_pi_(trainLength),
     beta_(trainLength),
     embed_y_(trainLength),
@@ -94,7 +91,8 @@ void LowRankRegressor<K>::operator()(const TrainingData& data,
   double invreg = 1.0/epsilonMin; 
   simpleNystromApproximation(data.x, kx, columns, C, W);
   Eigen::VectorXd x1(columns);
-  chol_g_xx_.solve(W + invreg*C.transpose()*C, C.transpose()*mu_pi_, 1e-10, x1);
+  qchol_g_xx_.compute(W + invreg*C.transpose()*C);
+  x1 = qchol_g_xx_.solve(C.transpose()*mu_pi_);
   
   beta_ = invreg*mu_pi_ - invreg*invreg*C*x1;
   beta_ = beta_.cwiseMax(0.0);
@@ -102,13 +100,13 @@ void LowRankRegressor<K>::operator()(const TrainingData& data,
   auto s = weights.rows();
   Eigen::VectorXd x2(columns);
   double invdelta = 1.0/deltaMin;
+  qchol_g_yy_.compute(W + invreg*C.transpose()*(beta_.asDiagonal()*C));
   for (uint i=0; i<s; i++)
   {
     auto yi = ys.row(i);
     ky.embed(yi, embed_y_);
     embed_y_ = beta_.asDiagonal() * embed_y_;
-    chol_beta_g_yy_.solve(W + invreg*C.transpose()*(beta_.asDiagonal()*C),
-                          C.transpose()*embed_y_,1e-10, x2);
+    x2 = qchol_g_yy_.solve(C.transpose()*embed_y_);
     w_ = invdelta*embed_y_ - invdelta * invdelta * beta_.asDiagonal()*(C*x2);
     w_ = w_.cwiseMax(0.0);
     if (w_.sum() > 0.0)

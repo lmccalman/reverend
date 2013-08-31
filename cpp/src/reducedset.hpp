@@ -38,7 +38,6 @@ std::vector<uint> randomIndices(uint size, uint nmin, uint nmax)
   return result;
 }
 
-
 void printCost(const std::vector<double>& x, double cost)
 {
   std::cout << "[ "; 
@@ -117,8 +116,6 @@ void paramsToVector(const Eigen::MatrixXd& x,
       theta0[c] = x(i,j);
       thetaMin[c] = x(i,j) - 3*settings.sigma_x(j);
       thetaMax[c] = x(i,j) + 3*settings.sigma_x(j);
-      // thetaMin[c] = minX[j];
-      // thetaMax[c] = maxX[j];
       c++;
     }
   }
@@ -130,8 +127,6 @@ void paramsToVector(const Eigen::MatrixXd& x,
       theta0[c] = y(i,j);
       thetaMin[c] = y(i,j) - 3*settings.sigma_y(j);
       thetaMax[c] = y(i,j) + 3*settings.sigma_y(j);
-      // thetaMin[c] = minY[j];
-      // thetaMax[c] = maxY[j];
       c++;
     }
   }
@@ -160,8 +155,9 @@ void paramsToVector(const Eigen::MatrixXd& x,
   c++;
 }
 
+
 template <class K>
-struct ReducedSetCost : NloptCost
+struct ReducedSetCost
 {
   public:
     ReducedSetCost(const TrainingData& data, const Settings& settings)
@@ -170,10 +166,8 @@ struct ReducedSetCost : NloptCost
       r_( int(settings.data_fraction*data.x.rows()) , data.x.rows(), settings),
       lweights_( int(settings.data_fraction*data.x.rows()) ),
       settings_(settings)
-      {
-        currentBestCost_ = 1e8;
-      };
-    double costfunc(const std::vector<double>&x, const std::vector<uint>& indices)
+      {};
+    double operator()(const std::vector<double>&x, const std::vector<uint>& indices)
     {
       uint n = data_.x.rows();
       uint dx = data_.x.cols();
@@ -189,27 +183,11 @@ struct ReducedSetCost : NloptCost
       Kernel<K> kx(X, sigma_x);
       Kernel<K> ky(Y, sigma_y);
       
-      // Eigen::MatrixXd J(setSize_, dx+dy);
-      // J.leftCols(dx) = X;
-      // J.rightCols(dy) = Y;
-      // Eigen::VectorXd sigma_j(dx+dy);
-      // sigma_j.head(dx) = sigma_x;
-      // sigma_j.tail(dy) = sigma_y;
-      // Kernel<K> kj(J, sigma_j);
-      //get weights of beta
-      // r_.likelihood(minidata, kx, epsilon_min, lweights_);
-      // lweights_ = lweights_.cwiseMax(0.0);
-      // lweights_ = lweights_ / lweights_.sum();
-      // evaluate the JOINT
-      // Eigen::RowVectorXd j(dx+dy);
       Eigen::MatrixXd Rxy = r_.RMatrix(minidata, kx, ky, epsilon_min, delta_min); 
       double totalCost = 0;
       uint batchSize = indices.size();
       for (uint p=0; p<batchSize; p++)
       {
-        // j.head(dx) = data_.x.row(i);
-        // j.tail(dy) = data_.y.row(i);
-        // totalCost += logKernelMixture(j, J, lweights_, kj, true);
         uint i = indices[p];
         auto yi = data_.y.row(i);
         ky.embed(yi, lweights_);
@@ -221,17 +199,28 @@ struct ReducedSetCost : NloptCost
       }
       totalCost /= double(indices.size());
       totalCost *= -1.0;
-      // if (totalCost < currentBestCost_)
-      // {
-      // currentBestCost_ = totalCost;
-      // std::cout << currentBestCost_ << std::endl;
-      // }
       return totalCost;
     };
     
+  
+  protected:
+    uint setSize_;
+    const TrainingData& data_;
+    Regressor<K> r_;
+    Eigen::VectorXd lweights_;
+    const Settings& settings_;
+};
+
+template <class K>
+struct SGDReducedSetCost : NloptCost
+{
+  public:
+    SGDReducedSetCost(const TrainingData& data, const Settings& settings)
+      : setSize_( int(settings.data_fraction*data.x.rows()) ), 
+      data_(data), settings_(settings){};
+
     double operator()(const std::vector<double>&x, std::vector<double>&grad)
     {
-      std::cout << "computing reduced set cost..." << std::endl;
       std::vector<double> xdash = x;
       uint n = x.size();
       uint fullsize = data_.x.rows();
@@ -239,7 +228,7 @@ struct ReducedSetCost : NloptCost
       uint batchSize = 100;
       bool stochastic = true;
       std::vector<uint> indices;
-      double modgrad = 0;
+      //indiecs
       if (stochastic)
       {
         indices = randomIndices(batchSize, setSize_, fullsize);
@@ -249,44 +238,35 @@ struct ReducedSetCost : NloptCost
         for (uint i=setSize_; i<fullsize; i++)
           indices.push_back(i);
       }
+
+
+      ReducedSetCost<K> rscost(data_, settings_);
+      double c0 = rscost(x, indices);
       
-      double c0 = costfunc(x, indices);
-      std::cout << "initial cost:" << c0 << std::endl;
-      std::cout << "computing gradient..." << std::endl;
+      #pragma omp parallel for
       for (int i=0;i<n;i++)
       {
+        ReducedSetCost<K> grscost(data_, settings_);
         double h = eps * std::min(fabs(x[i]),1.0);
         if (h == 0.0) 
         {
           h = eps;
         }
-        std::cout << "h: " << h << std::endl;
         xdash[i] += h;
-        double cdash = costfunc(xdash, indices);
+        double cdash = grscost(xdash, indices);
         double delta = cdash - c0;
-        std::cout << "delta: " << delta << std::endl;
         double gpos = (cdash - c0)/h ;
-        // if (fabs(gpos) > 100.0)
-        // {
-          // gpos = gpos / fabs(gpos);
-        // }
         grad[i] = gpos;
         xdash[i] -= h;
-        modgrad += gpos*gpos;
       }
-      std::cout << std::endl;
-      modgrad = sqrt(modgrad);
-      std::cout << "cost: " << c0 << " grad: " << modgrad << std::endl;
       return c0;
     }
-  
-  protected:
-    uint setSize_;
+
+
+  private:
+    const uint setSize_;
     const TrainingData& data_;
-    Regressor<K> r_;
-    Eigen::VectorXd lweights_;
     const Settings& settings_;
-    double currentBestCost_;
 };
 
 template <class K>
@@ -310,8 +290,9 @@ void findReducedSet(const TrainingData& fulldata, Settings& settings,
   paramsToVector(X, Y, fulldata.x, fulldata.y, settings,
                  thetaMin, theta0, thetaMax);
   //optimize
-  ReducedSetCost<K> costfunc(fulldata, settings); 
-  std::vector<double> thetaBest = localOptimum(costfunc, thetaMin, thetaMax, theta0);
+  SGDReducedSetCost<K> costfunc(fulldata, settings); 
+  // std::vector<double> thetaBest = localOptimum(costfunc, thetaMin, thetaMax, theta0);
+  std::vector<double> thetaBest = SGD(costfunc, thetaMin, thetaMax, theta0);
 
   Eigen::MatrixXd bestX(setSize, dx); 
   Eigen::MatrixXd bestY(setSize, dy); 

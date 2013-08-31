@@ -17,6 +17,7 @@
 // along with Reverend.  If not, see <http://www.gnu.org/licenses/>.
 #define _USE_MATH_DEFINES
 #include <cmath>
+#include <omp.h>
 #include "regressor.hpp"
 #include "filter.hpp"
 #include "preimage.hpp"
@@ -80,29 +81,56 @@ class LogPCost:Cost
       {
         sigma_y(i) = x[dx+i];
       }
-      double epsilon_min = exp(x[dx+dy]);
-      double delta_min = exp(x[dx+dy+1]);
+      // double epsilon_min = exp(x[dx+dy]);
+      // double delta_min = exp(x[dx+dy+1]);
+      double epsilon_min = x[dx+dy];
+      double delta_min = x[dx+dy+1];
       kx_.setWidth(sigma_x);
       ky_.setWidth(sigma_y);
       algo_(trainingData_, kx_, ky_, testingData_.ys, epsilon_min, delta_min, weights_);
       uint testPoints = testingData_.xs.rows();
       double totalCost = 0.0;
-      for (int i=0;i<testPoints;i++)
+      if (!omp_in_parallel())
       {
-        if (settings_.normed_weights)
+        #pragma omp parallel for reduction(+:totalCost)
+        for (int i=0;i<testPoints;i++)
         {
-          posWeights_ = weights_.row(i);
+          Eigen::VectorXd localWeights(trainingData_.x.rows());
+          if (settings_.normed_weights)
+          {
+            localWeights = weights_.row(i);
+          }
+          else
+          {
+            Eigen::MatrixXd A = AMatrix(trainingData_.x, kx_);
+            Eigen::MatrixXd B = BMatrix(trainingData_.x, kx_);
+            double preimage_reg = exp(x[dx+dy+2]);
+            positiveNormedCoeffs(weights_.row(i),A,B, preimage_reg, localWeights);
+          }
+          
+          totalCost += logKernelMixture(testingData_.xs.row(i),
+              trainingData_.x, localWeights, kx_, true);
         }
-        else
+      }
+      else
+      {
+        for (int i=0;i<testPoints;i++)
         {
-          Eigen::MatrixXd A = AMatrix(trainingData_.x, kx_);
-          Eigen::MatrixXd B = BMatrix(trainingData_.x, kx_);
-          double preimage_reg = exp(x[dx+dy+2]);
-          positiveNormedCoeffs(weights_.row(i),A,B, preimage_reg, posWeights_);
+          if (settings_.normed_weights)
+          {
+            posWeights_ = weights_.row(i);
+          }
+          else
+          {
+            Eigen::MatrixXd A = AMatrix(trainingData_.x, kx_);
+            Eigen::MatrixXd B = BMatrix(trainingData_.x, kx_);
+            double preimage_reg = exp(x[dx+dy+2]);
+            positiveNormedCoeffs(weights_.row(i),A,B, preimage_reg, posWeights_);
+          }
+
+          totalCost += logKernelMixture(testingData_.xs.row(i),
+              trainingData_.x, posWeights_, kx_, true);
         }
-        
-        totalCost += logKernelMixture(testingData_.xs.row(i),
-            trainingData_.x, posWeights_, kx_, true);
       }
       totalCost *= -1; // minimize this maximizes probability
       return totalCost;
@@ -147,8 +175,10 @@ class PinballCost:Cost
       {
         sigma_y(i) = x[dx+i];
       }
-      double epsilon_min = exp(x[dx+dy]);
-      double delta_min = exp(x[dx+dy+1]);
+      // double epsilon_min = exp(x[dx+dy]);
+      // double delta_min = exp(x[dx+dy+1]);
+      double epsilon_min = x[dx+dy];
+      double delta_min = x[dx+dy+1];
       kx_.setWidth(sigma_x);
       ky_.setWidth(sigma_y);
       algo_(trainingData_, kx_, ky_, testingData_.ys, epsilon_min, delta_min, weights_);

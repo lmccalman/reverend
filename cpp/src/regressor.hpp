@@ -61,25 +61,28 @@ class Regressor
     //stuff I'm going to compute
     Eigen::VectorXd mu_pi_;
     Eigen::VectorXd beta_;
+    Eigen::MatrixXd g_xx_epsilon_;
     Eigen::MatrixXd beta_g_yy_;
     Eigen::MatrixXd beta_diag_;
     Eigen::MatrixXd r_xy_;
-    VerifiedCholeskySolver<Eigen::VectorXd> chol_g_xx_;
-    VerifiedCholeskySolver<Eigen::MatrixXd> chol_beta_g_yy_;
+    Eigen::LDLT<Eigen::MatrixXd> qchol_g_xx_;
+    Eigen::LDLT<Eigen::MatrixXd> qchol_g_yy_;
     Eigen::VectorXd w_;
 
 };
 
 template <class K>
 Regressor<K>::Regressor(uint trainLength, uint testLength, const Settings& settings)
-  : settings_(settings),
+  : n_(trainLength), 
+    settings_(settings),
     mu_pi_(trainLength),
     beta_(trainLength),
+    g_xx_epsilon_(trainLength, trainLength),
     beta_g_yy_(trainLength,trainLength),
     beta_diag_(trainLength, trainLength),
     r_xy_(trainLength,trainLength),
-    chol_g_xx_(trainLength,trainLength,1),
-    chol_beta_g_yy_(trainLength,trainLength,trainLength),
+    qchol_g_xx_(trainLength),
+    qchol_g_yy_(trainLength),
     w_(trainLength){}
     
     
@@ -90,7 +93,9 @@ void Regressor<K>::likelihood(const TrainingData& data,
                               Eigen::VectorXd& lweights)
 {
   kx.embed(data.u, data.lambda, mu_pi_);
-  chol_g_xx_.solve(kx.gramMatrix(), mu_pi_, epsilonMin, lweights);
+  g_xx_epsilon_ = kx.gramMatrix() + Eigen::MatrixXd::Identity(n_,n_)*epsilonMin;
+  qchol_g_xx_.compute(g_xx_epsilon_);
+  lweights = qchol_g_xx_.solve(mu_pi_); 
 }
 
 template <class K>
@@ -105,7 +110,9 @@ void Regressor<K>::operator()(const TrainingData& data,
   //compute prior embedding
   kx.embed(data.u, data.lambda, mu_pi_);
   //get jitchol of gram matrix
-  chol_g_xx_.solve(kx.gramMatrix(), mu_pi_, epsilonMin, beta_);
+  g_xx_epsilon_ = kx.gramMatrix() + Eigen::MatrixXd::Identity(n_,n_)*epsilonMin;
+  qchol_g_xx_.compute(g_xx_epsilon_);
+  beta_ = qchol_g_xx_.solve(mu_pi_); 
   
   if (settings_.normed_weights)
   {
@@ -113,7 +120,9 @@ void Regressor<K>::operator()(const TrainingData& data,
     beta_ = beta_ / beta_.sum();
     beta_diag_ = beta_.asDiagonal();
     beta_g_yy_ = beta_diag_ * ky.gramMatrix();
-    chol_beta_g_yy_.solve(beta_g_yy_, beta_diag_, deltaMin, r_xy_);
+    beta_g_yy_ += Eigen::MatrixXd::Identity(n_,n_)*deltaMin;
+    qchol_g_yy_.compute(beta_g_yy_);
+    r_xy_ = qchol_g_yy_.solve(beta_diag_);
   }
   else
   {
@@ -123,7 +132,9 @@ void Regressor<K>::operator()(const TrainingData& data,
     beta_diag_ = beta_.asDiagonal();
     Eigen::MatrixXd b = ky.gramMatrix() * beta_diag_;
     Eigen::MatrixXd A = b * ky.gramMatrix();
-    chol_beta_g_yy_.solve(A, b, deltaMin, r_xy_);
+    beta_g_yy_ = A + Eigen::MatrixXd::Identity(n_,n_)*deltaMin;
+    qchol_g_yy_.compute(beta_g_yy_);
+    r_xy_ = qchol_g_yy_.solve(b);
   }
   //now infer
   auto s = weights.rows();
@@ -137,16 +148,6 @@ void Regressor<K>::operator()(const TrainingData& data,
       w_ = w_.cwiseMax(0.0);
       w_ = w_ / w_.sum();
     }
-    // if (w_.norm() > 0.0)
-    // {
-      // w_ = w_ / w_.norm();
-    // }
-  // }
-  // if (!(w_.norm() > 0))
-  // {
-    // w_ = Eigen::VectorXd::Ones(w_.size()) / double(w_.size());
-    // std::cout << "WARNING: DIVERGED" << std::endl;
-  // }
     weights.row(i) = w_;
   }
 }
@@ -162,26 +163,18 @@ Eigen::MatrixXd Regressor<K>::RMatrix(const TrainingData& data,
   //compute prior embedding
   kx.embed(data.u, data.lambda, mu_pi_);
   //get jitchol of gram matrix
-  chol_g_xx_.solve(kx.gramMatrix(), mu_pi_, epsilonMin, beta_);
+  g_xx_epsilon_ = kx.gramMatrix() + Eigen::MatrixXd::Identity(n_,n_)*epsilonMin;
+  qchol_g_xx_.compute(g_xx_epsilon_);
+  beta_ = qchol_g_xx_.solve(mu_pi_); 
 
-  if (settings_.normed_weights)
-  {
-    beta_ = beta_.cwiseMax(0.0);
-    beta_ = beta_ / beta_.sum();
-    beta_diag_ = beta_.asDiagonal();
-    beta_g_yy_ = beta_diag_ * ky.gramMatrix();
-    chol_beta_g_yy_.solve(beta_g_yy_, beta_diag_, deltaMin, r_xy_);
-  }
-  else
-  {
-    double scaleFactor = beta_.cwiseAbs().maxCoeff();
-    beta_ /= scaleFactor;
-    beta_ = beta_.cwiseAbs2();
-    beta_diag_ = beta_.asDiagonal();
-    Eigen::MatrixXd b = ky.gramMatrix() * beta_diag_;
-    Eigen::MatrixXd A = b * ky.gramMatrix();
-    chol_beta_g_yy_.solve(A, b, deltaMin, r_xy_);
-  }
+  beta_ = beta_.cwiseMax(0.0);
+  beta_ = beta_ / beta_.sum();
+  beta_diag_ = beta_.asDiagonal();
+  beta_g_yy_ = beta_diag_ * ky.gramMatrix();
+  beta_g_yy_ += Eigen::MatrixXd::Identity(n_,n_)*deltaMin;
+  qchol_g_yy_.compute(beta_g_yy_);
+  r_xy_ = qchol_g_yy_.solve(beta_diag_);
+  
   Eigen::MatrixXd& result = r_xy_;
   return result;
 }
