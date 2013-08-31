@@ -33,22 +33,12 @@ double costWrapper(const std::vector<double>&x, std::vector<double>&grad, void* 
 std::vector<double> localOptimum(NloptCost& costFunction, const std::vector<double>& thetaMin,
     const std::vector<double>& thetaMax, const std::vector<double>& theta0)
 {
-  std::cout << "Local Optimizer Initialized..." << std::endl; 
-  std::cout << "thetaMin:" << std::endl;
-  for (double e : thetaMin)
-    std::cout << e << " ";
-  std::cout << std::endl << "theta0:" << std::endl;
-  for (double e : theta0)
-    std::cout << e << " ";
-  std::cout << std::endl << "thetaMax:" << std::endl;
-  for (double e : thetaMax)
-    std::cout << e << " ";
-  std::cout << std::endl;
-
   uint n = theta0.size();
-  nlopt::opt opt(nlopt::LN_COBYLA, n);
-  opt.set_ftol_rel(1e-7);
-  opt.set_ftol_abs(1e-7);
+  // nlopt::opt opt(nlopt::LN_COBYLA, n);
+  // nlopt::opt opt(nlopt::LN_SBPLX, n);
+  nlopt::opt opt(nlopt::LD_LBFGS, n);
+  opt.set_ftol_abs(1e-8);
+  opt.set_ftol_rel(1e-8);
   opt.set_xtol_rel(1e-8);
   opt.set_maxtime(600);
 
@@ -62,7 +52,9 @@ std::vector<double> localOptimum(NloptCost& costFunction, const std::vector<doub
   
   try {opt.optimize(x, minf);}
   catch(nlopt::roundoff_limited a)
-  {}
+  {
+    std::cout << "WARNING: optimisation round-off limited" << std::endl; 
+  }
   
   std::cout << "Final Estimate" << std::endl;
   std::cout << "[ "; 

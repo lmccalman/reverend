@@ -19,6 +19,25 @@
 #include <iomanip>
 #include <algorithm>
 #include <vector>
+#include <limits>
+
+std::vector<uint> randomIndices(uint size, uint nmin, uint nmax)
+{
+  uint counter = 0;
+  std::vector<uint> allnums(nmax-nmin);
+  std::vector<uint> result(size);
+  for (uint i=0; i<(nmax-nmin); i++)
+  {
+    allnums[i] = i + nmin;
+  }
+  std::random_shuffle(allnums.begin(),allnums.end());
+  for (uint i=0; i<size; i++)
+  {
+    result[i] = allnums[i];
+  }
+  return result;
+}
+
 
 void printCost(const std::vector<double>& x, double cost)
 {
@@ -33,7 +52,7 @@ void printCost(const std::vector<double>& x, double cost)
 void vectorToParams(const std::vector<double>& x, 
                     Eigen::MatrixXd& X, Eigen::MatrixXd& Y,
                     Eigen::VectorXd& sigma_x, Eigen::VectorXd& sigma_y,
-                    double& epsilon_min)
+                    double& epsilon_min, double& delta_min)
 {
   uint size = X.rows();
   uint dx = X.cols();
@@ -69,6 +88,8 @@ void vectorToParams(const std::vector<double>& x,
   }
   epsilon_min = x[c];
   c++;
+  delta_min = x[c];
+  c++;
 }
 
 void paramsToVector(const Eigen::MatrixXd& x,
@@ -94,8 +115,10 @@ void paramsToVector(const Eigen::MatrixXd& x,
     for (int j=0; j<dx; j++)
     {
       theta0[c] = x(i,j);
-      thetaMin[c] = minX[j];
-      thetaMax[c] = maxX[j];
+      thetaMin[c] = x(i,j) - 3*settings.sigma_x(j);
+      thetaMax[c] = x(i,j) + 3*settings.sigma_x(j);
+      // thetaMin[c] = minX[j];
+      // thetaMax[c] = maxX[j];
       c++;
     }
   }
@@ -105,8 +128,10 @@ void paramsToVector(const Eigen::MatrixXd& x,
     for (int j=0; j<dy; j++)
     {
       theta0[c] = y(i,j);
-      thetaMin[c] = minY[j];
-      thetaMax[c] = maxY[j];
+      thetaMin[c] = y(i,j) - 3*settings.sigma_y(j);
+      thetaMax[c] = y(i,j) + 3*settings.sigma_y(j);
+      // thetaMin[c] = minY[j];
+      // thetaMax[c] = maxY[j];
       c++;
     }
   }
@@ -129,6 +154,10 @@ void paramsToVector(const Eigen::MatrixXd& x,
   thetaMin[c] = settings.epsilon_min_min;
   thetaMax[c] = settings.epsilon_min_max;
   c++;
+  theta0[c] = settings.delta_min;
+  thetaMin[c] = settings.delta_min_min;
+  thetaMax[c] = settings.delta_min_max;
+  c++;
 }
 
 template <class K>
@@ -144,8 +173,7 @@ struct ReducedSetCost : NloptCost
       {
         currentBestCost_ = 1e8;
       };
-    
-    double operator()(const std::vector<double>&x, std::vector<double>&grad)
+    double costfunc(const std::vector<double>&x, const std::vector<uint>& indices)
     {
       uint n = data_.x.rows();
       uint dx = data_.x.cols();
@@ -155,39 +183,102 @@ struct ReducedSetCost : NloptCost
       Eigen::VectorXd sigma_x(dx);
       Eigen::VectorXd sigma_y(dy);
       double epsilon_min;
-      vectorToParams(x, X, Y, sigma_x, sigma_y, epsilon_min);
-      
+      double delta_min;
+      vectorToParams(x, X, Y, sigma_x, sigma_y, epsilon_min, delta_min);
       const TrainingData minidata(data_.u, data_.lambda, X, Y);
       Kernel<K> kx(X, sigma_x);
-      Eigen::MatrixXd J(setSize_, dx+dy);
-      J.leftCols(dx) = X;
-      J.rightCols(dy) = Y;
-      Eigen::VectorXd sigma_j(dx+dy);
-      sigma_j.head(dx) = sigma_x;
-      sigma_j.tail(dy) = sigma_y;
-      Kernel<K> kj(J, sigma_j);
+      Kernel<K> ky(Y, sigma_y);
+      
+      // Eigen::MatrixXd J(setSize_, dx+dy);
+      // J.leftCols(dx) = X;
+      // J.rightCols(dy) = Y;
+      // Eigen::VectorXd sigma_j(dx+dy);
+      // sigma_j.head(dx) = sigma_x;
+      // sigma_j.tail(dy) = sigma_y;
+      // Kernel<K> kj(J, sigma_j);
       //get weights of beta
-      r_.likelihood(minidata, kx, epsilon_min, lweights_);
-      lweights_ = lweights_.cwiseMax(0.0);
-      lweights_ = lweights_ / lweights_.sum();
+      // r_.likelihood(minidata, kx, epsilon_min, lweights_);
+      // lweights_ = lweights_.cwiseMax(0.0);
+      // lweights_ = lweights_ / lweights_.sum();
       // evaluate the JOINT
+      // Eigen::RowVectorXd j(dx+dy);
+      Eigen::MatrixXd Rxy = r_.RMatrix(minidata, kx, ky, epsilon_min, delta_min); 
       double totalCost = 0;
-      Eigen::RowVectorXd j(dx+dy);
-      //don't re-do the ones we initialized with (overfit)
-      for (uint i=setSize_; i<n; i++)
+      uint batchSize = indices.size();
+      for (uint p=0; p<batchSize; p++)
       {
-        j.head(dx) = data_.x.row(i);
-        j.tail(dy) = data_.y.row(i);
-        totalCost += logKernelMixture(j, J, lweights_, kj, true);
+        // j.head(dx) = data_.x.row(i);
+        // j.tail(dy) = data_.y.row(i);
+        // totalCost += logKernelMixture(j, J, lweights_, kj, true);
+        uint i = indices[p];
+        auto yi = data_.y.row(i);
+        ky.embed(yi, lweights_);
+        lweights_ = Rxy * lweights_;
+        lweights_ = lweights_.cwiseMax(0.0);
+        lweights_ = lweights_ / lweights_.sum();
+        totalCost += logKernelMixture(data_.x.row(i),
+            minidata.x, lweights_, kx, true);
       }
+      totalCost /= double(indices.size());
       totalCost *= -1.0;
-      if (int(totalCost) < currentBestCost_)
-      {
-        currentBestCost_ = int(totalCost);
-        std::cout << currentBestCost_ << std::endl;
-      }
+      // if (totalCost < currentBestCost_)
+      // {
+      // currentBestCost_ = totalCost;
+      // std::cout << currentBestCost_ << std::endl;
+      // }
       return totalCost;
     };
+    
+    double operator()(const std::vector<double>&x, std::vector<double>&grad)
+    {
+      std::cout << "computing reduced set cost..." << std::endl;
+      std::vector<double> xdash = x;
+      uint n = x.size();
+      uint fullsize = data_.x.rows();
+      double eps = sqrt(std::numeric_limits<double>::epsilon());
+      uint batchSize = 100;
+      bool stochastic = true;
+      std::vector<uint> indices;
+      double modgrad = 0;
+      if (stochastic)
+      {
+        indices = randomIndices(batchSize, setSize_, fullsize);
+      }
+      else
+      {
+        for (uint i=setSize_; i<fullsize; i++)
+          indices.push_back(i);
+      }
+      
+      double c0 = costfunc(x, indices);
+      std::cout << "initial cost:" << c0 << std::endl;
+      std::cout << "computing gradient..." << std::endl;
+      for (int i=0;i<n;i++)
+      {
+        double h = eps * std::min(fabs(x[i]),1.0);
+        if (h == 0.0) 
+        {
+          h = eps;
+        }
+        std::cout << "h: " << h << std::endl;
+        xdash[i] += h;
+        double cdash = costfunc(xdash, indices);
+        double delta = cdash - c0;
+        std::cout << "delta: " << delta << std::endl;
+        double gpos = (cdash - c0)/h ;
+        // if (fabs(gpos) > 100.0)
+        // {
+          // gpos = gpos / fabs(gpos);
+        // }
+        grad[i] = gpos;
+        xdash[i] -= h;
+        modgrad += gpos*gpos;
+      }
+      std::cout << std::endl;
+      modgrad = sqrt(modgrad);
+      std::cout << "cost: " << c0 << " grad: " << modgrad << std::endl;
+      return c0;
+    }
   
   protected:
     uint setSize_;
@@ -195,7 +286,7 @@ struct ReducedSetCost : NloptCost
     Regressor<K> r_;
     Eigen::VectorXd lweights_;
     const Settings& settings_;
-    int currentBestCost_;
+    double currentBestCost_;
 };
 
 template <class K>
@@ -207,9 +298,9 @@ void findReducedSet(const TrainingData& fulldata, Settings& settings,
   uint dy = fulldata.y.cols();
   uint setSize = int(settings.data_fraction*n);
   //initialize the thetas 
-  std::vector<double> theta0((setSize * dx) + (setSize * dy) + dx + dy + 1);
-  std::vector<double> thetaMin((setSize * dx) + (setSize * dy) + dx + dy + 1);
-  std::vector<double> thetaMax((setSize * dx) + (setSize * dy) + dx + dy + 1);
+  std::vector<double> theta0((setSize * dx) + (setSize * dy) + dx + dy + 2);
+  std::vector<double> thetaMin((setSize * dx) + (setSize * dy) + dx + dy + 2);
+  std::vector<double> thetaMax((setSize * dx) + (setSize * dy) + dx + dy + 2);
   //get subsets
   Eigen::MatrixXd X = fulldata.x.topRows(setSize);
   Eigen::MatrixXd Y = fulldata.y.topRows(setSize);
@@ -218,7 +309,6 @@ void findReducedSet(const TrainingData& fulldata, Settings& settings,
   //fill the thetas 
   paramsToVector(X, Y, fulldata.x, fulldata.y, settings,
                  thetaMin, theta0, thetaMax);
-  
   //optimize
   ReducedSetCost<K> costfunc(fulldata, settings); 
   std::vector<double> thetaBest = localOptimum(costfunc, thetaMin, thetaMax, theta0);
@@ -228,11 +318,13 @@ void findReducedSet(const TrainingData& fulldata, Settings& settings,
   Eigen::VectorXd sigma_x(dx);
   Eigen::VectorXd sigma_y(dy);
   double epsilon_min;
+  double delta_min;
   vectorToParams(thetaBest, bestX, bestY,
-                 sigma_x, sigma_y, epsilon_min);
+                 sigma_x, sigma_y, epsilon_min, delta_min);
   settings.sigma_x = sigma_x;
   settings.sigma_y = sigma_y;
   settings.epsilon_min = epsilon_min;
+  settings.delta_min = delta_min;
   TrainingData result(fulldata.u, fulldata.lambda, bestX, bestY);
   trainData = result;
   testData = TestingData(X_s, Y_s);

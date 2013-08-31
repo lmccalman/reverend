@@ -41,7 +41,12 @@ class Regressor
                     const Kernel<K>& kx,
                     double epsilonMin,
                     Eigen::VectorXd& lweights);
-
+    Eigen::MatrixXd RMatrix(const TrainingData& data, 
+                            const Kernel<K>& kx,
+                            const Kernel<K>& ky, 
+                            double epsilonMin,
+                            double deltaMin);
+    
   private:
 
     //Settings
@@ -146,3 +151,37 @@ void Regressor<K>::operator()(const TrainingData& data,
   }
 }
 
+
+template <class K>
+Eigen::MatrixXd Regressor<K>::RMatrix(const TrainingData& data, 
+    const Kernel<K>& kx,
+    const Kernel<K>& ky, 
+    double epsilonMin,
+    double deltaMin)
+{
+  //compute prior embedding
+  kx.embed(data.u, data.lambda, mu_pi_);
+  //get jitchol of gram matrix
+  chol_g_xx_.solve(kx.gramMatrix(), mu_pi_, epsilonMin, beta_);
+
+  if (settings_.normed_weights)
+  {
+    beta_ = beta_.cwiseMax(0.0);
+    beta_ = beta_ / beta_.sum();
+    beta_diag_ = beta_.asDiagonal();
+    beta_g_yy_ = beta_diag_ * ky.gramMatrix();
+    chol_beta_g_yy_.solve(beta_g_yy_, beta_diag_, deltaMin, r_xy_);
+  }
+  else
+  {
+    double scaleFactor = beta_.cwiseAbs().maxCoeff();
+    beta_ /= scaleFactor;
+    beta_ = beta_.cwiseAbs2();
+    beta_diag_ = beta_.asDiagonal();
+    Eigen::MatrixXd b = ky.gramMatrix() * beta_diag_;
+    Eigen::MatrixXd A = b * ky.gramMatrix();
+    chol_beta_g_yy_.solve(A, b, deltaMin, r_xy_);
+  }
+  Eigen::MatrixXd& result = r_xy_;
+  return result;
+}

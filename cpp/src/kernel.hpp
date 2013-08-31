@@ -85,7 +85,7 @@ class Kernel
         alpha(i) = k_(X_.row(i), x, width_);
       }
     }
-
+    
     double innerProduct(const Eigen::VectorXd& x1, const Eigen::VectorXd& x2) const
     {
       double result = x1.transpose() * this->gramMatrix() * x2;
@@ -100,6 +100,16 @@ class Kernel
     double operator()(const Eigen::VectorXd& x1, const Eigen::VectorXd& x2) const
     {
       return k_(x1,x2, width_);
+    }
+    
+    double ddw(const Eigen::VectorXd& x1, const Eigen::VectorXd& x2, uint i) const
+    {
+      return k_.ddw(x1,x2, width_, i);
+    }
+    
+    double ddx(const Eigen::VectorXd& x1, const Eigen::VectorXd& x2, uint i) const
+    {
+      return k_.ddx(x1,x2, width_, i);
     }
     
     double logk(const Eigen::VectorXd& x1, const Eigen::VectorXd& x2) const
@@ -155,6 +165,25 @@ class RBFKernel
         const Eigen::VectorXd& sigma) const
     {
       return -0.5*(x - x_dash).cwiseQuotient(sigma).squaredNorm();
+    }
+    
+    double ddw(const Eigen::VectorXd& x1, const Eigen::VectorXd& x2,
+                          const Eigen::VectorXd& sigma,
+                          uint i) const
+    {
+      Eigen::VectorXd invsigma = Eigen::VectorXd::Ones(sigma.rows()).cwiseQuotient(sigma);
+      double val = (*this)(x1, x2, sigma);
+      double A = -0.5 * pow(double(x1(i) - x2(i)), 2);
+      double sig = sigma(i);
+      return -1. * val * (1.0/sig + 2 * A / pow(sig,3));
+    }
+
+    double ddx(const Eigen::VectorXd& x1, const Eigen::VectorXd& x2,
+                          const Eigen::VectorXd& sigma,
+                          uint i) const
+    {
+      double val = (*this)(x1, x2, sigma);
+      return -val * (x1(i)-x2(i)) / pow(double(sigma(i)), 2);
     }
     
     

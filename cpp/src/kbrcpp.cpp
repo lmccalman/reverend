@@ -84,9 +84,6 @@ int main(int argc, char** argv)
   srand(time(NULL));
   auto settings = getSettings(argv[1]);
   
-  std::cout << "sigma_x" << settings.sigma_x << std::endl;
-  std::cout << "sigma_y" << settings.sigma_y << std::endl;
-
   TrainingData fullData = readTrainingData(settings); 
   TestingData testData = readTestingData(settings);
   TrainingData trainData;
