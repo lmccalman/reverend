@@ -20,18 +20,19 @@
 #include <algorithm>
 #include <vector>
 #include <limits>
-
+//batchSize_, setSize_, fullSize
 std::vector<uint> randomIndices(uint size, uint nmin, uint nmax)
 {
   uint counter = 0;
+  uint realSize = std::min(size, nmax - nmin);
   std::vector<uint> allnums(nmax-nmin);
-  std::vector<uint> result(size);
-  for (uint i=0; i<(nmax-nmin); i++)
+  std::vector<uint> result(realSize);
+  for (uint i=0; i<realSize; i++)
   {
     allnums[i] = i + nmin;
   }
   std::random_shuffle(allnums.begin(),allnums.end());
-  for (uint i=0; i<size; i++)
+  for (uint i=0; i<realSize; i++)
   {
     result[i] = allnums[i];
   }
@@ -217,8 +218,8 @@ struct SGDReducedSetCost : NloptCost
   public:
     SGDReducedSetCost(const TrainingData& data, const Settings& settings)
       : setSize_( int(settings.data_fraction*data.x.rows()) ), 
-      data_(data), settings_(settings), batchSize_(settings.sgd_batch_size){};
-
+      data_(data), settings_(settings),
+      batchSize_(settings.sgd_batch_size) {};
     double operator()(const std::vector<double>&x, std::vector<double>&grad)
     {
       std::vector<double> xdash = x;

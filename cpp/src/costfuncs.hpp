@@ -90,6 +90,7 @@ class LogPCost:Cost
       algo_(trainingData_, kx_, ky_, testingData_.ys, epsilon_min, delta_min, weights_);
       uint testPoints = testingData_.xs.rows();
       double totalCost = 0.0;
+      #if NDEBUG
       if (!omp_in_parallel())
       {
         #pragma omp parallel for reduction(+:totalCost)
@@ -113,6 +114,7 @@ class LogPCost:Cost
         }
       }
       else
+      #endif
       {
         for (int i=0;i<testPoints;i++)
         {
