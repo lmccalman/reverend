@@ -39,11 +39,14 @@ void trainReducedSet(const TrainingData& fullData,
   else if (settings.scaling_strategy == "optimal")
     findReducedSet<RBFKernel>(fullData, settings, trainData, testData);
 
-  if (frac <= 0.2)
+  if (settings.scaling_strategy == "random")
+  {
+    // if (frac <= 0.2)
     passthroughTrainSettings<Regressor<RBFKernel>, RBFKernel>(
-        trainData, testData,settings);
-  else
-    trainSettings<Regressor<RBFKernel>, RBFKernel>(trainData, settings);
+        trainData, testData, settings);
+    // else
+      // trainSettings<Regressor<RBFKernel>, RBFKernel>(trainData, settings);
+  }
   //write out reduced set
   writeNPY(trainData.x, settings.filename_xr);
   writeNPY(trainData.y, settings.filename_yr);

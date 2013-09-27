@@ -35,7 +35,8 @@ std::vector<double> SGD(NloptCost& costFunction, const std::vector<double>& thet
     const Settings& settings)
 {
   uint iterations = settings.sgd_iterations; 
-  double learnRate = settings.sgd_learn_rate;
+  double initialLearnRate = settings.sgd_learn_rate;
+  double finalLearnRate = initialLearnRate * 0.01;
   
   std::vector<double> grad(theta0.size());
   std::vector<double> x = theta0;
@@ -47,6 +48,11 @@ std::vector<double> SGD(NloptCost& costFunction, const std::vector<double>& thet
     double cost = costFunction(x, grad);
     allCosts(iter) = cost; 
     double modgrad = 0.0;
+    
+    //update learn rate 
+    double frac = iter / double(iterations);
+    double learnRate = initialLearnRate*(1.0 - frac) + finalLearnRate * frac;
+    
     //update x 
     for (uint i=0; i< x.size(); i++)
     {

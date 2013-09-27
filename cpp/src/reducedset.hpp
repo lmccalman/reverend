@@ -321,10 +321,21 @@ void randomReducedSet(const TrainingData& fulldata, Settings& settings,
   uint setSize = int(settings.data_fraction*n);
   Eigen::MatrixXd X = fulldata.x.topRows(setSize);
   Eigen::MatrixXd Y = fulldata.y.topRows(setSize);
-  Eigen::MatrixXd X_s = fulldata.x.bottomRows(n-setSize);
-  Eigen::MatrixXd Y_s = fulldata.y.bottomRows(n-setSize);
+  // Eigen::MatrixXd X_s = fulldata.x.bottomRows(n-setSize);
+  // Eigen::MatrixXd Y_s = fulldata.y.bottomRows(n-setSize);
+  Eigen::MatrixXd X_s = fulldata.x.bottomRows(int(0.5*n));
+  Eigen::MatrixXd Y_s = fulldata.y.bottomRows(int(0.5*n));
   TrainingData result(fulldata.u, fulldata.lambda, X, Y);
   TestingData t(X_s, Y_s);  
   trainData = result;
   testData = t; 
 }
+
+
+
+
+
+
+
+
+
