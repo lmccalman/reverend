@@ -32,21 +32,23 @@
 void trainReducedSet(const TrainingData& fullData, 
     TrainingData& trainData, Settings& settings)
 {
-  TestingData testData;
   double frac = settings.data_fraction;
-  if (settings.scaling_strategy == "random")
-    randomReducedSet(fullData, settings, trainData, testData);
-  else if (settings.scaling_strategy == "optimal")
-    findReducedSet<RBFKernel>(fullData, settings, trainData, testData);
-
-  if (settings.scaling_strategy == "random")
+  Eigen::MatrixXd X_b = readNPY(settings.filename_xb);
+  Eigen::MatrixXd Y_b = readNPY(settings.filename_yb);
+  TestingData testData(fullData.x, fullData.y);
+  TrainingData newTrain(fullData.u, fullData.lambda, X_b, Y_b);
+  
+  
+  passthroughTrainSettings<Regressor<RBFKernel>, RBFKernel>(
+      newTrain, testData, settings);
+  
+  std::cout << "reduced set size: " << newTrain.x.rows() << std::endl;
+  
+  if (settings.scaling_strategy == "optimal")
   {
-    // if (frac <= 0.2)
-    passthroughTrainSettings<Regressor<RBFKernel>, RBFKernel>(
-        trainData, testData, settings);
-    // else
-      // trainSettings<Regressor<RBFKernel>, RBFKernel>(trainData, settings);
+    findReducedSet<RBFKernel>(newTrain, testData, settings);
   }
+  trainData = newTrain;
   //write out reduced set
   writeNPY(trainData.x, settings.filename_xr);
   writeNPY(trainData.y, settings.filename_yr);

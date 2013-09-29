@@ -30,6 +30,8 @@ struct Settings
   std::string filename_y;
   std::string filename_xr;
   std::string filename_yr;
+  std::string filename_xb;
+  std::string filename_yb;
   std::string filename_ys;
   std::string filename_xs;
   std::string filename_u;

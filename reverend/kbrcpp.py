@@ -27,6 +27,8 @@ class Settings(object):
         if prefix is not None:
             self.filename_X = prefix + 'X.npy'
             self.filename_Y = prefix + 'Y.npy'
+            self.filename_X_b = prefix + 'X_b.npy'
+            self.filename_Y_b = prefix + 'Y_b.npy'
             self.filename_Xr = prefix + 'Xr.npy'
             self.filename_Yr = prefix + 'Yr.npy'
             self.filename_X_s = prefix + 'X_s.npy'
@@ -49,6 +51,8 @@ def write_config_file(settings, filename):
     config.set('Input', 'filename_yr', settings.filename_Yr)
     config.set('Input', 'filename_xs', settings.filename_X_s)
     config.set('Input', 'filename_ys', settings.filename_Y_s)
+    config.set('Input', 'filename_xb', settings.filename_X_b)
+    config.set('Input', 'filename_yb', settings.filename_Y_b)
     config.set('Input', 'filename_u', settings.filename_U)
     config.add_section('Kernel')
     config.set('Kernel', 'sigma_x', settings.sigma_x)
@@ -108,12 +112,14 @@ def write_config_file(settings, filename):
         config.write(configfile)
 
 
-def write_data_files(settings,U, X, Y, X_s, Y_s):
+def write_data_files(settings,U, X, Y, X_s, Y_s, X_b, Y_b):
     np.save(settings.filename_U, U)
     np.save(settings.filename_X, X)
     np.save(settings.filename_Y, Y)
     np.save(settings.filename_X_s, X_s)
     np.save(settings.filename_Y_s, Y_s)
+    np.save(settings.filename_X_b, X_b)
+    np.save(settings.filename_Y_b, Y_b)
 
 
 def run(filename_config, directory):

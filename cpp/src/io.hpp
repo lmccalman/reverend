@@ -61,6 +61,8 @@ Settings getSettings(const std::string& filename)
   s.filename_y = pt.get<std::string>("Input.filename_y"); 
   s.filename_xr = pt.get<std::string>("Input.filename_xr"); 
   s.filename_yr = pt.get<std::string>("Input.filename_yr"); 
+  s.filename_xb = pt.get<std::string>("Input.filename_xb"); 
+  s.filename_yb = pt.get<std::string>("Input.filename_yb"); 
   s.filename_xs = pt.get<std::string>("Input.filename_xs"); 
   s.filename_ys = pt.get<std::string>("Input.filename_ys"); 
   s.filename_weights = pt.get<std::string>("Output.filename_weights"); 

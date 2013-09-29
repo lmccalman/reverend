@@ -20,19 +20,18 @@
 #include <algorithm>
 #include <vector>
 #include <limits>
-//batchSize_, setSize_, fullSize
-std::vector<uint> randomIndices(uint size, uint nmin, uint nmax)
+
+std::vector<uint> randomIndices(uint size, uint nmax)
 {
   uint counter = 0;
-  uint realSize = std::min(size, nmax - nmin);
-  std::vector<uint> allnums(nmax-nmin);
-  std::vector<uint> result(realSize);
-  for (uint i=0; i<realSize; i++)
+  std::vector<uint> allnums(nmax);
+  std::vector<uint> result(size);
+  for (uint i=0; i<nmax; i++)
   {
-    allnums[i] = i + nmin;
+    allnums[i] = i;
   }
   std::random_shuffle(allnums.begin(),allnums.end());
-  for (uint i=0; i<realSize; i++)
+  for (uint i=0; i<size; i++)
   {
     result[i] = allnums[i];
   }
@@ -94,17 +93,11 @@ void vectorToParams(const std::vector<double>& x,
 
 void paramsToVector(const Eigen::MatrixXd& x,
                     const Eigen::MatrixXd& y,
-                    const Eigen::MatrixXd& fullX,
-                    const Eigen::MatrixXd& fullY,
                     const Settings& settings,
                     std::vector<double>& thetaMin,
                     std::vector<double>& theta0,
                     std::vector<double>& thetaMax)
 {
-  Eigen::VectorXd minX = fullX.colwise().minCoeff();
-  Eigen::VectorXd maxX = fullX.colwise().maxCoeff();
-  Eigen::VectorXd minY = fullY.colwise().minCoeff();
-  Eigen::VectorXd maxY = fullY.colwise().maxCoeff();
   uint setSize = x.rows();
   uint dx = x.cols();
   uint dy = y.cols();
@@ -115,8 +108,8 @@ void paramsToVector(const Eigen::MatrixXd& x,
     for (int j=0; j<dx; j++)
     {
       theta0[c] = x(i,j);
-      thetaMin[c] = x(i,j) - 3*settings.sigma_x(j);
-      thetaMax[c] = x(i,j) + 3*settings.sigma_x(j);
+      thetaMin[c] = x(i,j) - 5*settings.sigma_x(j);
+      thetaMax[c] = x(i,j) + 5*settings.sigma_x(j);
       c++;
     }
   }
@@ -126,8 +119,8 @@ void paramsToVector(const Eigen::MatrixXd& x,
     for (int j=0; j<dy; j++)
     {
       theta0[c] = y(i,j);
-      thetaMin[c] = y(i,j) - 3*settings.sigma_y(j);
-      thetaMax[c] = y(i,j) + 3*settings.sigma_y(j);
+      thetaMin[c] = y(i,j) - 5*settings.sigma_y(j);
+      thetaMax[c] = y(i,j) + 5*settings.sigma_y(j);
       c++;
     }
   }
@@ -161,41 +154,39 @@ template <class K>
 struct ReducedSetCost
 {
   public:
-    ReducedSetCost(const TrainingData& data, const Settings& settings)
-      : setSize_( int(settings.data_fraction*data.x.rows()) ), 
-        data_(data),
-      r_( int(settings.data_fraction*data.x.rows()) , data.x.rows(), settings),
-      lweights_( int(settings.data_fraction*data.x.rows()) ),
-      settings_(settings)
-      {};
+    ReducedSetCost(const TrainingData& trainData, const TestingData& testData, 
+                   const Settings& settings)
+      : trainData_(trainData), testData_(testData), 
+      r_(trainData.x.rows() , trainData.u.rows(), settings),
+      lweights_(trainData.x.rows()), settings_(settings){};
+
     double operator()(const std::vector<double>&x, const std::vector<uint>& indices)
     {
-      uint n = data_.x.rows();
-      uint dx = data_.x.cols();
-      uint dy = data_.y.cols();
-      Eigen::MatrixXd X(setSize_, dx); 
-      Eigen::MatrixXd Y(setSize_, dy); 
+      uint n = trainData_.x.rows();
+      uint dx = trainData_.x.cols();
+      uint dy = trainData_.y.cols();
+      Eigen::MatrixXd X(n, dx); 
+      Eigen::MatrixXd Y(n, dy); 
       Eigen::VectorXd sigma_x(dx);
       Eigen::VectorXd sigma_y(dy);
       double epsilon_min;
       double delta_min;
       vectorToParams(x, X, Y, sigma_x, sigma_y, epsilon_min, delta_min);
-      const TrainingData minidata(data_.u, data_.lambda, X, Y);
+      const TrainingData minidata(trainData_.u, trainData_.lambda, X, Y);
       Kernel<K> kx(X, sigma_x);
       Kernel<K> ky(Y, sigma_y);
-      
       Eigen::MatrixXd Rxy = r_.RMatrix(minidata, kx, ky, epsilon_min, delta_min); 
       double totalCost = 0;
       uint batchSize = indices.size();
       for (uint p=0; p<batchSize; p++)
       {
         uint i = indices[p];
-        auto yi = data_.y.row(i);
+        auto yi = testData_.ys.row(i);
         ky.embed(yi, lweights_);
         lweights_ = Rxy * lweights_;
         lweights_ = lweights_.cwiseMax(0.0);
         lweights_ = lweights_ / lweights_.sum();
-        totalCost += logKernelMixture(data_.x.row(i),
+        totalCost += logKernelMixture(testData_.xs.row(i),
             minidata.x, lweights_, kx, true);
       }
       totalCost /= double(indices.size());
@@ -206,7 +197,8 @@ struct ReducedSetCost
   
   protected:
     uint setSize_;
-    const TrainingData& data_;
+    const TrainingData& trainData_;
+    const TestingData& testData_;
     Regressor<K> r_;
     Eigen::VectorXd lweights_;
     const Settings& settings_;
@@ -216,44 +208,44 @@ template <class K>
 struct SGDReducedSetCost : NloptCost
 {
   public:
-    SGDReducedSetCost(const TrainingData& data, const Settings& settings)
-      : setSize_( int(settings.data_fraction*data.x.rows()) ), 
-      data_(data), settings_(settings),
-      batchSize_(settings.sgd_batch_size) {};
+    SGDReducedSetCost(const TrainingData& trainData,
+                      const TestingData& testData, 
+                      const Settings& settings)
+
+      : trainData_(trainData),
+      testData_(testData),
+      settings_(settings) {};
+    
     double operator()(const std::vector<double>&x, std::vector<double>&grad)
     {
-      std::vector<double> xdash = x;
-      uint n = x.size();
-      uint fullsize = data_.x.rows();
+      uint testN = testData_.xs.rows();
       double eps = sqrt(std::numeric_limits<double>::epsilon());
       bool stochastic = true;
       std::vector<uint> indices;
-      //indiecs
       if (stochastic)
       {
-        indices = randomIndices(batchSize_, setSize_, fullsize);
+        indices = randomIndices(settings_.sgd_batch_size, testN);
       }
       else
       {
-        for (uint i=setSize_; i<fullsize; i++)
+        for (uint i=0; i<testN; i++)
           indices.push_back(i);
       }
-
-
-      ReducedSetCost<K> rscost(data_, settings_);
+      ReducedSetCost<K> rscost(trainData_, testData_, settings_);
       double c0 = rscost(x, indices);
-      
-      #pragma omp parallel for
-      for (int i=0;i<n;i++)
+     
+      uint params = x.size(); 
+      std::vector<double> xdash = x;
+      // #pragma omp parallel for
+      for (uint i=0;i<params;i++)
       {
-        ReducedSetCost<K> grscost(data_, settings_);
         double h = eps * std::min(fabs(x[i]),1.0);
         if (h == 0.0) 
         {
           h = eps;
         }
         xdash[i] += h;
-        double cdash = grscost(xdash, indices);
+        double cdash = rscost(xdash, indices);
         double delta = cdash - c0;
         double gpos = (cdash - c0)/h ;
         grad[i] = gpos;
@@ -264,39 +256,31 @@ struct SGDReducedSetCost : NloptCost
 
 
   private:
-    const uint setSize_;
-    const TrainingData& data_;
+    const TrainingData& trainData_;
+    const TestingData& testData_;
     const Settings& settings_;
-    const uint batchSize_;
 };
 
 template <class K>
-void findReducedSet(const TrainingData& fulldata, Settings& settings,
-                    TrainingData& trainData, TestingData& testData)
+void findReducedSet(TrainingData& trainData, const TestingData& testData, Settings& settings)
 {
-  uint n = fulldata.x.rows();
-  uint dx = fulldata.x.cols();
-  uint dy = fulldata.y.cols();
-  uint setSize = int(settings.data_fraction*n);
+  uint n = trainData.x.rows();
+  uint dx = trainData.x.cols();
+  uint dy = trainData.y.cols();
   //initialize the thetas 
-  std::vector<double> theta0((setSize * dx) + (setSize * dy) + dx + dy + 2);
-  std::vector<double> thetaMin((setSize * dx) + (setSize * dy) + dx + dy + 2);
-  std::vector<double> thetaMax((setSize * dx) + (setSize * dy) + dx + dy + 2);
-  //get subsets
-  Eigen::MatrixXd X = fulldata.x.topRows(setSize);
-  Eigen::MatrixXd Y = fulldata.y.topRows(setSize);
-  Eigen::MatrixXd X_s = fulldata.x.bottomRows(n-setSize);
-  Eigen::MatrixXd Y_s = fulldata.y.bottomRows(n-setSize);
+  std::vector<double> theta0((n * dx) + (n * dy) + dx + dy + 2);
+  std::vector<double> thetaMin((n * dx) + (n * dy) + dx + dy + 2);
+  std::vector<double> thetaMax((n * dx) + (n * dy) + dx + dy + 2);
   //fill the thetas 
-  paramsToVector(X, Y, fulldata.x, fulldata.y, settings,
+  paramsToVector(trainData.x, trainData.y, settings,
                  thetaMin, theta0, thetaMax);
   //optimize
-  SGDReducedSetCost<K> costfunc(fulldata, settings); 
+  SGDReducedSetCost<K> costfunc(trainData, testData, settings); 
   // std::vector<double> thetaBest = localOptimum(costfunc, thetaMin, thetaMax, theta0);
   std::vector<double> thetaBest = SGD(costfunc, thetaMin, thetaMax, theta0, settings);
 
-  Eigen::MatrixXd bestX(setSize, dx); 
-  Eigen::MatrixXd bestY(setSize, dy); 
+  Eigen::MatrixXd bestX(n, dx); 
+  Eigen::MatrixXd bestY(n, dy); 
   Eigen::VectorXd sigma_x(dx);
   Eigen::VectorXd sigma_y(dy);
   double epsilon_min;
@@ -307,28 +291,8 @@ void findReducedSet(const TrainingData& fulldata, Settings& settings,
   settings.sigma_y = sigma_y;
   settings.epsilon_min = epsilon_min;
   settings.delta_min = delta_min;
-  TrainingData result(fulldata.u, fulldata.lambda, bestX, bestY);
+  TrainingData result(trainData.u, trainData.lambda, bestX, bestY);
   trainData = result;
-  testData = TestingData(X_s, Y_s);
-}
-
-void randomReducedSet(const TrainingData& fulldata, Settings& settings,
-    TrainingData& trainData, TestingData& testData)
-{
-  uint n = fulldata.x.rows();
-  uint dx = fulldata.x.cols();
-  uint dy = fulldata.y.cols();
-  uint setSize = int(settings.data_fraction*n);
-  Eigen::MatrixXd X = fulldata.x.topRows(setSize);
-  Eigen::MatrixXd Y = fulldata.y.topRows(setSize);
-  // Eigen::MatrixXd X_s = fulldata.x.bottomRows(n-setSize);
-  // Eigen::MatrixXd Y_s = fulldata.y.bottomRows(n-setSize);
-  Eigen::MatrixXd X_s = fulldata.x.bottomRows(int(0.5*n));
-  Eigen::MatrixXd Y_s = fulldata.y.bottomRows(int(0.5*n));
-  TrainingData result(fulldata.u, fulldata.lambda, X, Y);
-  TestingData t(X_s, Y_s);  
-  trainData = result;
-  testData = t; 
 }
 
 
