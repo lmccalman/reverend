@@ -17,6 +17,7 @@
 
 import numpy as np
 import scipy.linalg
+import scipy.cluster.vq
 
 def scale(X, mean=None, sd=None):
     """scale input data to mean 0 sd 1"""
@@ -46,5 +47,15 @@ def whitening_matrix(X):
     sigma = np.dot(X.T, X)
     e, m = scipy.linalg.eigh(sigma)
     return m.T
+
+def kmeans(X, Y, frac):
+    """Compute K-mean clusters as good initialisers for a reduced set"""
+    J = np.concatenate((X,Y), axis=1)
+    dx = X.shape[1]
+    k = int(X.shape[0] * frac)
+    result, cost = scipy.cluster.vq.kmeans(J, k)
+    plusX = result[:, 0:dx]
+    plusY = result[:, dx:]
+    return plusX, plusY
 
 
