@@ -87,14 +87,15 @@ std::vector<double> localOptimum(NloptCost& costFunction, const std::vector<doub
     const std::vector<double>& thetaMax, const std::vector<double>& theta0)
 {
   uint n = theta0.size();
-  // nlopt::opt opt(nlopt::LN_COBYLA, n);
+  nlopt::opt opt(nlopt::LN_COBYLA, n);
   // nlopt::opt opt(nlopt::LN_SBPLX, n);
-  nlopt::opt opt(nlopt::LD_LBFGS, n);
-  opt.set_ftol_abs(1e-8);
-  opt.set_ftol_rel(1e-8);
-  opt.set_xtol_rel(1e-8);
+  // nlopt::opt opt(nlopt::LD_LBFGS, n);
+  opt.set_ftol_abs(1e-5);
+  opt.set_ftol_rel(1e-5);
+  opt.set_xtol_rel(1e-5);
   opt.set_maxtime(600);
-
+  
+  std::cout << "Optimizer Initialized..." << std::endl; 
   opt.set_min_objective(costWrapper, &costFunction);
   opt.set_lower_bounds(thetaMin);
   opt.set_upper_bounds(thetaMax);
@@ -257,8 +258,8 @@ Settings newSettings(std::vector<double> thetaBest, uint dx, uint dy, const Sett
   { 
     news.sigma_y(i) = thetaBest[i+dx];
   }
-  news.epsilon_min = exp(thetaBest[dx+dy]);
-  news.delta_min = exp(thetaBest[dx+dy+1]);
+  news.epsilon_min = thetaBest[dx+dy];
+  news.delta_min = thetaBest[dx+dy+1];
   if (!normedWeights)
   {
     news.preimage_reg = exp(thetaBest[dx+dy+2]);

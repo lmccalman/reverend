@@ -220,7 +220,7 @@ struct SGDReducedSetCost : NloptCost
     {
       uint testN = testData_.xs.rows();
       double eps = sqrt(std::numeric_limits<double>::epsilon());
-      bool stochastic = true;
+      bool stochastic = false;
       std::vector<uint> indices;
       if (stochastic)
       {
@@ -234,23 +234,24 @@ struct SGDReducedSetCost : NloptCost
       ReducedSetCost<K> rscost(trainData_, testData_, settings_);
       double c0 = rscost(x, indices);
      
-      uint params = x.size(); 
-      std::vector<double> xdash = x;
-      // #pragma omp parallel for
-      for (uint i=0;i<params;i++)
-      {
-        double h = eps * std::min(fabs(x[i]),1.0);
-        if (h == 0.0) 
-        {
-          h = eps;
-        }
-        xdash[i] += h;
-        double cdash = rscost(xdash, indices);
-        double delta = cdash - c0;
-        double gpos = (cdash - c0)/h ;
-        grad[i] = gpos;
-        xdash[i] -= h;
-      }
+      // uint params = x.size(); 
+      // std::vector<double> xdash = x;
+      // for (uint i=0;i<params;i++)
+      // {
+        // double h = eps * std::min(fabs(x[i]),1.0);
+        // if (h == 0.0) 
+        // {
+          // h = eps;
+        // }
+        // xdash[i] += h;
+        // double cdash = rscost(xdash, indices);
+        // double delta = cdash - c0;
+        // double gpos = (cdash - c0)/h ;
+        // grad[i] = gpos;
+        // xdash[i] -= h;
+      // }
+      
+      std::cout << c0 << std::endl;
       return c0;
     }
 
@@ -276,8 +277,8 @@ void findReducedSet(TrainingData& trainData, const TestingData& testData, Settin
                  thetaMin, theta0, thetaMax);
   //optimize
   SGDReducedSetCost<K> costfunc(trainData, testData, settings); 
-  // std::vector<double> thetaBest = localOptimum(costfunc, thetaMin, thetaMax, theta0);
-  std::vector<double> thetaBest = SGD(costfunc, thetaMin, thetaMax, theta0, settings);
+  std::vector<double> thetaBest = localOptimum(costfunc, thetaMin, thetaMax, theta0);
+  // std::vector<double> thetaBest = SGD(costfunc, thetaMin, thetaMax, theta0, settings);
 
   Eigen::MatrixXd bestX(n, dx); 
   Eigen::MatrixXd bestY(n, dy); 
