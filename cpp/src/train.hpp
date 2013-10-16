@@ -136,13 +136,14 @@ std::vector<double> globalOptimum(NloptCost& costFunction, const std::vector<dou
   std::cout << std::endl;
   
   uint n = theta0.size();
-  nlopt::opt opt(nlopt::G_MLSL_LDS, n);
-  nlopt::opt localopt(nlopt::LN_COBYLA, n);
-  localopt.set_ftol_rel(1e-5);
-  localopt.set_ftol_abs(1e-4);
-  localopt.set_xtol_rel(1e-8);
+  // nlopt::opt opt(nlopt::G_MLSL_LDS, n);
+  // nlopt::opt localopt(nlopt::LN_COBYLA, n);
+  // localopt.set_ftol_rel(1e-5);
+  // localopt.set_ftol_abs(1e-4);
+  // localopt.set_xtol_rel(1e-8);
+  nlopt::opt opt(nlopt::GN_CRS2_LM, n);
 
-  opt.set_local_optimizer(localopt);
+  // opt.set_local_optimizer(localopt);
   opt.set_min_objective(costWrapper, &costFunction);
   opt.set_lower_bounds(thetaMin);
   opt.set_upper_bounds(thetaMax);
