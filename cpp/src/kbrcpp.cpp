@@ -177,8 +177,10 @@ int main(int argc, char** argv)
   }
   
   //Evaluate the embedding and posterior
-  Eigen::MatrixXd embedding(testData.ys.rows(), testData.xs.rows());
-  Eigen::MatrixXd posterior(testData.ys.rows(), testData.xs.rows());
+  // Eigen::MatrixXd embedding(testData.ys.rows(), testData.xs.rows());
+  // Eigen::MatrixXd posterior(testData.ys.rows(), testData.xs.rows());
+  Eigen::VectorXd embedding(testData.ys.rows());
+  Eigen::VectorXd posterior(testData.ys.rows());
   std::cout << "Evaluating Embedding..." << std::endl;
   computeEmbedding(trainData,testData,weights,kx, embedding);
   std::cout << "Evaluating Log Posterior..." << std::endl;
