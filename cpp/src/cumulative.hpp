@@ -115,7 +115,7 @@ double Cumulative<K>::fromWeights(const Eigen::VectorXd& x) const
   template <class K>
 void computeCumulates(const TrainingData& trainingData, const TestingData& testingData,
     const Eigen::MatrixXd& weights, const K& kx, bool normedWeights,
-    Eigen::MatrixXd& cumulates)
+    Eigen::VectorXd& cumulates)
 {
   uint testPoints = weights.rows(); 
   uint evalPoints = testingData.xs.rows();
@@ -124,12 +124,9 @@ void computeCumulates(const TrainingData& trainingData, const TestingData& testi
   {
     Eigen::VectorXd coeffs = weights.row(i);
     Cumulative<K> cumulator(coeffs, trainingData.x, kx, normedWeights);
-    for (int j=0; j<evalPoints; j++)
-    {
-      Eigen::VectorXd point = testingData.xs.row(j);
-      double result = cumulator(point);
-      cumulates(i,j) = result;
-    }
+    Eigen::VectorXd point = testingData.xs.row(i);
+    double result = cumulator(point);
+    cumulates(i) = result;
   }
 }
 

@@ -147,7 +147,7 @@ int main(int argc, char** argv)
   if (settings.cumulative_estimate)
   {
     std::cout << "Estimating Cumulative..." << std::endl;
-    Eigen::MatrixXd cumulates(testData.ys.rows(), testData.xs.rows());
+    Eigen::VectorXd cumulates(testData.ys.rows());
     if (settings.direct_cumulative)
     {
       computeCumulates(trainData,testData, weights, kx, meanMap, cumulates);

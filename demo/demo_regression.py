@@ -49,6 +49,10 @@ settings.direct_cumulative = False
 settings.cumulative_mean_map = True
 
 settings.scaling_strategy = 'none'
+settings.data_fraction = 1.0
+settings.sgd_iterations = 200
+settings.sgd_learn_rate = 0.0001
+settings.sgd_batch_size = 500
 
 settings.sigma_x_min = 0.01
 settings.sigma_x = 1.34
@@ -101,12 +105,22 @@ def main():
     xsmax = np.amax(X) + 1.0
     ysmin = np.amin(Y)
     ysmax = np.amax(Y)
-    Y_s = np.linspace(ysmin, ysmax, yssize)[:, np.newaxis]
-    X_s = np.linspace(xsmin, xsmax, xssize)[:, np.newaxis]
+    fakeX_s = np.mgrid[xsmin:xsmax:xssize*1j,
+                       ysmin:ysmax:yssize*1j]
+    fakeX_s = np.rollaxis(fakeX_s, 0, 3).reshape((-1, 2))
+    #Needed so we don't screw up the file writing
+    X_s = np.zeros((xssize*xssize))
+    Y_s = np.zeros((yssize*yssize))
+    X_s[:] = fakeX_s[:, 0]
+    Y_s[:] = fakeX_s[:, 1]
+    X_s = X_s[:, np.newaxis]
+    Y_s = Y_s[:, np.newaxis]
+
 
     #parameters
     kbrcpp.write_config_file(settings, filename_config)
-    kbrcpp.write_data_files(settings, U=U, X=X, Y=Y, X_s=X_s, Y_s=Y_s,)
+    kbrcpp.write_data_files(settings, U=U, X=X, Y=Y, X_s=X_s, Y_s=Y_s,
+            X_b=None, Y_b=None)
 
     #now we're ready to invoke the regressor
     kbrcpp.run(filename_config, kbrcpp_directory)
@@ -116,26 +130,30 @@ def main():
     #PW = np.load(settings.filename_preimage)
     E = np.load(settings.filename_embedding)
     pdf = np.load(settings.filename_posterior)
+    pdf = pdf.reshape((xssize,yssize)).T
+    E = E.reshape((xssize,yssize)).T
     cdf = None
-    if settings.cumulative_estimate:
+    if settings.cumulative_estimate: 
         cdf = np.load(settings.filename_cumulative)
+        cdf = cdf.reshape((xssize,yssize)).T
     quantile = None
     if settings.quantile_estimate:
         quantile = np.load(settings.filename_quantile)
+        quantile = quantile[0:yssize]
 
     #And plot...
     fig = pl.figure()
     axes = fig.add_subplot(121)
     axes.set_title('Posterior Embedding')
     axes.imshow(E.T, origin='lower', 
-                extent=(ysmin, ysmax, xsmin, xsmax),cmap=cm.hot, aspect='auto')
+                extent=(ysmin, ysmax, xsmin, xsmax),cmap=cm.jet, aspect='auto')
     axes.scatter(Y, X, c='y')
     axes.set_xlim(ysmin, ysmax)
     axes.set_ylim(xsmin, xsmax)
     axes = fig.add_subplot(122)
     axes.set_title('PDF estimate')
     axes.imshow(np.exp(pdf).T, origin='lower', 
-            extent=(ysmin, ysmax, xsmin, xsmax), cmap=cm.hot, aspect='auto')
+            extent=(ysmin, ysmax, xsmin, xsmax), cmap=cm.jet, aspect='auto')
     axes.scatter(Y, X, c='y')
     axes.set_xlim(ysmin, ysmax)
     axes.set_ylim(xsmin, xsmax)
@@ -156,7 +174,7 @@ def main():
         axes.scatter(Y, X, c='y')
         axes.set_xlim(ysmin, ysmax)
         axes.set_ylim(xsmin, xsmax)
-        axes.plot(Y_s[:,0], quantile[:,0], 'b-',linewidth=2.0)
+        axes.plot(Y_s[0:yssize,0], quantile[:,0], 'b-',linewidth=2.0)
     pl.show()
 
 if __name__ == "__main__":
