@@ -4,6 +4,7 @@
 #include "data.hpp"
 #include "kernel.hpp"
 #include "distrib.hpp"
+#include "eiquadprog.hpp"
 
 template <class K>
 Eigen::MatrixXd AMatrix(const Eigen::MatrixXd& means,
@@ -41,140 +42,140 @@ Eigen::MatrixXd BMatrix(const Eigen::MatrixXd& means,
   return B;
 }
 
-// void positiveNormedCoeffs(const Eigen::VectorXd& embedding,
-                          // const Eigen::MatrixXd& A,
-                          // const Eigen::MatrixXd& B,  
-                          // double regulariser, Eigen::VectorXd& mixtureCoeffs)
-// {
-  // uint n = A.rows();
-  // uint p = 1;
-  // uint m = n;
-
-  // Eigen::MatrixXd G(n,n);
-  // Eigen::VectorXd g0(n);
-  // G = A + regulariser*Eigen::MatrixXd::Identity(n, n); 
-  // // G = A;
-  // g0 = -1.0 * embedding.transpose() * B;
-  // Eigen::MatrixXd CE(n,p);
-  // CE = Eigen::MatrixXd::Ones(n,p);
-  // Eigen::VectorXd ce0(p);
-  // ce0 = -1.0 * Eigen::VectorXd::Ones(p);
-  // Eigen::MatrixXd CI(n, n);
-  // CI = Eigen::MatrixXd::Identity(n, n);
-  // Eigen::VectorXd ci0(m);
-  // ci0 = Eigen::VectorXd::Zero(m);
-  // Eigen::VectorXd x(n);
-  // mixtureCoeffs = embedding.cwiseMax(0.0);
-  // mixtureCoeffs = mixtureCoeffs / mixtureCoeffs.sum();
-  // solve_quadprog(G, g0,  CE, ce0,  CI, ci0, mixtureCoeffs);
-  // bool resultOK = true;
-  // for (int i=0;i<n; i++)
-  // {
-    // if (mixtureCoeffs(i) < 0.0)
-    // {
-      // resultOK = false;
-      // break;
-    // }
-  // }
-  // if (!resultOK)
-  // {
-    // mixtureCoeffs = mixtureCoeffs.cwiseMax(0.0);
-    // mixtureCoeffs = mixtureCoeffs / mixtureCoeffs.sum();
-  // }
-// }
-
-struct PreimageData
-{
-  PreimageData(Eigen::MatrixXd& inG, Eigen::VectorXd& ing0)
-    : G(inG), g0(ing0){}
-  Eigen::MatrixXd& G;
-  Eigen::VectorXd& g0;
-};
-
-double preimageCostFn(const std::vector<double> &x, std::vector<double>&grad, void* data)
-{
-  PreimageData* d = reinterpret_cast<PreimageData*>(data);
-  uint n = x.size();
-  Eigen::VectorXd vx(n);
-  Eigen::VectorXd vgrad(n);
-  for (int i=0;i<n;i++)
-  {
-    vx(i) = x[i];
-  }
-  Eigen::MatrixXd cost = 0.5 * vx.transpose() * d->G * vx + d->g0.transpose() * vx;
-  if (!grad.empty())
-  {
-    vgrad = d->G * vx + d->g0;
-    for (int i=0;i<n;i++)
-    {
-      grad[i] = vgrad(i);
-    }
-  }
-  return cost(0,0);
-}
-
-double preimageConstraint(const std::vector<double> &x, std::vector<double>&grad, void* data)
-{
-  uint n = x.size();
-  double total = 0.0;
-  for (int i=0;i<n;i++)
-  {
-    total += x[i];
-  }
-  double result = total - 1.0;
-  if (!grad.empty())
-  {
-    for (int i=0;i<n;i++)
-    {
-      grad[i] = 1.0;
-    }
-  }
-  return result;
-}
-
 void positiveNormedCoeffs(const Eigen::VectorXd& embedding,
-                                const Eigen::MatrixXd& A,
-                                const Eigen::MatrixXd& B,  
-    double regulariser, Eigen::VectorXd& mixtureCoeffs)
+                          const Eigen::MatrixXd& A,
+                          const Eigen::MatrixXd& B,  
+                          double regulariser, Eigen::VectorXd& mixtureCoeffs)
 {
   uint n = A.rows();
+  uint p = 1;
+  uint m = n;
+
   Eigen::MatrixXd G(n,n);
   Eigen::VectorXd g0(n);
   G = A + regulariser*Eigen::MatrixXd::Identity(n, n); 
   // G = A;
   g0 = -1.0 * embedding.transpose() * B;
-  PreimageData data(G,g0);
-  
+  Eigen::MatrixXd CE(n,p);
+  CE = Eigen::MatrixXd::Ones(n,p);
+  Eigen::VectorXd ce0(p);
+  ce0 = -1.0 * Eigen::VectorXd::Ones(p);
+  Eigen::MatrixXd CI(n, n);
+  CI = Eigen::MatrixXd::Identity(n, n);
+  Eigen::VectorXd ci0(m);
+  ci0 = Eigen::VectorXd::Zero(m);
+  Eigen::VectorXd x(n);
   mixtureCoeffs = embedding.cwiseMax(0.0);
   mixtureCoeffs = mixtureCoeffs / mixtureCoeffs.sum();
-  
-  std::vector<double> thetaMin(n); 
-  std::vector<double> x(n); 
-  for (int i=0;i<n;i++) 
-  {
-    thetaMin[i] = 0.0;
-    x[i] = mixtureCoeffs(i);
-  }
-  
-  nlopt::opt opt(nlopt::LD_MMA, n);
-  opt.set_lower_bounds(thetaMin);
-  opt.set_min_objective(preimageCostFn, &data);
-  opt.set_maxtime(10.0); // if it's longer than this we're prolly stuffed anyway
-  // opt.add_equality_constraint(preimageConstraint, NULL, 1e-6);
-  opt.set_xtol_rel(1e-4);
-  opt.set_ftol_rel(1e-5);
-  double minf;
-  try {opt.optimize(x, minf);}
-  catch(nlopt::roundoff_limited a)
-  {}
-  double total = 0.0;
+  solve_quadprog(G, g0,  CE, ce0,  CI, ci0, mixtureCoeffs);
+  bool resultOK = true;
   for (int i=0;i<n; i++)
   {
-    mixtureCoeffs(i) = x[i];
+    if (mixtureCoeffs(i) < 0.0)
+    {
+      resultOK = false;
+      break;
+    }
   }
-  mixtureCoeffs = mixtureCoeffs.cwiseMax(0.0);
-  mixtureCoeffs = mixtureCoeffs / mixtureCoeffs.sum();
+  if (!resultOK)
+  {
+    mixtureCoeffs = mixtureCoeffs.cwiseMax(0.0);
+    mixtureCoeffs = mixtureCoeffs / mixtureCoeffs.sum();
+  }
 }
+
+// struct PreimageData
+// {
+  // PreimageData(Eigen::MatrixXd& inG, Eigen::VectorXd& ing0)
+    // : G(inG), g0(ing0){}
+  // Eigen::MatrixXd& G;
+  // Eigen::VectorXd& g0;
+// };
+
+// double preimageCostFn(const std::vector<double> &x, std::vector<double>&grad, void* data)
+// {
+  // PreimageData* d = reinterpret_cast<PreimageData*>(data);
+  // uint n = x.size();
+  // Eigen::VectorXd vx(n);
+  // Eigen::VectorXd vgrad(n);
+  // for (int i=0;i<n;i++)
+  // {
+    // vx(i) = x[i];
+  // }
+  // Eigen::MatrixXd cost = 0.5 * vx.transpose() * d->G * vx + d->g0.transpose() * vx;
+  // if (!grad.empty())
+  // {
+    // vgrad = d->G * vx + d->g0;
+    // for (int i=0;i<n;i++)
+    // {
+      // grad[i] = vgrad(i);
+    // }
+  // }
+  // return cost(0,0);
+// }
+
+// double preimageConstraint(const std::vector<double> &x, std::vector<double>&grad, void* data)
+// {
+  // uint n = x.size();
+  // double total = 0.0;
+  // for (int i=0;i<n;i++)
+  // {
+    // total += x[i];
+  // }
+  // double result = total - 1.0;
+  // if (!grad.empty())
+  // {
+    // for (int i=0;i<n;i++)
+    // {
+      // grad[i] = 1.0;
+    // }
+  // }
+  // return result;
+// }
+
+// void positiveNormedCoeffs(const Eigen::VectorXd& embedding,
+                                // const Eigen::MatrixXd& A,
+                                // const Eigen::MatrixXd& B,  
+    // double regulariser, Eigen::VectorXd& mixtureCoeffs)
+// {
+  // uint n = A.rows();
+  // Eigen::MatrixXd G(n,n);
+  // Eigen::VectorXd g0(n);
+  // G = A + regulariser*Eigen::MatrixXd::Identity(n, n); 
+  // // G = A;
+  // g0 = -1.0 * embedding.transpose() * B;
+  // PreimageData data(G,g0);
+  
+  // mixtureCoeffs = embedding.cwiseMax(0.0);
+  // mixtureCoeffs = mixtureCoeffs / mixtureCoeffs.sum();
+  
+  // std::vector<double> thetaMin(n); 
+  // std::vector<double> x(n); 
+  // for (int i=0;i<n;i++) 
+  // {
+    // thetaMin[i] = 0.0;
+    // x[i] = mixtureCoeffs(i);
+  // }
+  
+  // nlopt::opt opt(nlopt::LD_MMA, n);
+  // opt.set_lower_bounds(thetaMin);
+  // opt.set_min_objective(preimageCostFn, &data);
+  // opt.set_maxtime(10.0); // if it's longer than this we're prolly stuffed anyway
+  // // opt.add_equality_constraint(preimageConstraint, NULL, 1e-6);
+  // opt.set_xtol_rel(1e-4);
+  // opt.set_ftol_rel(1e-5);
+  // double minf;
+  // try {opt.optimize(x, minf);}
+  // catch(nlopt::roundoff_limited a)
+  // {}
+  // double total = 0.0;
+  // for (int i=0;i<n; i++)
+  // {
+    // mixtureCoeffs(i) = x[i];
+  // }
+  // mixtureCoeffs = mixtureCoeffs.cwiseMax(0.0);
+  // mixtureCoeffs = mixtureCoeffs / mixtureCoeffs.sum();
+// }
 
 
 template <class K>

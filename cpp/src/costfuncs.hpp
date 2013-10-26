@@ -105,7 +105,7 @@ class LogPCost:Cost
           {
             Eigen::MatrixXd A = AMatrix(trainingData_.x, kx_);
             Eigen::MatrixXd B = BMatrix(trainingData_.x, kx_);
-            double preimage_reg = exp(x[dx+dy+2]);
+            double preimage_reg = x[dx+dy+2];
             positiveNormedCoeffs(weights_.row(i),A,B, preimage_reg, localWeights);
           }
           
@@ -126,7 +126,7 @@ class LogPCost:Cost
           {
             Eigen::MatrixXd A = AMatrix(trainingData_.x, kx_);
             Eigen::MatrixXd B = BMatrix(trainingData_.x, kx_);
-            double preimage_reg = exp(x[dx+dy+2]);
+            double preimage_reg = x[dx+dy+2];
             positiveNormedCoeffs(weights_.row(i),A,B, preimage_reg, posWeights_);
           }
 
@@ -197,7 +197,7 @@ class PinballCost:Cost
         {
           Eigen::MatrixXd A = AMatrix(trainingData_.x, kx_);
           Eigen::MatrixXd B = BMatrix(trainingData_.x, kx_);
-          double preimage_reg = exp(x[dx+dy+2]);
+          double preimage_reg = x[dx+dy+2];
           positiveNormedCoeffs(weights_.row(i),A,B, preimage_reg, posWeights_);
         }
         double z;

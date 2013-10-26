@@ -274,9 +274,9 @@ TrainingVectors trainingVectors(uint dx, uint dy, const Settings& settings)
 
   if (!normedWeights) 
   {
-    theta0[dx+dy+2] = log(settings.preimage_reg);
-    thetaMin[dx+dy+2] = log(settings.preimage_reg_min);
-    thetaMax[dx+dy+2] = log(settings.preimage_reg_max);
+    theta0[dx+dy+2] = settings.preimage_reg;
+    thetaMin[dx+dy+2] = settings.preimage_reg_min;
+    thetaMax[dx+dy+2] = settings.preimage_reg_max;
   }
   TrainingVectors v;
   v.thetaMin = thetaMin;
@@ -301,7 +301,7 @@ Settings newSettings(std::vector<double> thetaBest, uint dx, uint dy, const Sett
   news.delta_min = thetaBest[dx+dy+1];
   if (!normedWeights)
   {
-    news.preimage_reg = exp(thetaBest[dx+dy+2]);
+    news.preimage_reg = thetaBest[dx+dy+2];
   }
   return news;
 }
