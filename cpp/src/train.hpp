@@ -198,6 +198,10 @@ std::vector<double> globalOptimum(NloptCost& costFunction, const std::vector<dou
   for (uint i=0; i<n; i++)
   {
     x[i] = exp(x[i]);
+    if (x[i] < thetaMin[i])
+      x[i] = thetaMin[i];
+    if (x[i] > thetaMax[i])
+      x[i] = thetaMax[i];
   }
   std::cout << "Approximate Solution Found." << std::endl;
   std::cout << "[ "; 
