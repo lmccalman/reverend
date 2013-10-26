@@ -35,6 +35,13 @@ double costWrapper(const std::vector<double>&x, std::vector<double>&grad, void* 
   return result;
 }
 
+double nonLogCostWrapper(const std::vector<double>&x, std::vector<double>&grad, void* costClass)
+{ 
+  NloptCost* ptr = reinterpret_cast<NloptCost*>(costClass); 
+  double result = (*ptr)(x, grad);
+  return result;
+}
+
 std::vector<double> SGD(NloptCost& costFunction, const std::vector<double>& thetaMin,
     const std::vector<double>& thetaMax, const std::vector<double>& theta0,
     const Settings& settings)
@@ -188,7 +195,10 @@ std::vector<double> globalOptimum(NloptCost& costFunction, const std::vector<dou
   // double firstcost = costFunction(x, grad);
   
   opt.optimize(x, minf);
-  
+  for (uint i=0; i<n; i++)
+  {
+    x[i] = exp(x[i]);
+  }
   std::cout << "Approximate Solution Found." << std::endl;
   std::cout << "[ "; 
   for (uint i=0;i<x.size();i++)
@@ -201,17 +211,13 @@ std::vector<double> globalOptimum(NloptCost& costFunction, const std::vector<dou
   nlopt::opt refopt(nlopt::LN_COBYLA, n);
   refopt.set_ftol_rel(1e-8);
   refopt.set_ftol_abs(1e-7);
-  refopt.set_min_objective(costWrapper, &costFunction);
-  refopt.set_lower_bounds(logThetaMin);
-  refopt.set_upper_bounds(logThetaMax);
+  refopt.set_min_objective(nonLogCostWrapper, &costFunction);
+  refopt.set_lower_bounds(thetaMin);
+  refopt.set_upper_bounds(thetaMax);
   refopt.set_maxtime(wallTime/2.0);
   try {refopt.optimize(x, minf);}
   catch(nlopt::roundoff_limited a)
   {}
-  for (uint i=0; i<n; i++)
-  {
-    x[i] = exp(x[i]);
-  }
   std::cout << "Final Estimate" << std::endl;
   std::cout << "[ "; 
   for (uint i=0;i<x.size();i++)
