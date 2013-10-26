@@ -82,6 +82,7 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
 #include <Eigen/Dense>
+#include <cmath>
 
 namespace Eigen {
 
@@ -91,20 +92,20 @@ template<typename Scalar>
 inline Scalar distance(Scalar a, Scalar b)
 {
 	Scalar a1, b1, t;
-	a1 = internal::abs(a);
-	b1 = internal::abs(b);
+	a1 = std::abs(a);
+	b1 = std::abs(b);
 	if (a1 > b1) 
 	{
 		t = (b1 / a1);
-		return a1 * internal::sqrt(1.0 + t * t);
+		return a1 * std::sqrt(1.0 + t * t);
 	}
 	else
 		if (b1 > a1)
 		{
 			t = (a1 / b1);
-			return b1 * internal::sqrt(1.0 + t * t);
-		}
-	return a1 * internal::sqrt(2.0);
+			return b1 * std::sqrt(1.0 + t * t);
+	}
+	return a1 * std::sqrt(2.0);
 }
 
 // }
@@ -139,7 +140,7 @@ inline double solve_quadprog(MatrixXd & G,  VectorXd & g0,
   MatrixXd R(G.rows(),G.cols()), J(G.rows(),G.cols());
   
   LLT<MatrixXd,Lower> chol(G.cols());
-  VerifiedCholeskySolver<Eigen::VectorXd> g0Chol(G.cols(), g0.rows(), g0.cols(),1e-8);
+ 
   VectorXd s(m+p), z(n), r(m + p), d(n),  np(n), u(m + p);
   VectorXd x_old(n), u_old(m + p);
   double f_value, psi, c1, c2, sum, ss, R_norm;
@@ -163,16 +164,13 @@ inline double solve_quadprog(MatrixXd & G,  VectorXd & g0,
   c1 = G.trace();
 	
 	/* decompose the matrix G in the form LL^T */
+  chol.compute(G);
  
   /* initialize the matrix R */
   d.setZero();
   R.setZero();
 	R_norm = 1.0; /* this variable will hold the norm of the matrix R */
   
-  g0Chol.solve(G, g0,x);
-  double jit = g0Chol.jitter();
-  G = G + jit*Eigen::MatrixXd::Identity(G.rows(), G.cols());
-  chol.compute(G);
 	/* compute the inverse of the factorized matrix G^-1, this is the initial value for H */
   // J = L^-T
   J.setIdentity();
@@ -189,7 +187,7 @@ inline double solve_quadprog(MatrixXd & G,  VectorXd & g0,
    * this is a feasible point in the dual space
 	 * x = G^-1 * g0
    */
-  // x = chol.solve(g0);
+  x = chol.solve(g0);
   x = -x;
 	/* and compute the current solution value */ 
 	f_value = 0.5 * g0.dot(x);
@@ -216,7 +214,7 @@ inline double solve_quadprog(MatrixXd & G,  VectorXd & g0,
     /* compute full step length t2: i.e., the minimum step in primal space s.t. the contraint 
       becomes feasible */
     t2 = 0.0;
-    if (internal::abs(z.dot(z)) > std::numeric_limits<double>::epsilon()) // i.e. z != 0
+    if (std::abs(z.dot(z)) > std::numeric_limits<double>::epsilon()) // i.e. z != 0
       t2 = (-np.dot(x) - ce0(i)) / z.dot(np);
     
     x += t2 * z;
@@ -268,7 +266,7 @@ l1:	iter++;
 #endif
 
     
-	if (internal::abs(psi) <= mi * std::numeric_limits<double>::epsilon() * c1 * c2* 100.0)
+	if (std::abs(psi) <= mi * std::numeric_limits<double>::epsilon() * c1 * c2* 100.0)
 	{
     /* numerically there are not infeasibilities anymore */
     q = iq;
@@ -337,7 +335,7 @@ l2a:/* Step 2a: determine step direction */
     }
   }
   /* Compute t2: full step length (minimum step in primal space such that the constraint ip becomes feasible */
-  if (internal::abs(z.dot(z))  > std::numeric_limits<double>::epsilon()) // i.e. z != 0
+  if (std::abs(z.dot(z))  > std::numeric_limits<double>::epsilon()) // i.e. z != 0
     t2 = -s(ip) / z.dot(np);
   else
     t2 = inf; /* +inf */
@@ -509,10 +507,10 @@ inline bool add_constraint(MatrixXd& R, MatrixXd& J, VectorXd& d, int& iq, doubl
   std::cerr << iq << std::endl;
 #endif
   
-	if (internal::abs(d(iq - 1)) <= std::numeric_limits<double>::epsilon() * R_norm)
+	if (std::abs(d(iq - 1)) <= std::numeric_limits<double>::epsilon() * R_norm)
 		// problem degenerate
 		return false;
-	R_norm = std::max<double>(R_norm, internal::abs(d(iq - 1)));
+	R_norm = std::max<double>(R_norm, std::abs(d(iq - 1)));
 	return true;
 }
 
