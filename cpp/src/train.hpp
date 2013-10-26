@@ -26,7 +26,12 @@
 double costWrapper(const std::vector<double>&x, std::vector<double>&grad, void* costClass)
 { 
   NloptCost* ptr = reinterpret_cast<NloptCost*>(costClass); 
-  double result = (*ptr)(x, grad);
+  std::vector<double> xDash = x;
+  for (uint i=0; i<x.size();i++)
+  {
+    xDash[i] = exp(x[i]);
+  }
+  double result = (*ptr)(xDash, grad);
   return result;
 }
 
@@ -119,6 +124,19 @@ std::vector<double> localOptimum(NloptCost& costFunction, const std::vector<doub
   std::cout << " ] cost:" << minf << std::endl << std::endl;
   return x;
 }
+
+void writeOptimalParams(const std::vector<double>& theta)
+{
+  std::ofstream file("optimal_params.txt");
+  if (file.is_open())
+  {
+    for (uint i=0; i<theta.size();i++)
+    {
+      file << theta[i] << ",";
+    }
+    file << std::endl;
+  }
+}
   
 std::vector<double> globalOptimum(NloptCost& costFunction, const std::vector<double>& thetaMin,
     const std::vector<double>& thetaMax, const std::vector<double>& theta0, double wallTime)
@@ -139,23 +157,41 @@ std::vector<double> globalOptimum(NloptCost& costFunction, const std::vector<dou
   // nlopt::opt opt(nlopt::G_MLSL_LDS, n);
   // nlopt::opt localopt(nlopt::LN_COBYLA, n);
   // localopt.set_ftol_rel(1e-5);
-  // localopt.set_ftol_abs(1e-4);
-  // localopt.set_xtol_rel(1e-8);
+  // localopt.set_ftol_abs(1e-5);
+  // localopt.set_xtol_rel(1e-5);
   nlopt::opt opt(nlopt::GN_CRS2_LM, n);
+  opt.set_ftol_rel(1e-5);
+  opt.set_ftol_abs(1e-5);
+  opt.set_xtol_rel(1e-5);
 
   // opt.set_local_optimizer(localopt);
   opt.set_min_objective(costWrapper, &costFunction);
-  opt.set_lower_bounds(thetaMin);
-  opt.set_upper_bounds(thetaMax);
+  
+  std::vector<double> logThetaMin(n);
+  std::vector<double> logThetaMax(n);
+  std::vector<double> logTheta0(n);
+  for (uint i=0; i<n; i++)
+  {
+    logThetaMin[i] = log(thetaMin[i]);
+    logThetaMax[i] = log(thetaMax[i]);
+    logTheta0[i] = log(theta0[i]);
+  }
+
+  opt.set_lower_bounds(logThetaMin);
+  opt.set_upper_bounds(logThetaMax);
   opt.set_maxtime(wallTime);
   double minf = 0.0;
   std::vector<double> x(theta0.size());
-  x = theta0;
+  x = logTheta0;
   std::vector<double> grad(x.size());
   // nlopt::result result = opt.optimize(x, minf);
   // double firstcost = costFunction(x, grad);
   
   opt.optimize(x, minf);
+  for (uint i=0; i<n; i++)
+  {
+    x[i] = exp(x[i]);
+  }
   
   std::cout << "Approximate Solution Found." << std::endl;
   std::cout << "[ "; 
@@ -183,6 +219,7 @@ std::vector<double> globalOptimum(NloptCost& costFunction, const std::vector<dou
     std::cout << std::setw(10) << x[i] << " ";
   }
   std::cout << " ] cost:" << minf << std::endl << std::endl;
+  writeOptimalParams(x);
   return x;
 }
 

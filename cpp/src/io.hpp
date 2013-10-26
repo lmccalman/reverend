@@ -232,7 +232,6 @@ void writeNPY(const Eigen::MatrixXd& matrix, const std::string& filename)
 }
 
 
-
 void writeCSV(const Eigen::MatrixXd& matrix, const std::string& filename)
 {
   std::ofstream file(filename);
