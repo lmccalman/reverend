@@ -108,8 +108,8 @@ void paramsToVector(const Eigen::MatrixXd& x,
     for (uint j=0; j<dx; j++)
     {
       theta0[c] = x(i,j);
-      thetaMin[c] = x(i,j) - 5*settings.sigma_x(j);
-      thetaMax[c] = x(i,j) + 5*settings.sigma_x(j);
+      thetaMin[c] = x(i,j) - 3*settings.sigma_x(j);
+      thetaMax[c] = x(i,j) + 3*settings.sigma_x(j);
       c++;
     }
   }
@@ -119,8 +119,8 @@ void paramsToVector(const Eigen::MatrixXd& x,
     for (int j=0; j<dy; j++)
     {
       theta0[c] = y(i,j);
-      thetaMin[c] = y(i,j) - 5*settings.sigma_y(j);
-      thetaMax[c] = y(i,j) + 5*settings.sigma_y(j);
+      thetaMin[c] = y(i,j) - 3*settings.sigma_y(j);
+      thetaMax[c] = y(i,j) + 3*settings.sigma_y(j);
       c++;
     }
   }
@@ -190,8 +190,6 @@ struct ReducedSetCost
         totalCost += logKernelMixture(testData_.xs.row(i),
             minidata.x, lweights_, kx, true);
       }
-      totalCost /= double(indices.size());
-      totalCost *= -1.0;
       return totalCost;
     };
     
@@ -230,18 +228,32 @@ struct SGDReducedSetCost : NloptCost
       uint testN = testData_.xs.rows();
       double eps = sqrt(std::numeric_limits<double>::epsilon());
       bool stochastic = false;
-      std::vector<uint> indices;
-      if (stochastic)
+      
+      std::vector< std::vector<uint> > indexList;
+      uint counter = 0;
+      while (counter < testN)
       {
-        indices = randomIndices(settings_.sgd_batch_size, testN);
+        std::vector<uint> ids;
+        for (uint i=0; i<100; i++)
+        {
+          ids.push_back(counter);
+          counter++;
+          if (counter >= testN)
+            break;
+        }
+        indexList.push_back(ids);
       }
-      else
+      double totalCost = 0.0; 
+      #pragma omp parallel for reduction(+:totalCost)
+      for (uint i=0;i<indexList.size();i++)
       {
-        for (uint i=0; i<testN; i++)
-          indices.push_back(i);
+        ReducedSetCost<K> rscost(trainData_, testData_, settings_);
+        totalCost += rscost(x, indexList[i]);
       }
-      ReducedSetCost<K> rscost(trainData_, testData_, settings_);
-      double c0 = rscost(x, indices);
+      totalCost /= double(testN);
+      totalCost *= -1.0;
+      
+      
       // uint params = x.size(); 
       // std::vector<double> xdash = x;
       // for (uint i=0;i<params;i++)
@@ -264,8 +276,8 @@ struct SGDReducedSetCost : NloptCost
       {
         std::cout << std::setw(10) << x[i] << " ";
       }
-      std::cout << " ] reduced set cost:" << c0 << std::endl;
-      return c0;
+      std::cout << " ] reduced set cost:" << totalCost << std::endl;
+      return totalCost;
     }
 
 
