@@ -102,9 +102,10 @@ std::vector<double> localOptimum(NloptCost& costFunction, const std::vector<doub
   nlopt::opt opt(nlopt::LN_COBYLA, n);
   // nlopt::opt opt(nlopt::LN_SBPLX, n);
   // nlopt::opt opt(nlopt::LD_LBFGS, n);
-  opt.set_ftol_abs(1e-4);
+  opt.set_ftol_abs(1e-3);
   opt.set_ftol_rel(1e-4);
   opt.set_xtol_rel(1e-4);
+  opt.set_xtol_abs(1e-4);
   opt.set_maxtime(1800);
   
   std::cout << "Optimizer Initialized..." << std::endl; 
