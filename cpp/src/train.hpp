@@ -106,7 +106,7 @@ std::vector<double> localOptimum(NloptCost& costFunction, const std::vector<doub
   opt.set_ftol_rel(1e-4);
   // opt.set_xtol_rel(1e-5);
   // opt.set_xtol_abs(1e-5);
-  opt.set_maxtime(1800);
+  opt.set_maxtime(3600);
   
   std::cout << "Optimizer Initialized..." << std::endl; 
   opt.set_min_objective(nonLogCostWrapper, &costFunction);

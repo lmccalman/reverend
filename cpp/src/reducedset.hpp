@@ -108,8 +108,8 @@ void paramsToVector(const Eigen::MatrixXd& x,
     for (uint j=0; j<dx; j++)
     {
       theta0[c] = x(i,j);
-      thetaMin[c] = x(i,j) - 3*settings.sigma_x(j);
-      thetaMax[c] = x(i,j) + 3*settings.sigma_x(j);
+      thetaMin[c] = x(i,j) - 5*settings.sigma_x(j);
+      thetaMax[c] = x(i,j) + 5*settings.sigma_x(j);
       c++;
     }
   }
@@ -119,8 +119,8 @@ void paramsToVector(const Eigen::MatrixXd& x,
     for (int j=0; j<dy; j++)
     {
       theta0[c] = y(i,j);
-      thetaMin[c] = y(i,j) - 3*settings.sigma_y(j);
-      thetaMax[c] = y(i,j) + 3*settings.sigma_y(j);
+      thetaMin[c] = y(i,j) - 5*settings.sigma_y(j);
+      thetaMax[c] = y(i,j) + 5*settings.sigma_y(j);
       c++;
     }
   }
