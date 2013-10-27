@@ -109,7 +109,7 @@ std::vector<double> localOptimum(NloptCost& costFunction, const std::vector<doub
   opt.set_maxtime(1800);
   
   std::cout << "Optimizer Initialized..." << std::endl; 
-  opt.set_min_objective(costWrapper, &costFunction);
+  opt.set_min_objective(nonLogCostWrapper, &costFunction);
   opt.set_lower_bounds(thetaMin);
   opt.set_upper_bounds(thetaMax);
   double minf = 0.0;

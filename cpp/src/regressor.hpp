@@ -166,7 +166,6 @@ Eigen::MatrixXd Regressor<K>::RMatrix(const TrainingData& data,
   g_xx_epsilon_ = kx.gramMatrix() + Eigen::MatrixXd::Identity(n_,n_)*epsilonMin;
   qchol_g_xx_.compute(g_xx_epsilon_);
   beta_ = qchol_g_xx_.solve(mu_pi_); 
-
   beta_ = beta_.cwiseMax(0.0);
   beta_ = beta_ / beta_.sum();
   beta_diag_ = beta_.asDiagonal();
@@ -174,7 +173,6 @@ Eigen::MatrixXd Regressor<K>::RMatrix(const TrainingData& data,
   beta_g_yy_ += Eigen::MatrixXd::Identity(n_,n_)*deltaMin;
   qchol_g_yy_.compute(beta_g_yy_);
   r_xy_ = qchol_g_yy_.solve(beta_diag_);
-  
-  Eigen::MatrixXd& result = r_xy_;
+  Eigen::MatrixXd result = r_xy_;
   return result;
 }

@@ -103,9 +103,9 @@ void paramsToVector(const Eigen::MatrixXd& x,
   uint dy = y.cols();
   uint c = 0; 
   //x points
-  for (int i=0;i<setSize;i++)
+  for (uint i=0;i<setSize;i++)
   {
-    for (int j=0; j<dx; j++)
+    for (uint j=0; j<dx; j++)
     {
       theta0[c] = x(i,j);
       thetaMin[c] = x(i,j) - 5*settings.sigma_x(j);
@@ -124,7 +124,7 @@ void paramsToVector(const Eigen::MatrixXd& x,
       c++;
     }
   }
-  //sigma_x
+  // sigma_x
   for (int i=0; i<dx; i++)
   {
     theta0[c] = settings.sigma_x(i);
@@ -149,7 +149,6 @@ void paramsToVector(const Eigen::MatrixXd& x,
   c++;
 }
 
-
 template <class K>
 struct ReducedSetCost
 {
@@ -158,7 +157,8 @@ struct ReducedSetCost
                    const Settings& settings)
       : trainData_(trainData), testData_(testData), 
       r_(trainData.x.rows() , trainData.u.rows(), settings),
-      lweights_(trainData.x.rows()), settings_(settings){};
+      lweights_(trainData.x.rows()), settings_(settings)
+      {};
 
     double operator()(const std::vector<double>&x, const std::vector<uint>& indices)
     {
@@ -172,6 +172,7 @@ struct ReducedSetCost
       double epsilon_min;
       double delta_min;
       vectorToParams(x, X, Y, sigma_x, sigma_y, epsilon_min, delta_min);
+      // std::cout << sigma_x << ":" << sigma_y << ":" << epsilon_min << ":" << delta_min << std::endl;
       const TrainingData minidata(trainData_.u, trainData_.lambda, X, Y);
       Kernel<K> kx(X, sigma_x);
       Kernel<K> ky(Y, sigma_y);
@@ -211,13 +212,21 @@ struct SGDReducedSetCost : NloptCost
     SGDReducedSetCost(const TrainingData& trainData,
                       const TestingData& testData, 
                       const Settings& settings)
-
       : trainData_(trainData),
       testData_(testData),
       settings_(settings) {};
     
     double operator()(const std::vector<double>&x, std::vector<double>&grad)
     {
+      
+      // std::cout << "in cost fn:" << std::endl;
+      // for (uint i=0;i<x.size();i++)
+      // {
+        // std::cout << x[i] << ",";
+      // }
+      // std::cout << std::endl;
+
+
       uint testN = testData_.xs.rows();
       double eps = sqrt(std::numeric_limits<double>::epsilon());
       bool stochastic = false;
@@ -233,7 +242,6 @@ struct SGDReducedSetCost : NloptCost
       }
       ReducedSetCost<K> rscost(trainData_, testData_, settings_);
       double c0 = rscost(x, indices);
-     
       // uint params = x.size(); 
       // std::vector<double> xdash = x;
       // for (uint i=0;i<params;i++)
@@ -250,8 +258,13 @@ struct SGDReducedSetCost : NloptCost
         // grad[i] = gpos;
         // xdash[i] -= h;
       // }
-      
-      std::cout << c0 << std::endl;
+      uint print = x.size() - (trainData_.x.cols() + trainData_.y.cols() + 2);
+      std::cout << "[ ";
+      for (uint i=print;i<x.size();i++)
+      {
+        std::cout << std::setw(10) << x[i] << " ";
+      }
+      std::cout << " ] reduced set cost:" << c0 << std::endl;
       return c0;
     }
 
@@ -267,14 +280,26 @@ void findReducedSet(TrainingData& trainData, const TestingData& testData, Settin
 {
   uint n = trainData.x.rows();
   uint dx = trainData.x.cols();
-  uint dy = trainData.y.cols();
+  uint dy = trainData.y.cols(); 
+  
+  // std::cout << "pretrain:" << std::endl;
+  // std::cout << settings.sigma_x << std::endl;
+  // std::cout << settings.sigma_y << std::endl;
+  // std::cout << settings.epsilon_min << std::endl;
+  // std::cout << settings.delta_min << std::endl;
   //initialize the thetas 
   std::vector<double> theta0((n * dx) + (n * dy) + dx + dy + 2);
   std::vector<double> thetaMin((n * dx) + (n * dy) + dx + dy + 2);
   std::vector<double> thetaMax((n * dx) + (n * dy) + dx + dy + 2);
-  //fill the thetas 
+  //fill the thetas
   paramsToVector(trainData.x, trainData.y, settings,
                  thetaMin, theta0, thetaMax);
+  // std::cout << "params:" << std::endl;
+  // for (uint i=0; i< theta0.size(); i++)
+  // {
+    // std::cout << theta0[i] << ",";
+  // }
+  // std::cout << std::endl;
   //optimize
   SGDReducedSetCost<K> costfunc(trainData, testData, settings); 
   std::vector<double> thetaBest = localOptimum(costfunc, thetaMin, thetaMax, theta0);

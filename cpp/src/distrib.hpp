@@ -73,7 +73,8 @@ double logKernelMixture(const Eigen::VectorXd& point,
     if (!(result == result))
     {
       // std::cout << point(0) << " " << point(1) << ":";
-      result = -1e10;
+      // result = -1e10;
+      result = -1*std::numeric_limits<double>::infinity();
     }
   }
   else
