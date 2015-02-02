@@ -22,7 +22,7 @@
 #include <Eigen/Cholesky>
 #include <Eigen/Sparse>
 #include <Eigen/QR>
-#include <Eigen/CholmodSupport>
+#include <Eigen/SparseCholesky>
 
 typedef Eigen::SparseMatrix<double,0> SparseMatrix;
 
@@ -118,7 +118,7 @@ class SparseCholeskySolver
     double jitter(){return jitter_;}
 
   private:
-    Eigen::CholmodSupernodalLLT<SparseMatrix> cholSolver_;
+    Eigen::SimplicialLDLT<SparseMatrix> cholSolver_;
     T bDash_;
     T xDashDown_;
     double jitter_ = 1e-1;
@@ -145,10 +145,10 @@ void SparseCholeskySolver<T>::solve(const SparseMatrix& A, const T& b, double mi
     jitter_ = minJitter_;
   }
   
-  cholmod_common& config = cholSolver_.cholmod();
-  config.print = 1;
-  config.print_function = NULL;
-  config.try_catch = false;
+  // cholmod_common& config = cholSolver_.cholmod();
+  // config.print = 1;
+  // config.print_function = NULL;
+  // config.try_catch = false;
 
   uint n = A.rows();
   SparseMatrix aJit_(n,n);

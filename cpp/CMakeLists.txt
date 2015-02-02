@@ -36,7 +36,6 @@ set(CMAKE_VERBOSE_MAKEFILE on)
 
 find_package(Boost COMPONENTS filesystem REQUIRED)
 find_package(Eigen3)
-find_package(SuiteSparse)
 find_package(LAPACK)
 
 include_directories( ${EIGEN3_INCLUDE_DIR}
@@ -52,7 +51,6 @@ add_custom_command(TARGET ${REVEREND_EXECUTABLE} POST_BUILD
                     COMMENT "Creating tags" VERBATIM)
 
 target_link_libraries(${REVEREND_EXECUTABLE} 
-                      ${SUITESPARSE_LIBRARIES}
                       ${LAPACK_LIBRARIES}
                       ${CNPY_LIBRARY}
                       ${NLOPT_LIBRARY}
